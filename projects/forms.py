@@ -1,6 +1,6 @@
 from django import forms
 
-from .models import Apartment, Project
+from .models import Flat, Project
 
 
 class ProjectForm(forms.ModelForm):
@@ -18,10 +18,10 @@ class ProjectForm(forms.ModelForm):
         }
 
 
-class ApartmentForm(forms.ModelForm):
+class FlatForm(forms.ModelForm):
     class Meta:
-        model = Apartment
-        fields = ['apartment_no', 'floor_no', 'apartment_type', 'saleable_area', 'base_price', 'status', 'notes']
+        model = Flat
+        fields = ['flat_no', 'floor_no', 'flat_type', 'facing', 'saleable_area', 'base_price', 'status', 'notes']
         widgets = {
             'notes': forms.Textarea(attrs={'rows': 2}),
         }

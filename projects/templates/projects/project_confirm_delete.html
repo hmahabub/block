@@ -14,8 +14,8 @@
         </div>
         <div class="alert alert-danger">
             <strong>Warning:</strong> This action cannot be undone.
-            {% if object.apartments.exists %}
-            <br>This project has {{ object.apartment_count }} apartment(s) that will also be deleted.
+            {% if object.flats.exists %}
+            <br>This project has {{ object.flat_count }} flat(s) that will also be deleted.
             {% endif %}
         </div>
         <form method="post">

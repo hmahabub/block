@@ -1,9 +1,9 @@
 from django.urls import path
 
 from .views import (
-    ApartmentWisePDFView,
-    ApartmentWiseReportView,
     DuesReportView,
+    FlatWisePDFView,
+    FlatWiseReportView,
     ProjectProfitabilityReportView,
     ReportIndexView,
 )
@@ -13,7 +13,7 @@ app_name = 'reports'
 urlpatterns = [
     path('', ReportIndexView.as_view(), name='index'),
     path('project-profitability/', ProjectProfitabilityReportView.as_view(), name='project-profitability'),
-    path('apartment-wise/', ApartmentWiseReportView.as_view(), name='apartment-wise'),
-    path('apartment-wise/<int:project_pk>/pdf/', ApartmentWisePDFView.as_view(), name='apartment-wise-pdf'),
+    path('flat-wise/', FlatWiseReportView.as_view(), name='flat-wise'),
+    path('flat-wise/<int:project_pk>/pdf/', FlatWisePDFView.as_view(), name='flat-wise-pdf'),
     path('dues/', DuesReportView.as_view(), name='dues'),
 ]

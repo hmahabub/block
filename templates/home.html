@@ -6,7 +6,7 @@
 {% block content %}
 <div class="jumbotron mt-4">
     <h1 class="display-5">Welcome to BLOCK ERP</h1>
-    <p class="lead">Real estate project costing, apartment sales, receivables, payables and profitability — powered by NOORSYS.</p>
+    <p class="lead">Real estate project costing, flat sales, receivables, payables and profitability — powered by NOORSYS.</p>
     <hr class="my-4">
 
     {% if user.is_authenticated %}
@@ -37,7 +37,7 @@
                         <div class="col-4 border"><h3>{{ supplier_count }}</h3><p class="mb-0">Suppliers</p></div>
                     </div>
                     <div class="row text-center stat-tile mb-2">
-                        <div class="col-4 border"><h3>{{ apartment_count }}</h3><p class="mb-0">Apartments</p></div>
+                        <div class="col-4 border"><h3>{{ flat_count }}</h3><p class="mb-0">Flats</p></div>
                         <div class="col-4 border"><h3>{{ sold_count }}</h3><p class="mb-0">Sold</p></div>
                         <div class="col-4 border"><h3>{{ available_count }}</h3><p class="mb-0">Available</p></div>
                     </div>
@@ -63,7 +63,7 @@
             <div class="card h-100">
                 <div class="card-body">
                     <h5 class="card-title"><i class="fas fa-building"></i> Projects</h5>
-                    <p class="card-text">Manage buildings, floors and apartments.</p>
+                    <p class="card-text">Manage buildings, floors and flats.</p>
                     <a href="{% url 'projects:list' %}" class="btn btn-primary">Go to Projects</a>
                 </div>
             </div>
@@ -99,7 +99,7 @@
             <div class="card h-100">
                 <div class="card-body">
                     <h5 class="card-title"><i class="fas fa-dollar-sign"></i> Sales</h5>
-                    <p class="card-text">Apartment sales and customer payments.</p>
+                    <p class="card-text">Flat sales and customer payments.</p>
                     <a href="{% url 'sales:list' %}" class="btn btn-primary">Go to Sales</a>
                 </div>
             </div>
@@ -127,7 +127,7 @@
             <div class="card h-100">
                 <div class="card-body">
                     <h5 class="card-title"><i class="fas fa-chart-line"></i> Reports</h5>
-                    <p class="card-text">Project, apartment and dues reports.</p>
+                    <p class="card-text">Project, flat and dues reports.</p>
                     <a href="{% url 'reports:index' %}" class="btn btn-primary">Go to Reports</a>
                 </div>
             </div>

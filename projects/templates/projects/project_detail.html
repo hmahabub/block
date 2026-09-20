@@ -28,10 +28,10 @@
             <div class="card-body">
                 <div class="row text-center stat-tile">
                     <div class="col-6"><h5>{{ object.floor_no }}</h5><small>Floors</small></div>
-                    <div class="col-6"><h5>{{ object.apartment_count }}</h5><small>Apartments</small></div>
-                    <div class="col-6"><h5>{{ object.sold_apartment_count }}</h5><small>Sold</small></div>
-                    <div class="col-6"><h5>{{ object.booked_apartment_count }}</h5><small>Booked</small></div>
-                    <div class="col-6"><h5>{{ object.available_apartment_count }}</h5><small>Available</small></div>
+                    <div class="col-6"><h5>{{ object.flat_count }}</h5><small>Flats</small></div>
+                    <div class="col-6"><h5>{{ object.sold_flat_count }}</h5><small>Sold</small></div>
+                    <div class="col-6"><h5>{{ object.booked_flat_count }}</h5><small>Booked</small></div>
+                    <div class="col-6"><h5>{{ object.available_flat_count }}</h5><small>Available</small></div>
                     <div class="col-6"><h5>{{ object.total_saleable_area }}</h5><small>Saleable sqft</small></div>
                 </div>
             </div>
@@ -84,9 +84,9 @@
 
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0"><i class="fas fa-door-open"></i> Apartments</h5>
-        <a href="{% url 'projects:apartment-create' object.pk %}" class="btn btn-primary btn-sm">
-            <i class="fas fa-plus"></i> Add Apartment
+        <h5 class="mb-0"><i class="fas fa-door-open"></i> Flats</h5>
+        <a href="{% url 'projects:flat-create' object.pk %}" class="btn btn-primary btn-sm">
+            <i class="fas fa-plus"></i> Add Flat
         </a>
     </div>
     <div class="card-body">
@@ -97,6 +97,7 @@
                         <th>No.</th>
                         <th>Floor</th>
                         <th>Type</th>
+                        <th>Facing</th>
                         <th>Area (sqft)</th>
                         <th>Base Price</th>
                         <th>Status</th>
@@ -104,32 +105,33 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for apartment in apartments %}
+                    {% for flat in flats %}
                     <tr>
-                        <td><a href="{% url 'projects:apartment-detail' apartment.pk %}">{{ apartment.apartment_no }}</a></td>
-                        <td>{{ apartment.floor_no }}</td>
-                        <td>{{ apartment.get_apartment_type_display }}</td>
-                        <td>{{ apartment.saleable_area }}</td>
-                        <td>{{ apartment.base_price|taka }}</td>
+                        <td><a href="{% url 'projects:flat-detail' flat.pk %}">{{ flat.flat_no }}</a></td>
+                        <td>{{ flat.floor_no }}</td>
+                        <td>{{ flat.get_flat_type_display }}</td>
+                        <td>{{ flat.facing|default:"-" }}</td>
+                        <td>{{ flat.saleable_area }}</td>
+                        <td>{{ flat.base_price|taka }}</td>
                         <td>
                             <span class="badge
-                                {% if apartment.status == 'AVAILABLE' %}bg-success
-                                {% elif apartment.status == 'BOOKED' %}bg-warning text-dark
-                                {% elif apartment.status == 'SOLD' %}bg-primary
-                                {% elif apartment.status == 'HANDED_OVER' %}bg-info text-dark
+                                {% if flat.status == 'AVAILABLE' %}bg-success
+                                {% elif flat.status == 'BOOKED' %}bg-warning text-dark
+                                {% elif flat.status == 'SOLD' %}bg-primary
+                                {% elif flat.status == 'HANDED_OVER' %}bg-info text-dark
                                 {% else %}bg-danger{% endif %}">
-                                {{ apartment.get_status_display }}
+                                {{ flat.get_status_display }}
                             </span>
                         </td>
                         <td>
                             <div class="btn-group btn-group-sm">
-                                <a href="{% url 'projects:apartment-detail' apartment.pk %}" class="btn btn-info" title="View"><i class="fas fa-eye"></i></a>
-                                <a href="{% url 'projects:apartment-update' apartment.pk %}" class="btn btn-warning" title="Edit"><i class="fas fa-edit"></i></a>
+                                <a href="{% url 'projects:flat-detail' flat.pk %}" class="btn btn-info" title="View"><i class="fas fa-eye"></i></a>
+                                <a href="{% url 'projects:flat-update' flat.pk %}" class="btn btn-warning" title="Edit"><i class="fas fa-edit"></i></a>
                             </div>
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="7" class="text-center py-4">No apartments added yet</td></tr>
+                    <tr><td colspan="8" class="text-center py-4">No flats added yet</td></tr>
                     {% endfor %}
                 </tbody>
             </table>

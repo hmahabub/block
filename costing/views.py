@@ -84,7 +84,7 @@ class ProjectCostListView(LoginRequiredMixin, ListView):
     paginate_by = 30
 
     def get_queryset(self):
-        queryset = super().get_queryset().select_related('project', 'cost_category', 'supplier', 'apartment')
+        queryset = super().get_queryset().select_related('project', 'cost_category', 'supplier', 'flat')
         project_id = self.request.GET.get('project')
         status = self.request.GET.get('status')
         q = self.request.GET.get('q')
@@ -117,7 +117,7 @@ class ProjectCostDetailView(LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['payments'] = self.object.payments.select_related('supplier')
-        context['allocations'] = self.object.cost_allocations.select_related('apartment')
+        context['allocations'] = self.object.cost_allocations.select_related('flat')
         return context
 
 

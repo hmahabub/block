@@ -62,7 +62,7 @@
                         <th>Project</th>
                         <th>Category</th>
                         <th>Supplier</th>
-                        <th>Apartment</th>
+                        <th>Flat</th>
                         <th>Amount</th>
                         <th>Paid</th>
                         <th>Payable</th>
@@ -77,7 +77,7 @@
                         <td><a href="{% url 'projects:detail' cost.project.pk %}">{{ cost.project.project_code }}</a></td>
                         <td>{{ cost.cost_category }}</td>
                         <td>{{ cost.supplier|default:"-" }}</td>
-                        <td>{{ cost.apartment|default:"Shared" }}</td>
+                        <td>{{ cost.flat|default:"Shared" }}</td>
                         <td>{{ cost.amount|taka }}</td>
                         <td>{{ cost.paid_amount|taka }}</td>
                         <td>{{ cost.payable_amount|taka }}</td>

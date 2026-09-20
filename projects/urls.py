@@ -1,11 +1,11 @@
 from django.urls import path
 
 from .views import (
-    ApartmentCreateView,
-    ApartmentDeleteView,
-    ApartmentDetailView,
-    ApartmentListView,
-    ApartmentUpdateView,
+    FlatCreateView,
+    FlatDeleteView,
+    FlatDetailView,
+    FlatListView,
+    FlatUpdateView,
     ProjectCreateView,
     ProjectDeleteView,
     ProjectDetailView,
@@ -22,9 +22,9 @@ urlpatterns = [
     path('<int:pk>/update/', ProjectUpdateView.as_view(), name='update'),
     path('<int:pk>/delete/', ProjectDeleteView.as_view(), name='delete'),
 
-    path('apartments/', ApartmentListView.as_view(), name='apartment-list'),
-    path('<int:project_pk>/apartments/create/', ApartmentCreateView.as_view(), name='apartment-create'),
-    path('apartments/<int:pk>/', ApartmentDetailView.as_view(), name='apartment-detail'),
-    path('apartments/<int:pk>/update/', ApartmentUpdateView.as_view(), name='apartment-update'),
-    path('apartments/<int:pk>/delete/', ApartmentDeleteView.as_view(), name='apartment-delete'),
+    path('flats/', FlatListView.as_view(), name='flat-list'),
+    path('<int:project_pk>/flats/create/', FlatCreateView.as_view(), name='flat-create'),
+    path('flats/<int:pk>/', FlatDetailView.as_view(), name='flat-detail'),
+    path('flats/<int:pk>/update/', FlatUpdateView.as_view(), name='flat-update'),
+    path('flats/<int:pk>/delete/', FlatDeleteView.as_view(), name='flat-delete'),
 ]

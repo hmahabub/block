@@ -78,10 +78,10 @@ class ProjectCost(models.Model):
     supplier = models.ForeignKey(
         'suppliers.Supplier', null=True, blank=True, on_delete=models.SET_NULL, related_name='project_costs'
     )
-    apartment = models.ForeignKey(
-        'projects.Apartment', null=True, blank=True, on_delete=models.SET_NULL, related_name='project_costs',
+    flat = models.ForeignKey(
+        'projects.Flat', null=True, blank=True, on_delete=models.SET_NULL, related_name='project_costs',
         help_text='Leave blank for a shared project cost — it will be allocated across every '
-                   'apartment in the project by saleable area. Set it for a cost that belongs to one apartment only.',
+                   'flat in the project by saleable area. Set it for a cost that belongs to one flat only.',
     )
     date = models.DateField()
     reference_no = models.CharField('Reference / Bill No.', max_length=100, blank=True)
@@ -107,7 +107,7 @@ class ProjectCost(models.Model):
         return reverse('costing:cost-detail', kwargs={'pk': self.pk})
 
     def save(self, *args, **kwargs):
-        self.allocation_required = self.apartment_id is None
+        self.allocation_required = self.flat_id is None
         self.payable_amount = self.amount - self.paid_amount
         if self.paid_amount <= 0:
             self.status = self.Status.UNPAID
@@ -122,19 +122,19 @@ class ProjectCost(models.Model):
             self.cost_allocations.all().delete()
 
     def _recompute_allocation(self):
-        """Area-based allocation: allocated = cost.amount * apartment_area / total_saleable_area."""
+        """Area-based allocation: allocated = cost.amount * flat_area / total_saleable_area."""
         self.cost_allocations.all().delete()
         total_area = self.project.total_saleable_area
         if not total_area:
             return
         allocations = []
-        for apartment in self.project.apartments.all():
-            rate = apartment.saleable_area / total_area
+        for flat in self.project.flats.all():
+            rate = flat.saleable_area / total_area
             allocations.append(CostAllocation(
                 project_cost=self,
                 project=self.project,
-                apartment=apartment,
-                apartment_area=apartment.saleable_area,
+                flat=flat,
+                flat_area=flat.saleable_area,
                 project_saleable_area=total_area,
                 allocation_rate=rate,
                 allocated_amount=self.amount * rate,
@@ -150,14 +150,14 @@ class ProjectCost(models.Model):
 class CostAllocation(models.Model):
     project_cost = models.ForeignKey(ProjectCost, on_delete=models.CASCADE, related_name='cost_allocations')
     project = models.ForeignKey('projects.Project', on_delete=models.CASCADE, related_name='cost_allocations')
-    apartment = models.ForeignKey('projects.Apartment', on_delete=models.CASCADE, related_name='cost_allocations')
-    apartment_area = models.DecimalField(max_digits=10, decimal_places=2)
+    flat = models.ForeignKey('projects.Flat', on_delete=models.CASCADE, related_name='cost_allocations')
+    flat_area = models.DecimalField(max_digits=10, decimal_places=2)
     project_saleable_area = models.DecimalField(max_digits=12, decimal_places=2)
     allocation_rate = models.DecimalField(max_digits=12, decimal_places=8)
     allocated_amount = models.DecimalField(max_digits=14, decimal_places=2)
 
     class Meta:
-        ordering = ['apartment__floor_no', 'apartment__apartment_no']
+        ordering = ['flat__floor_no', 'flat__flat_no']
 
     def __str__(self):
-        return f'{self.apartment} <- {self.project_cost} : {self.allocated_amount}'
+        return f'{self.flat} <- {self.project_cost} : {self.allocated_amount}'

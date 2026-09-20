@@ -5,7 +5,7 @@ from django.shortcuts import get_object_or_404
 from django.views.generic import TemplateView
 
 from customers.models import Customer
-from projects.models import Apartment, Project
+from projects.models import Flat, Project
 from suppliers.models import Supplier
 
 
@@ -40,25 +40,25 @@ class ProjectProfitabilityReportView(LoginRequiredMixin, TemplateView):
         return context
 
 
-class ApartmentWiseReportView(LoginRequiredMixin, TemplateView):
-    template_name = 'reports/apartment_wise.html'
+class FlatWiseReportView(LoginRequiredMixin, TemplateView):
+    template_name = 'reports/flat_wise.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         project_id = self.request.GET.get('project')
-        apartments = Apartment.objects.select_related('project').all()
+        flats = Flat.objects.select_related('project').all()
         if project_id:
-            apartments = apartments.filter(project_id=project_id)
+            flats = flats.filter(project_id=project_id)
         rows = []
-        for apartment in apartments:
-            sale = apartment.current_sale
+        for flat in flats:
+            sale = flat.current_sale
             rows.append({
-                'apartment': apartment,
+                'flat': flat,
                 'sale_value': sale.net_sale_value if sale else 0,
-                'cost': apartment.total_cost,
+                'cost': flat.total_cost,
                 'received': sale.received_amount if sale else 0,
                 'receivable': sale.receivable_amount if sale else 0,
-                'profit': apartment.profit,
+                'profit': flat.profit,
             })
         context['rows'] = rows
         context['projects'] = Project.objects.all()
@@ -84,7 +84,7 @@ class DuesReportView(LoginRequiredMixin, TemplateView):
         return context
 
 
-class ApartmentWisePDFView(LoginRequiredMixin, TemplateView):
+class FlatWisePDFView(LoginRequiredMixin, TemplateView):
     def get(self, request, project_pk, *args, **kwargs):
         from reportlab.lib import colors
         from reportlab.lib.pagesizes import A4, landscape
@@ -93,29 +93,29 @@ class ApartmentWisePDFView(LoginRequiredMixin, TemplateView):
         from reportlab.lib.styles import getSampleStyleSheet
 
         project = get_object_or_404(Project, pk=project_pk)
-        apartments = project.apartments.all()
+        flats = project.flats.all()
 
         response = HttpResponse(content_type='application/pdf')
-        response['Content-Disposition'] = f'inline; filename="{project.project_code}_apartment_report.pdf"'
+        response['Content-Disposition'] = f'inline; filename="{project.project_code}_flat_report.pdf"'
 
         doc = SimpleDocTemplate(response, pagesize=landscape(A4), topMargin=1.5 * cm, bottomMargin=1.5 * cm)
         styles = getSampleStyleSheet()
         elements = [
-            Paragraph(f'Apartment-Wise Report — {project.project_name} ({project.project_code})', styles['Title']),
+            Paragraph(f'Flat-Wise Report — {project.project_name} ({project.project_code})', styles['Title']),
         ]
 
-        table_data = [['Apartment', 'Floor', 'Area (sqft)', 'Sale Value', 'Cost', 'Received', 'Receivable', 'Profit']]
-        for apartment in apartments:
-            sale = apartment.current_sale
+        table_data = [['Flat', 'Floor', 'Area (sqft)', 'Sale Value', 'Cost', 'Received', 'Receivable', 'Profit']]
+        for flat in flats:
+            sale = flat.current_sale
             table_data.append([
-                apartment.apartment_no,
-                str(apartment.floor_no),
-                f'{apartment.saleable_area:,.2f}',
+                flat.flat_no,
+                str(flat.floor_no),
+                f'{flat.saleable_area:,.2f}',
                 f'{sale.net_sale_value:,.2f}' if sale else '-',
-                f'{apartment.total_cost:,.2f}',
+                f'{flat.total_cost:,.2f}',
                 f'{sale.received_amount:,.2f}' if sale else '-',
                 f'{sale.receivable_amount:,.2f}' if sale else '-',
-                f'{apartment.profit:,.2f}' if apartment.profit is not None else '-',
+                f'{flat.profit:,.2f}' if flat.profit is not None else '-',
             ])
 
         table = Table(table_data, repeatRows=1)

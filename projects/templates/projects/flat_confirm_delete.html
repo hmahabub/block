@@ -1,21 +1,21 @@
 {% extends "base.html" %}
 
-{% block title %}Delete Apartment{% endblock %}
+{% block title %}Delete Flat{% endblock %}
 
 {% block content %}
 <div class="card border-danger">
     <div class="card-header bg-danger text-white">
-        <h3 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Confirm Apartment Deletion</h3>
+        <h3 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Confirm Flat Deletion</h3>
     </div>
     <div class="card-body">
-        <p>You are about to permanently delete the following apartment:</p>
+        <p>You are about to permanently delete the following flat:</p>
         <div class="alert alert-warning">
             <h5>{{ object }}</h5>
         </div>
         <div class="alert alert-danger">
             <strong>Warning:</strong> This action cannot be undone.
             {% if object.sales.exists %}
-            <br>This apartment has sale record(s) linked to it.
+            <br>This flat has sale record(s) linked to it.
             {% endif %}
         </div>
         <form method="post">
@@ -23,7 +23,7 @@
             <button type="submit" class="btn btn-danger">
                 <i class="fas fa-trash"></i> Confirm Delete
             </button>
-            <a href="{% url 'projects:apartment-detail' object.pk %}" class="btn btn-secondary">
+            <a href="{% url 'projects:flat-detail' object.pk %}" class="btn btn-secondary">
                 <i class="fas fa-times"></i> Cancel
             </a>
         </form>

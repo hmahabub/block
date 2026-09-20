@@ -14,7 +14,7 @@
     <div class="card-body">
         <form method="get" class="row g-3">
             <div class="col-md-4">
-                <input type="text" name="q" class="form-control" placeholder="Search by name, code, phone, email..."
+                <input type="text" name="q" class="form-control" placeholder="Search by name, phone, email..."
                        value="{{ request.GET.q }}">
             </div>
             <div class="col-md-2">
@@ -32,7 +32,6 @@
             <table class="table table-hover">
                 <thead class="table-light">
                     <tr>
-                        <th>Code</th>
                         <th>Name</th>
                         <th>Phone</th>
                         <th>Email</th>
@@ -42,9 +41,8 @@
                 <tbody>
                     {% for customer in object_list %}
                     <tr>
-                        <td>{{ customer.customer_code }}</td>
                         <td>{{ customer.name }}</td>
-                        <td>{{ customer.phone|default:"-" }}</td>
+                        <td>{{ customer.phone }}</td>
                         <td>{{ customer.email|default:"-" }}</td>
                         <td>
                             <div class="btn-group btn-group-sm">
@@ -54,15 +52,12 @@
                                 <a href="{% url 'customers:update' customer.pk %}" class="btn btn-warning" title="Edit">
                                     <i class="fas fa-edit"></i>
                                 </a>
-                                <a href="{% url 'customers:delete' customer.pk %}" class="btn btn-danger" title="Delete">
-                                    <i class="fas fa-trash"></i>
-                                </a>
                             </div>
                         </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="5" class="text-center py-4">No customers found</td>
+                        <td colspan="4" class="text-center py-4">No customers found</td>
                     </tr>
                     {% endfor %}
                 </tbody>

@@ -1,9 +1,9 @@
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.db.models import Q
 from django.urls import reverse_lazy
-from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
+from django.views.generic import CreateView, DetailView, ListView, UpdateView
 
-from core.mixins import CreateAuditMixin, DeleteAuditMixin, UpdateAuditMixin
+from core.mixins import CreateAuditMixin, UpdateAuditMixin
 
 from .forms import SupplierForm
 from .models import Supplier
@@ -54,10 +54,3 @@ class SupplierUpdateView(PermissionRequiredMixin, UpdateAuditMixin, UpdateView):
 
     def get_success_url(self):
         return reverse_lazy('suppliers:detail', kwargs={'pk': self.object.pk})
-
-
-class SupplierDeleteView(PermissionRequiredMixin, DeleteAuditMixin, DeleteView):
-    model = Supplier
-    template_name = 'suppliers/supplier_confirm_delete.html'
-    success_url = reverse_lazy('suppliers:list')
-    permission_required = 'suppliers.delete_supplier'

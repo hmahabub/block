@@ -18,12 +18,12 @@ class ProjectBudgetAdmin(admin.ModelAdmin):
 
 @admin.register(ProjectCost)
 class ProjectCostAdmin(admin.ModelAdmin):
-    list_display = ('project', 'cost_category', 'apartment', 'amount', 'paid_amount', 'payable_amount', 'status', 'date')
+    list_display = ('project', 'cost_category', 'flat', 'amount', 'paid_amount', 'payable_amount', 'status', 'date')
     list_filter = ('status', 'project', 'cost_category')
     search_fields = ('description', 'reference_no')
 
 
 @admin.register(CostAllocation)
 class CostAllocationAdmin(admin.ModelAdmin):
-    list_display = ('project_cost', 'apartment', 'allocated_amount')
+    list_display = ('project_cost', 'flat', 'allocated_amount')
     list_filter = ('project',)

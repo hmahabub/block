@@ -2,7 +2,7 @@ from django.core.validators import RegexValidator
 from django.db import models
 from django.urls import reverse
 
-from core.numbering import generate_year_code
+from core.numbering import generate_dashed_code
 
 phone_regex = RegexValidator(
     regex=r'^\+?1?\d{9,15}$',
@@ -32,7 +32,7 @@ class Supplier(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.supplier_code:
-            self.supplier_code = generate_year_code('supplier', 'S')
+            self.supplier_code = generate_dashed_code('supplier', 'S')
         super().save(*args, **kwargs)
 
     def get_absolute_url(self):

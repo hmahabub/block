@@ -46,7 +46,7 @@
                 <p class="text-muted mb-1">{{ project.project_code }} &middot; {{ project.location|default:"-" }}</p>
                 <span class="badge bg-secondary mb-2">{{ project.get_status_display }}</span>
                 <ul class="list-unstyled small mb-3">
-                    <li><i class="fas fa-door-open"></i> {{ project.apartment_count }} apartments &middot; {{ project.sold_apartment_count }} sold</li>
+                    <li><i class="fas fa-door-open"></i> {{ project.flat_count }} flats &middot; {{ project.sold_flat_count }} sold</li>
                     <li><i class="fas fa-ruler-combined"></i> {{ project.total_saleable_area }} sqft</li>
                     <li><i class="fas fa-coins"></i> Budget {{ project.budget_amount|taka }}</li>
                 </ul>

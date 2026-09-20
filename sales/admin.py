@@ -1,13 +1,13 @@
 from django.contrib import admin
 
-from .models import ApartmentSale, CustomerPayment
+from .models import CustomerPayment, FlatSale
 
 
-@admin.register(ApartmentSale)
-class ApartmentSaleAdmin(admin.ModelAdmin):
-    list_display = ('sale_no', 'apartment', 'customer', 'net_sale_value', 'received_amount', 'receivable_amount', 'status')
+@admin.register(FlatSale)
+class FlatSaleAdmin(admin.ModelAdmin):
+    list_display = ('sale_no', 'flat', 'customer', 'net_sale_value', 'received_amount', 'receivable_amount', 'status')
     list_filter = ('status', 'project')
-    search_fields = ('sale_no', 'customer__name', 'apartment__apartment_no')
+    search_fields = ('sale_no', 'customer__name', 'flat__flat_no')
 
 
 @admin.register(CustomerPayment)

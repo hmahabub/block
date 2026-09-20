@@ -5,26 +5,26 @@ from django.utils import timezone
 from django.views.generic import CreateView, DetailView, ListView, UpdateView
 
 from core.mixins import CreateAuditMixin, UpdateAuditMixin
-from projects.models import Apartment, Project
+from projects.models import Flat, Project
 
-from .forms import ApartmentSaleForm, CustomerPaymentForm
-from .models import ApartmentSale, CustomerPayment
+from .forms import CustomerPaymentForm, FlatSaleForm
+from .models import CustomerPayment, FlatSale
 
 
-class ApartmentSaleListView(LoginRequiredMixin, ListView):
-    model = ApartmentSale
+class FlatSaleListView(LoginRequiredMixin, ListView):
+    model = FlatSale
     template_name = 'sales/sale_list.html'
     context_object_name = 'object_list'
     paginate_by = 20
 
     def get_queryset(self):
-        queryset = super().get_queryset().select_related('project', 'apartment', 'customer')
+        queryset = super().get_queryset().select_related('project', 'flat', 'customer')
         q = self.request.GET.get('q')
         project_id = self.request.GET.get('project')
         status = self.request.GET.get('status')
         if q:
             queryset = queryset.filter(
-                Q(sale_no__icontains=q) | Q(customer__name__icontains=q) | Q(apartment__apartment_no__icontains=q)
+                Q(sale_no__icontains=q) | Q(customer__name__icontains=q) | Q(flat__flat_no__icontains=q)
             )
         if project_id:
             queryset = queryset.filter(project_id=project_id)
@@ -35,12 +35,12 @@ class ApartmentSaleListView(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['projects'] = Project.objects.all()
-        context['status_choices'] = ApartmentSale.Status.choices
+        context['status_choices'] = FlatSale.Status.choices
         return context
 
 
-class ApartmentSaleDetailView(LoginRequiredMixin, DetailView):
-    model = ApartmentSale
+class FlatSaleDetailView(LoginRequiredMixin, DetailView):
+    model = FlatSale
     template_name = 'sales/sale_detail.html'
     context_object_name = 'object'
 
@@ -50,22 +50,22 @@ class ApartmentSaleDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
-class ApartmentSaleCreateView(PermissionRequiredMixin, CreateAuditMixin, CreateView):
-    model = ApartmentSale
-    form_class = ApartmentSaleForm
+class FlatSaleCreateView(PermissionRequiredMixin, CreateAuditMixin, CreateView):
+    model = FlatSale
+    form_class = FlatSaleForm
     template_name = 'sales/sale_form.html'
-    permission_required = 'sales.add_apartmentsale'
+    permission_required = 'sales.add_flatsale'
 
     def get_initial(self):
         initial = super().get_initial()
         initial['sale_date'] = timezone.now().date()
-        apartment_id = self.request.GET.get('apartment')
-        if apartment_id:
+        flat_id = self.request.GET.get('flat')
+        if flat_id:
             try:
-                apartment = Apartment.objects.get(pk=apartment_id)
-                initial['apartment'] = apartment
-                initial['base_price'] = apartment.base_price
-            except Apartment.DoesNotExist:
+                flat = Flat.objects.get(pk=flat_id)
+                initial['flat'] = flat
+                initial['base_price'] = flat.base_price
+            except Flat.DoesNotExist:
                 pass
         return initial
 
@@ -73,11 +73,11 @@ class ApartmentSaleCreateView(PermissionRequiredMixin, CreateAuditMixin, CreateV
         return reverse_lazy('sales:detail', kwargs={'pk': self.object.pk})
 
 
-class ApartmentSaleUpdateView(PermissionRequiredMixin, UpdateAuditMixin, UpdateView):
-    model = ApartmentSale
-    form_class = ApartmentSaleForm
+class FlatSaleUpdateView(PermissionRequiredMixin, UpdateAuditMixin, UpdateView):
+    model = FlatSale
+    form_class = FlatSaleForm
     template_name = 'sales/sale_form.html'
-    permission_required = 'sales.change_apartmentsale'
+    permission_required = 'sales.change_flatsale'
 
     def get_success_url(self):
         return reverse_lazy('sales:detail', kwargs={'pk': self.object.pk})
@@ -90,7 +90,7 @@ class CustomerPaymentListView(LoginRequiredMixin, ListView):
     paginate_by = 30
 
     def get_queryset(self):
-        queryset = super().get_queryset().select_related('customer', 'sale', 'sale__apartment')
+        queryset = super().get_queryset().select_related('customer', 'sale', 'sale__flat')
         customer_id = self.request.GET.get('customer')
         if customer_id:
             queryset = queryset.filter(customer_id=customer_id)
@@ -110,9 +110,9 @@ class CustomerPaymentCreateView(PermissionRequiredMixin, CreateAuditMixin, Creat
         sale_id = self.request.GET.get('sale')
         if sale_id:
             try:
-                sale = ApartmentSale.objects.get(pk=sale_id)
+                sale = FlatSale.objects.get(pk=sale_id)
                 initial['sale'] = sale
                 initial['customer'] = sale.customer
-            except ApartmentSale.DoesNotExist:
+            except FlatSale.DoesNotExist:
                 pass
         return initial

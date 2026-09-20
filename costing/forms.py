@@ -27,7 +27,7 @@ class ProjectCostForm(forms.ModelForm):
     class Meta:
         model = ProjectCost
         fields = [
-            'project', 'cost_category', 'supplier', 'apartment', 'date',
+            'project', 'cost_category', 'supplier', 'flat', 'date',
             'reference_no', 'description', 'amount', 'notes',
         ]
         widgets = {
@@ -37,5 +37,5 @@ class ProjectCostForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['apartment'].required = False
+        self.fields['flat'].required = False
         self.fields['supplier'].required = False

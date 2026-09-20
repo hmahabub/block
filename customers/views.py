@@ -1,9 +1,9 @@
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.db.models import Q
 from django.urls import reverse_lazy
-from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
+from django.views.generic import CreateView, DetailView, ListView, UpdateView
 
-from core.mixins import CreateAuditMixin, DeleteAuditMixin, UpdateAuditMixin
+from core.mixins import CreateAuditMixin, UpdateAuditMixin
 
 from .forms import CustomerForm
 from .models import Customer
@@ -21,7 +21,6 @@ class CustomerListView(LoginRequiredMixin, ListView):
         if q:
             queryset = queryset.filter(
                 Q(name__icontains=q)
-                | Q(customer_code__icontains=q)
                 | Q(phone__icontains=q)
                 | Q(email__icontains=q)
             )
@@ -35,7 +34,7 @@ class CustomerDetailView(LoginRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['sales'] = self.object.sales.select_related('apartment', 'project').all()
+        context['sales'] = self.object.sales.select_related('flat', 'project').all()
         return context
 
 
@@ -57,10 +56,3 @@ class CustomerUpdateView(PermissionRequiredMixin, UpdateAuditMixin, UpdateView):
 
     def get_success_url(self):
         return reverse_lazy('customers:detail', kwargs={'pk': self.object.pk})
-
-
-class CustomerDeleteView(PermissionRequiredMixin, DeleteAuditMixin, DeleteView):
-    model = Customer
-    template_name = 'customers/customer_confirm_delete.html'
-    success_url = reverse_lazy('customers:list')
-    permission_required = 'customers.delete_customer'

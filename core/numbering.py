@@ -34,6 +34,13 @@ def generate_code(series, infix, width=3):
     return f"{prefix}-{n:0{width}d}"
 
 
+def generate_dashed_code(series, infix, width=3):
+    """e.g. generate_dashed_code('supplier', 'S') -> 'AB-S-001'. No year component."""
+    prefix = f"{settings.COMPANY_CODE_PREFIX}-{infix}"
+    n = next_number(f"{series}:{prefix}")
+    return f"{prefix}-{n:0{width}d}"
+
+
 def generate_slash_code(series, width=5):
     """e.g. generate_slash_code('sale') -> 'AB/2026/00001'."""
     year = timezone.now().year

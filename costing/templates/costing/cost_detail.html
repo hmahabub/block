@@ -10,7 +10,7 @@
         <p class="text-muted mb-0">
             <a href="{% url 'projects:detail' object.project.pk %}">{{ object.project }}</a>
             &middot; {{ object.date }}
-            {% if object.apartment %}&middot; Direct cost for {{ object.apartment }}{% else %}&middot; Shared project cost{% endif %}
+            {% if object.flat %}&middot; Direct cost for {{ object.flat }}{% else %}&middot; Shared project cost{% endif %}
         </p>
     </div>
     <div>
@@ -68,17 +68,17 @@
 
 {% if object.allocation_required %}
 <div class="card">
-    <div class="card-header">Area-Based Allocation Across Apartments</div>
+    <div class="card-header">Area-Based Allocation Across Flats</div>
     <div class="card-body">
         {% if allocations %}
         <div class="table-responsive">
             <table class="table table-sm">
-                <thead class="table-light"><tr><th>Apartment</th><th>Area (sqft)</th><th>Allocation Rate</th><th>Allocated Amount</th></tr></thead>
+                <thead class="table-light"><tr><th>Flat</th><th>Area (sqft)</th><th>Allocation Rate</th><th>Allocated Amount</th></tr></thead>
                 <tbody>
                     {% for allocation in allocations %}
                     <tr>
-                        <td><a href="{% url 'projects:apartment-detail' allocation.apartment.pk %}">{{ allocation.apartment }}</a></td>
-                        <td>{{ allocation.apartment_area }}</td>
+                        <td><a href="{% url 'projects:flat-detail' allocation.flat.pk %}">{{ allocation.flat }}</a></td>
+                        <td>{{ allocation.flat_area }}</td>
                         <td>{{ allocation.allocation_rate|floatformat:6 }}</td>
                         <td>{{ allocation.allocated_amount|taka }}</td>
                     </tr>
@@ -87,7 +87,7 @@
             </table>
         </div>
         {% else %}
-        <p class="text-muted mb-0">No allocation yet — the project has no apartments or no saleable area defined.</p>
+        <p class="text-muted mb-0">No allocation yet — the project has no flats or no saleable area defined.</p>
         {% endif %}
     </div>
 </div>

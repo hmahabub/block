@@ -45,20 +45,20 @@ class Project(models.Model):
         return reverse('projects:detail', kwargs={'pk': self.pk})
 
     @property
-    def apartment_count(self):
-        return self.apartments.count()
+    def flat_count(self):
+        return self.flats.count()
 
     @property
-    def sold_apartment_count(self):
-        return self.apartments.filter(status=Apartment.Status.SOLD).count()
+    def sold_flat_count(self):
+        return self.flats.filter(status=Flat.Status.SOLD).count()
 
     @property
-    def available_apartment_count(self):
-        return self.apartments.filter(status=Apartment.Status.AVAILABLE).count()
+    def available_flat_count(self):
+        return self.flats.filter(status=Flat.Status.AVAILABLE).count()
 
     @property
-    def booked_apartment_count(self):
-        return self.apartments.filter(status=Apartment.Status.BOOKED).count()
+    def booked_flat_count(self):
+        return self.flats.filter(status=Flat.Status.BOOKED).count()
 
     @property
     def total_cost(self):
@@ -95,7 +95,7 @@ class Project(models.Model):
         return 0
 
 
-class Apartment(models.Model):
+class Flat(models.Model):
     class Status(models.TextChoices):
         AVAILABLE = 'AVAILABLE', 'Available'
         BOOKED = 'BOOKED', 'Booked'
@@ -103,7 +103,7 @@ class Apartment(models.Model):
         CANCELLED = 'CANCELLED', 'Cancelled'
         HANDED_OVER = 'HANDED_OVER', 'Handed Over'
 
-    class ApartmentType(models.TextChoices):
+    class FlatType(models.TextChoices):
         STUDIO = 'STUDIO', 'Studio'
         ONE_BED = '1BED', '1 Bedroom'
         TWO_BED = '2BED', '2 Bedroom'
@@ -114,10 +114,11 @@ class Apartment(models.Model):
         COMMERCIAL = 'COMMERCIAL', 'Commercial'
         OTHER = 'OTHER', 'Other'
 
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='apartments')
-    apartment_no = models.CharField(max_length=30)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='flats')
+    flat_no = models.CharField(max_length=30)
     floor_no = models.IntegerField()
-    apartment_type = models.CharField(max_length=20, choices=ApartmentType.choices, default=ApartmentType.TWO_BED)
+    flat_type = models.CharField(max_length=20, choices=FlatType.choices, default=FlatType.TWO_BED)
+    facing = models.CharField(max_length=50, blank=True)
     saleable_area = models.DecimalField('Saleable Area (sqft)', max_digits=10, decimal_places=2)
     base_price = models.DecimalField(max_digits=14, decimal_places=2, validators=[MinValueValidator(0)])
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.AVAILABLE)
@@ -126,17 +127,17 @@ class Apartment(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['project', 'floor_no', 'apartment_no']
-        unique_together = ('project', 'apartment_no')
+        ordering = ['project', 'floor_no', 'flat_no']
+        unique_together = ('project', 'flat_no')
         indexes = [
             models.Index(fields=['status']),
         ]
 
     def __str__(self):
-        return f'{self.project.project_code} / {self.apartment_no}'
+        return f'{self.project.project_code} / {self.flat_no}'
 
     def get_absolute_url(self):
-        return reverse('projects:apartment-detail', kwargs={'pk': self.pk})
+        return reverse('projects:flat-detail', kwargs={'pk': self.pk})
 
     @property
     def allocated_cost(self):

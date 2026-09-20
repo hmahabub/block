@@ -1,13 +1,13 @@
 from django import forms
 
-from .models import ApartmentSale, CustomerPayment
+from .models import CustomerPayment, FlatSale
 
 
-class ApartmentSaleForm(forms.ModelForm):
+class FlatSaleForm(forms.ModelForm):
     class Meta:
-        model = ApartmentSale
+        model = FlatSale
         fields = [
-            'apartment', 'customer', 'sale_date', 'base_price',
+            'flat', 'customer', 'sale_date', 'base_price',
             'other_charges', 'discount', 'status', 'notes',
         ]
         widgets = {
@@ -18,7 +18,7 @@ class ApartmentSaleForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if not self.instance.pk:
-            self.fields['apartment'].queryset = self.fields['apartment'].queryset.filter(
+            self.fields['flat'].queryset = self.fields['flat'].queryset.filter(
                 status__in=['AVAILABLE', 'BOOKED']
             )
 

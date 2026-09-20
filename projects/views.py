@@ -6,8 +6,8 @@ from django.views.generic import CreateView, DeleteView, DetailView, ListView, U
 
 from core.mixins import CreateAuditMixin, DeleteAuditMixin, UpdateAuditMixin
 
-from .forms import ApartmentForm, ProjectForm
-from .models import Apartment, Project
+from .forms import FlatForm, ProjectForm
+from .models import Flat, Project
 
 
 class ProjectListView(LoginRequiredMixin, ListView):
@@ -39,7 +39,7 @@ class ProjectDetailView(LoginRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['apartments'] = self.object.apartments.all()
+        context['flats'] = self.object.flats.all()
         return context
 
 
@@ -70,9 +70,9 @@ class ProjectDeleteView(PermissionRequiredMixin, DeleteAuditMixin, DeleteView):
     permission_required = 'projects.delete_project'
 
 
-class ApartmentListView(LoginRequiredMixin, ListView):
-    model = Apartment
-    template_name = 'projects/apartment_list.html'
+class FlatListView(LoginRequiredMixin, ListView):
+    model = Flat
+    template_name = 'projects/flat_list.html'
     context_object_name = 'object_list'
     paginate_by = 30
 
@@ -82,7 +82,7 @@ class ApartmentListView(LoginRequiredMixin, ListView):
         project_id = self.request.GET.get('project')
         status = self.request.GET.get('status')
         if q:
-            queryset = queryset.filter(Q(apartment_no__icontains=q) | Q(project__project_name__icontains=q))
+            queryset = queryset.filter(Q(flat_no__icontains=q) | Q(project__project_name__icontains=q))
         if project_id:
             queryset = queryset.filter(project_id=project_id)
         if status:
@@ -92,13 +92,13 @@ class ApartmentListView(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['projects'] = Project.objects.all()
-        context['status_choices'] = Apartment.Status.choices
+        context['status_choices'] = Flat.Status.choices
         return context
 
 
-class ApartmentDetailView(LoginRequiredMixin, DetailView):
-    model = Apartment
-    template_name = 'projects/apartment_detail.html'
+class FlatDetailView(LoginRequiredMixin, DetailView):
+    model = Flat
+    template_name = 'projects/flat_detail.html'
     context_object_name = 'object'
 
     def get_context_data(self, **kwargs):
@@ -109,11 +109,11 @@ class ApartmentDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
-class ApartmentCreateView(PermissionRequiredMixin, CreateAuditMixin, CreateView):
-    model = Apartment
-    form_class = ApartmentForm
-    template_name = 'projects/apartment_form.html'
-    permission_required = 'projects.add_apartment'
+class FlatCreateView(PermissionRequiredMixin, CreateAuditMixin, CreateView):
+    model = Flat
+    form_class = FlatForm
+    template_name = 'projects/flat_form.html'
+    permission_required = 'projects.add_flat'
 
     def dispatch(self, request, *args, **kwargs):
         self.project = get_object_or_404(Project, pk=kwargs['project_pk'])
@@ -132,11 +132,11 @@ class ApartmentCreateView(PermissionRequiredMixin, CreateAuditMixin, CreateView)
         return reverse_lazy('projects:detail', kwargs={'pk': self.project.pk})
 
 
-class ApartmentUpdateView(PermissionRequiredMixin, UpdateAuditMixin, UpdateView):
-    model = Apartment
-    form_class = ApartmentForm
-    template_name = 'projects/apartment_form.html'
-    permission_required = 'projects.change_apartment'
+class FlatUpdateView(PermissionRequiredMixin, UpdateAuditMixin, UpdateView):
+    model = Flat
+    form_class = FlatForm
+    template_name = 'projects/flat_form.html'
+    permission_required = 'projects.change_flat'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -144,13 +144,13 @@ class ApartmentUpdateView(PermissionRequiredMixin, UpdateAuditMixin, UpdateView)
         return context
 
     def get_success_url(self):
-        return reverse_lazy('projects:apartment-detail', kwargs={'pk': self.object.pk})
+        return reverse_lazy('projects:flat-detail', kwargs={'pk': self.object.pk})
 
 
-class ApartmentDeleteView(PermissionRequiredMixin, DeleteAuditMixin, DeleteView):
-    model = Apartment
-    template_name = 'projects/apartment_confirm_delete.html'
-    permission_required = 'projects.delete_apartment'
+class FlatDeleteView(PermissionRequiredMixin, DeleteAuditMixin, DeleteView):
+    model = Flat
+    template_name = 'projects/flat_confirm_delete.html'
+    permission_required = 'projects.delete_flat'
 
     def get_success_url(self):
         return reverse_lazy('projects:detail', kwargs={'pk': self.object.project.pk})

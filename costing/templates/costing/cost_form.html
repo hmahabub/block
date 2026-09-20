@@ -16,7 +16,7 @@
                     {{ form.project|as_crispy_field }}
                     {{ form.cost_category|as_crispy_field }}
                     {{ form.supplier|as_crispy_field }}
-                    {{ form.apartment|as_crispy_field }}
+                    {{ form.flat|as_crispy_field }}
                 </div>
                 <div class="col-md-6">
                     {{ form.date|as_crispy_field }}
@@ -32,8 +32,8 @@
             </div>
             {% if not object %}
             <div class="alert alert-info">
-                <i class="fas fa-info-circle"></i> Leave <strong>Apartment</strong> blank for a shared project cost —
-                it will be automatically allocated across every apartment in the project by saleable area.
+                <i class="fas fa-info-circle"></i> Leave <strong>Flat</strong> blank for a shared project cost —
+                it will be automatically allocated across every flat in the project by saleable area.
                 Paid amount is tracked separately through <a href="{% url 'payables:create' %}">Supplier Payments</a> once this cost is saved.
             </div>
             {% endif %}

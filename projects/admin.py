@@ -1,10 +1,10 @@
 from django.contrib import admin
 
-from .models import Apartment, Project
+from .models import Flat, Project
 
 
-class ApartmentInline(admin.TabularInline):
-    model = Apartment
+class FlatInline(admin.TabularInline):
+    model = Flat
     extra = 0
 
 
@@ -13,11 +13,11 @@ class ProjectAdmin(admin.ModelAdmin):
     list_display = ('project_code', 'project_name', 'status', 'floor_no', 'total_saleable_area')
     search_fields = ('project_code', 'project_name', 'location')
     list_filter = ('status',)
-    inlines = [ApartmentInline]
+    inlines = [FlatInline]
 
 
-@admin.register(Apartment)
-class ApartmentAdmin(admin.ModelAdmin):
-    list_display = ('project', 'apartment_no', 'floor_no', 'apartment_type', 'status', 'base_price')
-    list_filter = ('status', 'apartment_type', 'project')
-    search_fields = ('apartment_no', 'project__project_name')
+@admin.register(Flat)
+class FlatAdmin(admin.ModelAdmin):
+    list_display = ('project', 'flat_no', 'floor_no', 'flat_type', 'facing', 'status', 'base_price')
+    list_filter = ('status', 'flat_type', 'project')
+    search_fields = ('flat_no', 'project__project_name')
