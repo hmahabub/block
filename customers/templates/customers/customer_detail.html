@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% load core_tags %}
+
+{% block title %}{{ object.name }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h4 class="mb-0"><i class="fas fa-user"></i> {{ object.name }} <small class="text-muted">{{ object.customer_code }}</small></h4>
+        <div>
+            <a href="{% url 'customers:update' object.pk %}" class="btn btn-warning">
+                <i class="fas fa-edit"></i> Edit
+            </a>
+            <a href="{% url 'customers:list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to List
+            </a>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <table class="table table-bordered">
+                    <tr><th width="35%">Phone</th><td>{{ object.phone|default:"-" }}</td></tr>
+                    <tr><th>Email</th><td>{{ object.email|default:"-" }}</td></tr>
+                    <tr><th>NID / Passport</th><td>{{ object.identification_no|default:"-" }}</td></tr>
+                    <tr><th>Address</th><td>{{ object.address|linebreaks|default:"-" }}</td></tr>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Receivable Summary</h5>
+                        <h3 class="text-danger">{{ object.total_receivable|taka }}</h3>
+                        <p class="text-muted mb-0">Total outstanding across all bookings</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-4">
+            <h5>Apartment Sales ({{ sales.count }})</h5>
+            {% if sales %}
+            <div class="table-responsive">
+                <table class="table table-sm table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Sale No.</th>
+                            <th>Project</th>
+                            <th>Apartment</th>
+                            <th>Net Sale Value</th>
+                            <th>Received</th>
+                            <th>Receivable</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for sale in sales %}
+                        <tr>
+                            <td><a href="{% url 'sales:detail' sale.pk %}">{{ sale.sale_no }}</a></td>
+                            <td>{{ sale.project }}</td>
+                            <td>{{ sale.apartment.apartment_no }}</td>
+                            <td>{{ sale.net_sale_value|taka }}</td>
+                            <td>{{ sale.received_amount|taka }}</td>
+                            <td>{{ sale.receivable_amount|taka }}</td>
+                            <td>{{ sale.get_status_display }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">No apartment sales recorded for this customer yet.</div>
+            {% endif %}
+        </div>
+
+        {% if object.notes %}
+        <div class="mt-4">
+            <h5>Notes</h5>
+            <div class="card"><div class="card-body">{{ object.notes|linebreaks }}</div></div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

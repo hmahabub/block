@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-4">
+        <div class="card mt-5">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0 text-center"><i class="fas fa-lock"></i> BLOCK ERP Login</h4>
+            </div>
+            <div class="card-body">
+                {% if form.errors %}
+                <div class="alert alert-danger">Your username and password didn't match. Please try again.</div>
+                {% endif %}
+
+                {% if next %}
+                    {% if user.is_authenticated %}
+                    <div class="alert alert-warning">Your account doesn't have access to this page.</div>
+                    {% else %}
+                    <div class="alert alert-info">Please login to see this page.</div>
+                    {% endif %}
+                {% endif %}
+
+                <form method="post" action="{% url 'login' %}">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="id_username" class="form-label">{{ form.username.label_tag }}</label>
+                        <input type="text" name="username" autofocus autocapitalize="none"
+                               autocomplete="username" maxlength="150"
+                               class="form-control" required id="id_username">
+                    </div>
+                    <div class="mb-3">
+                        <label for="id_password" class="form-label">{{ form.password.label_tag }}</label>
+                        <input type="password" name="password"
+                               autocomplete="current-password"
+                               class="form-control" required id="id_password">
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-sign-in-alt"></i> Login
+                    </button>
+                    <input type="hidden" name="next" value="{{ next }}">
+                </form>
+
+                <div class="text-center mt-3">
+                    <a href="{% url 'password_reset' %}">Forgot password?</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% load core_tags %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<div class="jumbotron mt-4">
+    <h1 class="display-5">Welcome to BLOCK ERP</h1>
+    <p class="lead">Real estate project costing, apartment sales, receivables, payables and profitability — powered by NOORSYS.</p>
+    <hr class="my-4">
+
+    {% if user.is_authenticated %}
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header"><h5 class="mb-0">Recent Activity</h5></div>
+                <div class="card-body">
+                    <ul class="list-group">
+                        {% for activity in activity_logs %}
+                        <li class="list-group-item">{{ activity }}</li>
+                        {% empty %}
+                        <li class="list-group-item">No recent activity</li>
+                        {% endfor %}
+                    </ul>
+                    <a href="{% url 'activity_log:list' %}" class="d-inline-block mt-2">See more &raquo;</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header"><h5 class="mb-0">Quick Stats</h5></div>
+                <div class="card-body">
+                    <div class="row text-center stat-tile mb-2">
+                        <div class="col-4 border"><h3>{{ project_count }}</h3><p class="mb-0">Projects</p></div>
+                        <div class="col-4 border"><h3>{{ customer_count }}</h3><p class="mb-0">Customers</p></div>
+                        <div class="col-4 border"><h3>{{ supplier_count }}</h3><p class="mb-0">Suppliers</p></div>
+                    </div>
+                    <div class="row text-center stat-tile mb-2">
+                        <div class="col-4 border"><h3>{{ apartment_count }}</h3><p class="mb-0">Apartments</p></div>
+                        <div class="col-4 border"><h3>{{ sold_count }}</h3><p class="mb-0">Sold</p></div>
+                        <div class="col-4 border"><h3>{{ available_count }}</h3><p class="mb-0">Available</p></div>
+                    </div>
+                    <div class="row text-center stat-tile mb-2">
+                        <div class="col-4 border"><h5>{{ total_cost|taka }}</h5><p class="mb-0">Total Cost</p></div>
+                        <div class="col-4 border"><h5>{{ total_sales|taka }}</h5><p class="mb-0">Total Sales</p></div>
+                        <div class="col-4 border"><h5>{{ total_received|taka }}</h5><p class="mb-0">Received</p></div>
+                    </div>
+                    <div class="row text-center stat-tile">
+                        <div class="col-4 border"><h5>{{ total_receivable|taka }}</h5><p class="mb-0">Receivable</p></div>
+                        <div class="col-4 border"><h5>{{ total_payable|taka }}</h5><p class="mb-0">Payable</p></div>
+                        <div class="col-4 border"><h5 class="{% if profit >= 0 %}text-success{% else %}text-danger{% endif %}">{{ profit|taka }}</h5><p class="mb-0">Profit</p></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <hr>
+
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-building"></i> Projects</h5>
+                    <p class="card-text">Manage buildings, floors and apartments.</p>
+                    <a href="{% url 'projects:list' %}" class="btn btn-primary">Go to Projects</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-users"></i> Customers</h5>
+                    <p class="card-text">Manage customer contacts and bookings.</p>
+                    <a href="{% url 'customers:list' %}" class="btn btn-primary">Go to Customers</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-truck"></i> Suppliers</h5>
+                    <p class="card-text">Manage suppliers and contractors.</p>
+                    <a href="{% url 'suppliers:list' %}" class="btn btn-primary">Go to Suppliers</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-coins"></i> Costing</h5>
+                    <p class="card-text">Project costs, budgets and area-based allocation.</p>
+                    <a href="{% url 'costing:cost-list' %}" class="btn btn-primary">Go to Costing</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-dollar-sign"></i> Sales</h5>
+                    <p class="card-text">Apartment sales and customer payments.</p>
+                    <a href="{% url 'sales:list' %}" class="btn btn-primary">Go to Sales</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-hand-holding-usd"></i> Payables</h5>
+                    <p class="card-text">Supplier payments against project costs.</p>
+                    <a href="{% url 'payables:list' %}" class="btn btn-primary">Go to Payables</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-book"></i> Books</h5>
+                    <p class="card-text">Independent Cash Book and Bank Book.</p>
+                    <a class="btn btn-primary" href="{% url 'books:cashbook_list' %}">Cash Book</a>&nbsp;
+                    <a class="btn btn-secondary" href="{% url 'books:bankbook_list' %}">Bank Book</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-chart-line"></i> Reports</h5>
+                    <p class="card-text">Project, apartment and dues reports.</p>
+                    <a href="{% url 'reports:index' %}" class="btn btn-primary">Go to Reports</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <p>Please log in to access the system</p>
+    <a class="btn btn-primary btn-lg" href="{% url 'login' %}" role="button">
+        <i class="fas fa-sign-in-alt"></i> Login
+    </a>
+    {% endif %}
+</div>
+{% endblock %}

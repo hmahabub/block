@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Delete Project{% endblock %}
+
+{% block content %}
+<div class="card border-danger">
+    <div class="card-header bg-danger text-white">
+        <h3 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Confirm Project Deletion</h3>
+    </div>
+    <div class="card-body">
+        <p>You are about to permanently delete the following project:</p>
+        <div class="alert alert-warning">
+            <h5>{{ object.project_name }} ({{ object.project_code }})</h5>
+        </div>
+        <div class="alert alert-danger">
+            <strong>Warning:</strong> This action cannot be undone.
+            {% if object.apartments.exists %}
+            <br>This project has {{ object.apartment_count }} apartment(s) that will also be deleted.
+            {% endif %}
+        </div>
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">
+                <i class="fas fa-trash"></i> Confirm Delete
+            </button>
+            <a href="{% url 'projects:detail' object.pk %}" class="btn btn-secondary">
+                <i class="fas fa-times"></i> Cancel
+            </a>
+        </form>
+    </div>
+</div>
+{% endblock %}

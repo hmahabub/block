@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% load core_tags %}
+
+{% block title %}Cash Book{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 d-print-none">
+    <h2><i class="fas fa-money-bill-wave"></i> Cash Book</h2>
+    <div>
+        <a href="{% url 'books:cashbook_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> New Entry
+        </a>
+        <button class="btn btn-info" onclick="window.print()"><i class="fas fa-print"></i> Print</button>
+    </div>
+</div>
+
+<div class="card mb-4 d-print-none">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">From</label>
+                <input type="date" name="start_date" class="form-control" value="{{ start_date }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">To</label>
+                <input type="date" name="end_date" class="form-control" value="{{ end_date }}">
+            </div>
+            <div class="col-md-2 align-self-end">
+                <button type="submit" class="btn btn-primary w-100"><i class="fas fa-filter"></i> Filter</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr><th colspan="2">From: {{ start_date }}</th><th colspan="2">To: {{ end_date }}</th></tr>
+                    <tr>
+                        <th>Date</th>
+                        <th>Particulars</th>
+                        <th class="text-end">Debit</th>
+                        <th class="text-end">Credit</th>
+                        <th class="text-end">Balance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for transaction in transactions %}
+                    {% if forloop.first %}
+                    <tr class="table-info">
+                        <td colspan="2"><strong>Opening Balance</strong></td>
+                        <td class="text-end"></td>
+                        <td class="text-end"></td>
+                        <td class="text-end">
+                            <strong>
+                            {% if transaction.transaction_type == 'CREDIT' %}
+                                {{ transaction.current_balance|subtract:transaction.amount|taka }}
+                            {% else %}
+                                {{ transaction.current_balance|add:transaction.amount|taka }}
+                            {% endif %}
+                            </strong>
+                        </td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <td>{{ transaction.date|date:"Y-m-d" }}</td>
+                        <td>{{ transaction.particulars }}</td>
+                        <td class="text-end">{% if transaction.transaction_type == 'DEBIT' %}{{ transaction.amount|taka }}{% endif %}</td>
+                        <td class="text-end">{% if transaction.transaction_type == 'CREDIT' %}{{ transaction.amount|taka }}{% endif %}</td>
+                        <td class="text-end">{{ transaction.current_balance|taka }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="text-center py-4">No transactions found for this period</td></tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr class="table-active">
+                        <td colspan="2" class="text-end"><strong>Totals:</strong></td>
+                        <td class="text-end"><strong>{{ total_debit|taka }}</strong></td>
+                        <td class="text-end"><strong>{{ total_credit|taka }}</strong></td>
+                        <td class="text-end"><strong>{{ last_balance|taka }}</strong></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        {% include "includes/pagination.html" %}
+    </div>
+</div>
+<style>
+@media print {
+    body { background: white; }
+    .container, .container-fluid { width: 100% !important; max-width: 100% !important; }
+    .d-print-none { display: none !important; }
+    .card { border: none; }
+}
+</style>
+{% endblock %}

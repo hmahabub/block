@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% load core_tags %}
+
+{% block title %}{{ object.sale_no }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h3 class="mb-0"><i class="fas fa-dollar-sign"></i> {{ object.sale_no }}
+            <span class="badge {% if object.status == 'SOLD' %}bg-primary{% elif object.status == 'BOOKED' %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+                {{ object.get_status_display }}
+            </span>
+        </h3>
+        <p class="text-muted mb-0">
+            <a href="{% url 'projects:apartment-detail' object.apartment.pk %}">{{ object.apartment }}</a>
+            &middot; <a href="{% url 'customers:detail' object.customer.pk %}">{{ object.customer }}</a>
+        </p>
+    </div>
+    <div>
+        <a href="{% url 'sales:update' object.pk %}" class="btn btn-warning"><i class="fas fa-edit"></i> Edit</a>
+        <a href="{% url 'sales:list' %}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Back to List</a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-3">
+        <div class="card h-100">
+            <div class="card-header">Sale Breakdown</div>
+            <div class="card-body">
+                <table class="table table-bordered mb-0">
+                    <tr><th width="40%">Sale Date</th><td>{{ object.sale_date }}</td></tr>
+                    <tr><th>Base Price</th><td>{{ object.base_price|taka }}</td></tr>
+                    <tr><th>Parking / Other Charges</th><td>{{ object.other_charges|taka }}</td></tr>
+                    <tr><th>Discount</th><td>-{{ object.discount|taka }}</td></tr>
+                    <tr><th>Net Sale Value</th><td><strong>{{ object.net_sale_value|taka }}</strong></td></tr>
+                    <tr><th>Received</th><td>{{ object.received_amount|taka }}</td></tr>
+                    <tr><th>Receivable</th><td class="text-danger">{{ object.receivable_amount|taka }}</td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-3">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Payments</span>
+                <a href="{% url 'sales:payment-create' %}?sale={{ object.pk }}" class="btn btn-sm btn-primary">
+                    <i class="fas fa-plus"></i> Record Payment
+                </a>
+            </div>
+            <div class="card-body">
+                {% if payments %}
+                <table class="table table-sm mb-0">
+                    <thead class="table-light"><tr><th>Date</th><th>Method</th><th>Amount</th></tr></thead>
+                    <tbody>
+                        {% for payment in payments %}
+                        <tr><td>{{ payment.payment_date }}</td><td>{{ payment.get_payment_method_display }}</td><td>{{ payment.amount|taka }}</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <p class="text-muted mb-0">No payments recorded yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if object.notes %}
+<div class="card">
+    <div class="card-header">Notes</div>
+    <div class="card-body">{{ object.notes|linebreaks }}</div>
+</div>
+{% endif %}
+{% endblock %}

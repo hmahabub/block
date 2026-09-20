@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% load core_tags %}
+
+{% block title %}{{ object.project_name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h3 class="mb-0"><i class="fas fa-building"></i> {{ object.project_name }}</h3>
+        <p class="text-muted mb-0">{{ object.project_code }} &middot; {{ object.location|default:"-" }} &middot;
+            <span class="badge bg-secondary">{{ object.get_status_display }}</span>
+        </p>
+    </div>
+    <div>
+        <a href="{% url 'projects:update' object.pk %}" class="btn btn-warning">
+            <i class="fas fa-edit"></i> Edit
+        </a>
+        <a href="{% url 'projects:list' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to List
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card h-100">
+            <div class="card-header">Project</div>
+            <div class="card-body">
+                <div class="row text-center stat-tile">
+                    <div class="col-6"><h5>{{ object.floor_no }}</h5><small>Floors</small></div>
+                    <div class="col-6"><h5>{{ object.apartment_count }}</h5><small>Apartments</small></div>
+                    <div class="col-6"><h5>{{ object.sold_apartment_count }}</h5><small>Sold</small></div>
+                    <div class="col-6"><h5>{{ object.booked_apartment_count }}</h5><small>Booked</small></div>
+                    <div class="col-6"><h5>{{ object.available_apartment_count }}</h5><small>Available</small></div>
+                    <div class="col-6"><h5>{{ object.total_saleable_area }}</h5><small>Saleable sqft</small></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card h-100">
+            <div class="card-header">Cost</div>
+            <div class="card-body">
+                <table class="table table-sm mb-0">
+                    <tr><th>Budget</th><td class="text-end">{{ object.budget_amount|taka }}</td></tr>
+                    <tr><th>Total Cost</th><td class="text-end">{{ object.total_cost|taka }}</td></tr>
+                    <tr><th>Paid</th><td class="text-end">{{ object.total_paid|taka }}</td></tr>
+                    <tr><th>Payable</th><td class="text-end text-danger">{{ object.total_cost_payable|taka }}</td></tr>
+                    <tr><th>Cost / Sqft</th><td class="text-end">{{ object.cost_per_sqft|taka }}</td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card h-100">
+            <div class="card-header">Sales</div>
+            <div class="card-body">
+                <table class="table table-sm mb-0">
+                    <tr><th>Sales Value</th><td class="text-end">{{ object.total_sales_value|taka }}</td></tr>
+                    <tr><th>Net Received</th><td class="text-end">{{ object.total_received|taka }}</td></tr>
+                    <tr><th>Receivable</th><td class="text-end text-danger">{{ object.total_receivable|taka }}</td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card h-100">
+            <div class="card-header">Profitability</div>
+            <div class="card-body d-flex flex-column justify-content-center h-100">
+                <h4 class="{% if object.estimated_profit >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    {{ object.estimated_profit|taka }}
+                </h4>
+                <p class="text-muted mb-0">Estimated Project Profit</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if object.description %}
+<div class="card mb-3">
+    <div class="card-body">{{ object.description|linebreaks }}</div>
+</div>
+{% endif %}
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="fas fa-door-open"></i> Apartments</h5>
+        <a href="{% url 'projects:apartment-create' object.pk %}" class="btn btn-primary btn-sm">
+            <i class="fas fa-plus"></i> Add Apartment
+        </a>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>No.</th>
+                        <th>Floor</th>
+                        <th>Type</th>
+                        <th>Area (sqft)</th>
+                        <th>Base Price</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for apartment in apartments %}
+                    <tr>
+                        <td><a href="{% url 'projects:apartment-detail' apartment.pk %}">{{ apartment.apartment_no }}</a></td>
+                        <td>{{ apartment.floor_no }}</td>
+                        <td>{{ apartment.get_apartment_type_display }}</td>
+                        <td>{{ apartment.saleable_area }}</td>
+                        <td>{{ apartment.base_price|taka }}</td>
+                        <td>
+                            <span class="badge
+                                {% if apartment.status == 'AVAILABLE' %}bg-success
+                                {% elif apartment.status == 'BOOKED' %}bg-warning text-dark
+                                {% elif apartment.status == 'SOLD' %}bg-primary
+                                {% elif apartment.status == 'HANDED_OVER' %}bg-info text-dark
+                                {% else %}bg-danger{% endif %}">
+                                {{ apartment.get_status_display }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'projects:apartment-detail' apartment.pk %}" class="btn btn-info" title="View"><i class="fas fa-eye"></i></a>
+                                <a href="{% url 'projects:apartment-update' apartment.pk %}" class="btn btn-warning" title="Edit"><i class="fas fa-edit"></i></a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7" class="text-center py-4">No apartments added yet</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

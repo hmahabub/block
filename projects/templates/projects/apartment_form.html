@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}{% if object %}Update{% else %}Create{% endif %} Apartment{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h3 class="mb-0">{% if object %}Update{% else %}Add{% endif %} Apartment
+            <small class="text-muted">{{ project.project_name }}</small>
+        </h3>
+    </div>
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            <div class="row">
+                <div class="col-md-6">
+                    {{ form.apartment_no|as_crispy_field }}
+                    {{ form.floor_no|as_crispy_field }}
+                    {{ form.apartment_type|as_crispy_field }}
+                </div>
+                <div class="col-md-6">
+                    {{ form.saleable_area|as_crispy_field }}
+                    {{ form.base_price|as_crispy_field }}
+                    {{ form.status|as_crispy_field }}
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12">
+                    {{ form.notes|as_crispy_field }}
+                </div>
+            </div>
+            <div class="mt-3">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> {% if object %}Update{% else %}Create{% endif %}
+                </button>
+                <a href="{% if object %}{% url 'projects:apartment-detail' object.pk %}{% else %}{% url 'projects:detail' project.pk %}{% endif %}"
+                   class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

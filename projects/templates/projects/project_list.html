@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% load core_tags %}
+
+{% block title %}Projects{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-building"></i> Projects</h2>
+    <a href="{% url 'projects:create' %}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Add New Project
+    </a>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <input type="text" name="q" class="form-control" placeholder="Search by name, code, location..."
+                       value="{{ request.GET.q }}">
+            </div>
+            <div class="col-md-3">
+                <select name="status" class="form-select">
+                    <option value="">All Statuses</option>
+                    {% for value, label in status_choices %}
+                    <option value="{{ value }}" {% if request.GET.status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-filter"></i> Filter
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row">
+    {% for project in object_list %}
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <a href="{% url 'projects:detail' project.pk %}">{{ project.project_name }}</a>
+                </h5>
+                <p class="text-muted mb-1">{{ project.project_code }} &middot; {{ project.location|default:"-" }}</p>
+                <span class="badge bg-secondary mb-2">{{ project.get_status_display }}</span>
+                <ul class="list-unstyled small mb-3">
+                    <li><i class="fas fa-door-open"></i> {{ project.apartment_count }} apartments &middot; {{ project.sold_apartment_count }} sold</li>
+                    <li><i class="fas fa-ruler-combined"></i> {{ project.total_saleable_area }} sqft</li>
+                    <li><i class="fas fa-coins"></i> Budget {{ project.budget_amount|taka }}</li>
+                </ul>
+                <a href="{% url 'projects:detail' project.pk %}" class="btn btn-outline-primary btn-sm">View Details</a>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="alert alert-info">No projects found</div>
+    </div>
+    {% endfor %}
+</div>
+{% include "includes/pagination.html" %}
+{% endblock %}

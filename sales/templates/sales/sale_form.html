@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}{% if object %}Update{% else %}New{% endif %} Apartment Sale{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h3 class="mb-0">{% if object %}Update Sale {{ object.sale_no }}{% else %}New Apartment Sale{% endif %}</h3>
+    </div>
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            <div class="row">
+                <div class="col-md-6">
+                    {{ form.apartment|as_crispy_field }}
+                    {{ form.customer|as_crispy_field }}
+                    {{ form.sale_date|as_crispy_field }}
+                    {{ form.status|as_crispy_field }}
+                </div>
+                <div class="col-md-6">
+                    {{ form.base_price|as_crispy_field }}
+                    {{ form.other_charges|as_crispy_field }}
+                    {{ form.discount|as_crispy_field }}
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12">
+                    {{ form.notes|as_crispy_field }}
+                </div>
+            </div>
+            {% if not object %}
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> Net Sale Value and Receivable are calculated automatically.
+                Received amount is tracked separately through <a href="{% url 'sales:payment-create' %}">Customer Payments</a> once this sale is saved.
+            </div>
+            {% endif %}
+            <div class="mt-3">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> {% if object %}Update{% else %}Create{% endif %}
+                </button>
+                <a href="{% if object %}{% url 'sales:detail' object.pk %}{% else %}{% url 'sales:list' %}{% endif %}"
+                   class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% load core_tags %}
+
+{% block title %}Project Budget{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-calculator"></i> Project Budget</h2>
+    <a href="{% url 'costing:budget-create' %}" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Add Budget Line
+    </a>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <select name="project" class="form-select">
+                    <option value="">All Projects</option>
+                    {% for project in projects %}
+                    <option value="{{ project.id }}" {% if request.GET.project == project.id|stringformat:"s" %}selected{% endif %}>{{ project.project_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100"><i class="fas fa-filter"></i> Filter</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Project</th>
+                        <th>Cost Category</th>
+                        <th>Budget</th>
+                        <th>Actual Cost</th>
+                        <th>Difference</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for budget in object_list %}
+                    <tr>
+                        <td><a href="{% url 'projects:detail' budget.project.pk %}">{{ budget.project }}</a></td>
+                        <td>{{ budget.cost_category }}</td>
+                        <td>{{ budget.budget_amount|taka }}</td>
+                        <td>{{ budget.actual_cost|taka }}</td>
+                        <td class="{% if budget.difference < 0 %}text-danger{% else %}text-success{% endif %}">
+                            {{ budget.difference|taka }}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'costing:budget-update' budget.pk %}" class="btn btn-warning" title="Edit"><i class="fas fa-edit"></i></a>
+                                <a href="{% url 'costing:budget-delete' budget.pk %}" class="btn btn-danger" title="Delete"><i class="fas fa-trash"></i></a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" class="text-center py-4">No budget lines found</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% include "includes/pagination.html" %}
+    </div>
+</div>
+{% endblock %}

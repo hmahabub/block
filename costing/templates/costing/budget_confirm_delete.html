@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Delete Budget Line{% endblock %}
+
+{% block content %}
+<div class="card border-danger">
+    <div class="card-header bg-danger text-white">
+        <h3 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Confirm Deletion</h3>
+    </div>
+    <div class="card-body">
+        <p>You are about to permanently delete the following budget line:</p>
+        <div class="alert alert-warning">
+            <h5>{{ object.project }} / {{ object.cost_category }}</h5>
+        </div>
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger"><i class="fas fa-trash"></i> Confirm Delete</button>
+            <a href="{% url 'costing:budget-list' %}" class="btn btn-secondary"><i class="fas fa-times"></i> Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

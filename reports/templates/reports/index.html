@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Report Center{% endblock %}
+
+{% block content %}
+<h2 class="mb-4"><i class="fas fa-chart-line"></i> Report Center</h2>
+
+<div class="row">
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-building"></i> Project Profitability</h5>
+                <p class="card-text">Sales, cost and estimated profit for every project.</p>
+                <a href="{% url 'reports:project-profitability' %}" class="btn btn-primary">Open Report</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-door-open"></i> Apartment-Wise Report</h5>
+                <p class="card-text">Area, sale value, cost, received, receivable and profit per apartment.</p>
+                <a href="{% url 'reports:apartment-wise' %}" class="btn btn-primary">Open Report</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-hand-holding-usd"></i> Receivable &amp; Payable</h5>
+                <p class="card-text">Outstanding customer receivables and supplier payables.</p>
+                <a href="{% url 'reports:dues' %}" class="btn btn-primary">Open Report</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

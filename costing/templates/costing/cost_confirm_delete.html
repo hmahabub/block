@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% load core_tags %}
+
+{% block title %}Delete Cost Entry{% endblock %}
+
+{% block content %}
+<div class="card border-danger">
+    <div class="card-header bg-danger text-white">
+        <h3 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Confirm Deletion</h3>
+    </div>
+    <div class="card-body">
+        <p>You are about to permanently delete the following cost entry:</p>
+        <div class="alert alert-warning">
+            <h5>{{ object.cost_category }} &middot; {{ object.amount|taka }}</h5>
+            <p class="mb-0">{{ object.project }} &middot; {{ object.date }}</p>
+        </div>
+        <div class="alert alert-danger">
+            <strong>Warning:</strong> This action cannot be undone and will also remove any linked cost allocation and supplier payment records.
+        </div>
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger"><i class="fas fa-trash"></i> Confirm Delete</button>
+            <a href="{% url 'costing:cost-detail' object.pk %}" class="btn btn-secondary"><i class="fas fa-times"></i> Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

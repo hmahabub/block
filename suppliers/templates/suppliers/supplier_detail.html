@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% load core_tags %}
+
+{% block title %}{{ object.name }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h4 class="mb-0"><i class="fas fa-truck"></i> {{ object.name }} <small class="text-muted">{{ object.supplier_code }}</small></h4>
+        <div>
+            <a href="{% url 'suppliers:update' object.pk %}" class="btn btn-warning">
+                <i class="fas fa-edit"></i> Edit
+            </a>
+            <a href="{% url 'suppliers:list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to List
+            </a>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <table class="table table-bordered">
+                    <tr><th width="35%">Contact Person</th><td>{{ object.contact_person|default:"-" }}</td></tr>
+                    <tr><th>Phone</th><td>{{ object.phone|default:"-" }}</td></tr>
+                    <tr><th>Address</th><td>{{ object.address|linebreaks|default:"-" }}</td></tr>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Payable Summary</h5>
+                        <h3 class="text-danger">{{ object.total_payable|taka }}</h3>
+                        <p class="text-muted mb-0">Total outstanding across all project costs</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-4">
+            <h5>Project Costs ({{ project_costs.count }})</h5>
+            {% if project_costs %}
+            <div class="table-responsive">
+                <table class="table table-sm table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Project</th>
+                            <th>Category</th>
+                            <th>Date</th>
+                            <th>Amount</th>
+                            <th>Paid</th>
+                            <th>Payable</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for cost in project_costs %}
+                        <tr>
+                            <td><a href="{% url 'projects:detail' cost.project.pk %}">{{ cost.project }}</a></td>
+                            <td>{{ cost.cost_category }}</td>
+                            <td>{{ cost.date }}</td>
+                            <td>{{ cost.amount|taka }}</td>
+                            <td>{{ cost.paid_amount|taka }}</td>
+                            <td>{{ cost.payable_amount|taka }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">No project costs recorded for this supplier yet.</div>
+            {% endif %}
+        </div>
+
+        {% if object.notes %}
+        <div class="mt-4">
+            <h5>Notes</h5>
+            <div class="card"><div class="card-body">{{ object.notes|linebreaks }}</div></div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
