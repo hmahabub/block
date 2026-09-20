@@ -26,6 +26,14 @@ def generate_year_code(series, infix, width=4):
     return f"{year_prefix}{n:0{width}d}"
 
 
+def generate_code(series, infix, width=3):
+    """e.g. generate_code('project', 'P') -> 'ABP-001'. No year component —
+    a plain, permanent running sequence for entities that don't need one."""
+    prefix = f"{settings.COMPANY_CODE_PREFIX}{infix}"
+    n = next_number(f"{series}:{prefix}")
+    return f"{prefix}-{n:0{width}d}"
+
+
 def generate_slash_code(series, width=5):
     """e.g. generate_slash_code('sale') -> 'AB/2026/00001'."""
     year = timezone.now().year

@@ -38,6 +38,9 @@ Visit http://localhost:8010/, log in, and the dashboard links to every module.
 
 ## Numbering
 
-Codes follow `{YY}{COMPANY_CODE_PREFIX}{TYPE}{NNNN}`, e.g. project `26ABP0001`, customer `26ABC0001`,
-supplier `26ABS0001`; sale numbers use `{PREFIX}/{YYYY}/{NNNNN}`, e.g. `AB/2026/00001`. Numbers are
-minted atomically via `core.numbering` (`select_for_update` on a `Sequence` row), not a racy `count()+1`.
+- Project codes have no year component: `{COMPANY_CODE_PREFIX}P-{NNN}`, e.g. `ABP-001`.
+- Customer/supplier codes are year-scoped: `{YY}{COMPANY_CODE_PREFIX}{TYPE}{NNNN}`, e.g. `26ABC0001`, `26ABS0001`.
+- Sale numbers use `{PREFIX}/{YYYY}/{NNNNN}`, e.g. `AB/2026/00001`.
+
+All of these are minted atomically via `core.numbering` (`select_for_update` on a `Sequence` row), not a
+racy `count()+1`.

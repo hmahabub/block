@@ -2,7 +2,7 @@ from django.core.validators import MinValueValidator
 from django.db import models
 from django.urls import reverse
 
-from core.numbering import generate_year_code
+from core.numbering import generate_code
 
 
 class Project(models.Model):
@@ -38,7 +38,7 @@ class Project(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.project_code:
-            self.project_code = generate_year_code('project', 'P')
+            self.project_code = generate_code('project', 'P')
         super().save(*args, **kwargs)
 
     def get_absolute_url(self):
