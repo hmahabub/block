@@ -11,8 +11,15 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
-    <!-- Custom CSS -->
+    <!-- Custom CSS: BLOCK brand theme (deep teal + amber) — deliberately distinct from inspcta's black/blue -->
     <style>
+        :root {
+            --block-navbar: #0b3d3a;
+            --block-navbar-dark: #062624;
+            --block-primary: #d97706;
+            --block-primary-dark: #b45309;
+            --block-primary-rgb: 217, 119, 6;
+        }
         body {
             padding-top: 20px;
             background-color: #f8f9fa;
@@ -27,10 +34,14 @@
             opacity: 0.75;
             letter-spacing: 0.04em;
         }
+        .navbar-brand i {
+            color: var(--block-primary);
+        }
         .jumbotron {
             background-color: white;
             padding: 2rem;
             border-radius: 0.3rem;
+            border-top: 4px solid var(--block-primary);
             box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
         }
         .table-xs td,
@@ -40,6 +51,67 @@
         }
         .stat-tile h3 {
             margin-bottom: 0.1rem;
+        }
+
+        /* Brand overrides: BLOCK uses a deep teal navbar with an amber accent,
+           instead of inspcta's neutral black navbar with default Bootstrap blue. */
+        #base.navbar.bg-dark {
+            background-color: var(--block-navbar) !important;
+        }
+        #base .dropdown-menu {
+            --bs-dropdown-link-active-bg: var(--block-primary);
+        }
+        a {
+            color: var(--block-primary-dark);
+        }
+        a:hover {
+            color: var(--block-primary);
+        }
+        .btn-primary {
+            background-color: var(--block-primary);
+            border-color: var(--block-primary);
+        }
+        .btn-primary:hover,
+        .btn-primary:focus,
+        .btn-primary:active {
+            background-color: var(--block-primary-dark) !important;
+            border-color: var(--block-primary-dark) !important;
+        }
+        .btn-outline-primary {
+            color: var(--block-primary-dark);
+            border-color: var(--block-primary);
+        }
+        .btn-outline-primary:hover {
+            background-color: var(--block-primary);
+            border-color: var(--block-primary);
+        }
+        .text-primary {
+            color: var(--block-primary-dark) !important;
+        }
+        .bg-primary {
+            background-color: var(--block-primary) !important;
+        }
+        .border-primary {
+            border-color: var(--block-primary) !important;
+        }
+        .badge.bg-primary {
+            background-color: var(--block-primary) !important;
+        }
+        .page-item.active .page-link {
+            background-color: var(--block-primary);
+            border-color: var(--block-primary);
+        }
+        .page-link {
+            color: var(--block-primary-dark);
+        }
+        .form-control:focus,
+        .form-select:focus {
+            border-color: var(--block-primary);
+            box-shadow: 0 0 0 0.25rem rgba(var(--block-primary-rgb), 0.25);
+        }
+        .form-check-input:checked {
+            background-color: var(--block-primary);
+            border-color: var(--block-primary);
         }
     </style>
 
