@@ -44,17 +44,19 @@
         <div class="card h-100">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span>Payments</span>
-                <a href="{% url 'payables:create' %}?project_cost={{ object.pk }}" class="btn btn-sm btn-primary">
+                {% if object.payable_amount > 0 %}
+                <a href="{% url 'costing:cost-pay' object.pk %}" class="btn btn-sm btn-primary">
                     <i class="fas fa-plus"></i> Record Payment
                 </a>
+                {% endif %}
             </div>
             <div class="card-body">
                 {% if payments %}
                 <table class="table table-sm mb-0">
-                    <thead class="table-light"><tr><th>Date</th><th>Method</th><th>Amount</th></tr></thead>
+                    <thead class="table-light"><tr><th>Date</th><th>Method</th><th>Reference</th><th class="text-end">Amount</th></tr></thead>
                     <tbody>
                         {% for payment in payments %}
-                        <tr><td>{{ payment.payment_date }}</td><td>{{ payment.get_payment_method_display }}</td><td>{{ payment.amount|taka }}</td></tr>
+                        <tr><td>{{ payment.payment_date }}</td><td>{{ payment.get_payment_method_display }}</td><td>{{ payment.reference_no|default:"-" }}</td><td class="text-end">{{ payment.amount|taka }}</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>

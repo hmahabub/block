@@ -1,6 +1,9 @@
 from django import forms
+from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.utils import timezone
 
-from .models import CostCategory, ProjectBudget, ProjectCost
+from .models import CostCategory, CostPayment, ProjectBudget, ProjectCost
 
 
 class CostCategoryForm(forms.ModelForm):
@@ -77,3 +80,33 @@ class DirectCostForm(_SupplierOptionalMixin, forms.ModelForm):
         if commit:
             instance.save()
         return instance
+
+
+class CostPaymentForm(forms.ModelForm):
+    """Records a payment against one specific cost; can't exceed what is still payable."""
+
+    class Meta:
+        model = CostPayment
+        fields = ['payment_date', 'amount', 'payment_method', 'reference_no', 'notes']
+        widgets = {
+            'payment_date': forms.DateInput(attrs={'type': 'date'}),
+            'notes': forms.Textarea(attrs={'rows': 2}),
+        }
+
+    def __init__(self, *args, project_cost, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.project_cost = project_cost
+        self.instance.project_cost = project_cost
+        if not self.instance.pk:
+            self.fields['payment_date'].initial = timezone.now().date()
+            self.fields['amount'].initial = project_cost.payable_amount
+
+    def clean_amount(self):
+        amount = self.cleaned_data['amount']
+        remaining = self.project_cost.payable_amount
+        if amount > remaining:
+            symbol = settings.CURRENCY_SYMBOL
+            raise ValidationError(
+                f'This payment of {symbol}{amount} exceeds the remaining payable amount of {symbol}{remaining}.'
+            )
+        return amount

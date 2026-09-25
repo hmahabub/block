@@ -1,13 +1,15 @@
+from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.db.models import Q, Sum
-from django.urls import reverse_lazy
+from django.shortcuts import get_object_or_404, redirect
+from django.urls import reverse, reverse_lazy
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
 from core.mixins import CreateAuditMixin, DeleteAuditMixin, UpdateAuditMixin
 from projects.models import Flat, Project
 
-from .forms import CostCategoryForm, DirectCostForm, ProjectBudgetForm, SharedCostForm
-from .models import CostCategory, ProjectBudget, ProjectCost
+from .forms import CostCategoryForm, CostPaymentForm, DirectCostForm, ProjectBudgetForm, SharedCostForm
+from .models import CostCategory, CostPayment, ProjectBudget, ProjectCost
 
 
 class CostCategoryListView(LoginRequiredMixin, ListView):
@@ -88,11 +90,14 @@ class ProjectCostListView(LoginRequiredMixin, ListView):
         project_id = self.request.GET.get('project')
         status = self.request.GET.get('status')
         cost_type = self.request.GET.get('type')
+        due = self.request.GET.get('due')
         q = self.request.GET.get('q')
         if project_id:
             queryset = queryset.filter(project_id=project_id)
         if status:
             queryset = queryset.filter(status=status)
+        if due:
+            queryset = queryset.filter(payable_amount__gt=0)
         if cost_type == 'shared':
             queryset = queryset.filter(flat__isnull=True)
         elif cost_type == 'direct':
@@ -121,7 +126,7 @@ class ProjectCostDetailView(LoginRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['payments'] = self.object.payments.select_related('supplier')
+        context['payments'] = self.object.payments.all()
         context['allocations'] = self.object.cost_allocations.select_related('flat')
         return context
 
@@ -188,3 +193,30 @@ class ProjectCostDeleteView(PermissionRequiredMixin, DeleteAuditMixin, DeleteVie
     template_name = 'costing/cost_confirm_delete.html'
     success_url = reverse_lazy('costing:cost-list')
     permission_required = 'costing.delete_projectcost'
+
+
+class CostPaymentCreateView(PermissionRequiredMixin, CreateAuditMixin, CreateView):
+    model = CostPayment
+    form_class = CostPaymentForm
+    template_name = 'costing/payment_form.html'
+    permission_required = 'costing.add_costpayment'
+
+    def dispatch(self, request, *args, **kwargs):
+        self.project_cost = get_object_or_404(ProjectCost, pk=kwargs['pk'])
+        if request.user.is_authenticated and self.project_cost.payable_amount <= 0:
+            messages.info(request, 'This cost is already fully paid.')
+            return redirect('costing:cost-detail', pk=self.project_cost.pk)
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['project_cost'] = self.project_cost
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['cost'] = self.project_cost
+        return context
+
+    def get_success_url(self):
+        return reverse('costing:cost-detail', kwargs={'pk': self.project_cost.pk})

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags core_tags %}
+
+{% block title %}Record Payment{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h3 class="mb-0"><i class="fas fa-hand-holding-usd"></i> Record Payment</h3>
+    </div>
+    <div class="card-body">
+        <div class="row mb-3">
+            <div class="col-md-8">
+                <table class="table table-bordered mb-0">
+                    <tr><th width="30%">Cost</th><td>
+                        <a href="{% url 'costing:cost-detail' cost.pk %}">{{ cost.cost_category }}</a>
+                        &middot; {{ cost.project }}
+                        {% if cost.flat %}&middot; {{ cost.flat }}{% endif %}
+                    </td></tr>
+                    <tr><th>Paid to</th><td>{{ cost.supplier|default:"(no supplier set)" }}</td></tr>
+                    <tr><th>Total / Paid</th><td>{{ cost.amount|taka }} / {{ cost.paid_amount|taka }}</td></tr>
+                    <tr><th>Still payable</th><td class="text-danger"><strong>{{ cost.payable_amount|taka }}</strong></td></tr>
+                </table>
+            </div>
+        </div>
+        <form method="post">
+            {% csrf_token %}
+            {{ form|crispy }}
+            <div class="mt-3">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Payment</button>
+                <a href="{% url 'costing:cost-detail' cost.pk %}" class="btn btn-secondary"><i class="fas fa-times"></i> Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

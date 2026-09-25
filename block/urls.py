@@ -15,7 +15,6 @@ urlpatterns = [
     path('projects/', include('projects.urls', namespace='projects')),
     path('costing/', include('costing.urls', namespace='costing')),
     path('sales/', include('sales.urls', namespace='sales')),
-    path('payables/', include('payables.urls', namespace='payables')),
     path('books/', include('books.urls', namespace='books')),
     path('reports/', include('reports.urls', namespace='reports')),
     path('activity-log/', include('activity_log.urls', namespace='activity_log')),

@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import CostAllocation, CostCategory, ProjectBudget, ProjectCost
+from .models import CostAllocation, CostCategory, CostPayment, ProjectBudget, ProjectCost
 
 
 @admin.register(CostCategory)
@@ -27,3 +27,10 @@ class ProjectCostAdmin(admin.ModelAdmin):
 class CostAllocationAdmin(admin.ModelAdmin):
     list_display = ('project_cost', 'flat', 'allocated_amount')
     list_filter = ('project',)
+
+
+@admin.register(CostPayment)
+class CostPaymentAdmin(admin.ModelAdmin):
+    list_display = ('project_cost', 'amount', 'payment_date', 'payment_method')
+    list_filter = ('payment_method',)
+    search_fields = ('reference_no', 'project_cost__supplier__name')

@@ -2,6 +2,7 @@ from django.urls import path
 
 from .views import (
     CostCategoryCreateView,
+    CostPaymentCreateView,
     CostCategoryListView,
     CostCategoryUpdateView,
     ProjectBudgetCreateView,
@@ -33,5 +34,6 @@ urlpatterns = [
     path('create/direct/', DirectCostCreateView.as_view(), name='cost-create-direct'),
     path('<int:pk>/', ProjectCostDetailView.as_view(), name='cost-detail'),
     path('<int:pk>/update/', ProjectCostUpdateView.as_view(), name='cost-update'),
+    path('<int:pk>/pay/', CostPaymentCreateView.as_view(), name='cost-pay'),
     path('<int:pk>/delete/', ProjectCostDeleteView.as_view(), name='cost-delete'),
 ]

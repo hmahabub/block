@@ -178,6 +178,7 @@
                             </a>
                             <ul class="dropdown-menu">
                                 <li><a class="dropdown-item" href="{% url 'costing:cost-list' %}">Project Costs</a></li>
+                                <li><a class="dropdown-item" href="{% url 'costing:cost-list' %}?due=1">Payables (Unpaid Costs)</a></li>
                                 <li><a class="dropdown-item" href="{% url 'costing:budget-list' %}">Project Budget</a></li>
                                 <li><a class="dropdown-item" href="{% url 'costing:category-list' %}">Cost Categories</a></li>
                             </ul>
@@ -190,11 +191,6 @@
                                 <li><a class="dropdown-item" href="{% url 'sales:list' %}">Flat Sales</a></li>
                                 <li><a class="dropdown-item" href="{% url 'sales:payment-list' %}">Customer Payments</a></li>
                             </ul>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'payables:list' %}">
-                                <i class="fas fa-hand-holding-usd"></i> Payables
-                            </a>
                         </li>
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">

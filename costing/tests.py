@@ -4,8 +4,8 @@ from django.urls import reverse
 
 from projects.models import Flat, Project
 
-from .forms import DirectCostForm, SharedCostForm
-from .models import CostAllocation, CostCategory, ProjectCost
+from .forms import CostPaymentForm, DirectCostForm, SharedCostForm
+from .models import CostAllocation, CostCategory, CostPayment, ProjectCost
 from .views import ProjectCostListView, ProjectCostUpdateView
 
 
@@ -73,3 +73,53 @@ class SeparateCostEntryTests(TestCase):
 
         self.assertEqual(listed('shared'), [None])
         self.assertEqual(listed('direct'), [self.flat1])
+
+
+class CostPaymentTests(TestCase):
+    def setUp(self):
+        self.project = Project.objects.create(project_name='P', total_saleable_area=1000)
+        category = CostCategory.objects.create(name='Civil')
+        self.cost = ProjectCost.objects.create(
+            project=self.project, cost_category=category, date='2026-01-01', amount=1000,
+        )
+
+    def pay(self, amount):
+        form = CostPaymentForm(
+            data={'payment_date': '2026-02-01', 'amount': str(amount), 'payment_method': 'BANK'},
+            project_cost=self.cost,
+        )
+        if form.is_valid():
+            form.save()
+        return form
+
+    def test_payment_updates_paid_payable_and_status(self):
+        self.pay(400)
+        self.cost.refresh_from_db()
+        self.assertEqual((self.cost.paid_amount, self.cost.payable_amount), (400, 600))
+        self.assertEqual(self.cost.status, ProjectCost.Status.PARTIAL)
+        self.pay(600)
+        self.cost.refresh_from_db()
+        self.assertEqual(self.cost.payable_amount, 0)
+        self.assertEqual(self.cost.status, ProjectCost.Status.PAID)
+
+    def test_cannot_pay_more_than_payable(self):
+        form = self.pay(1001)
+        self.assertIn('amount', form.errors)
+        self.assertEqual(CostPayment.objects.count(), 0)
+
+    def test_cannot_overpay_after_partial_payment(self):
+        self.pay(400)
+        self.assertIn('amount', self.pay(601).errors)
+        self.assertTrue(self.pay(600).is_valid())
+
+    def test_amount_defaults_to_remaining_payable(self):
+        self.pay(250)
+        form = CostPaymentForm(project_cost=ProjectCost.objects.get(pk=self.cost.pk))
+        self.assertEqual(form.fields['amount'].initial, 750)
+
+    def test_deleting_a_payment_restores_payable(self):
+        self.pay(400)
+        CostPayment.objects.get().delete()
+        self.cost.refresh_from_db()
+        self.assertEqual(self.cost.payable_amount, 1000)
+        self.assertEqual(self.cost.status, ProjectCost.Status.UNPAID)
