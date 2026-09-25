@@ -1,0 +1,48 @@
+{% extends "print_base.html" %}
+{% load core_tags %}
+
+{% block doc_title %}Money Receipt{% endblock %}
+{% block doc_no %}{{ payment.receipt_no }}{% endblock %}
+{% block back_url %}{% url 'sales:detail' payment.sale.pk %}{% endblock %}
+{% block doc_heading %}MONEY RECEIPT{% endblock %}
+{% block doc_meta %}
+    <div><strong>Receipt No:</strong> {{ payment.receipt_no }}</div>
+    <div><strong>Date:</strong> {{ payment.payment_date|date:"j M Y" }}</div>
+{% endblock %}
+
+{% block body %}
+<div class="row mt-4 mb-3">
+    <div class="col-6">
+        <div class="section-label">Received from</div>
+        <div class="fs-5 fw-semibold">{{ payment.customer.name }}</div>
+        <div class="text-muted small">Phone: {{ payment.customer.phone }}</div>
+        {% if payment.customer.address %}<div class="text-muted small">{{ payment.customer.address|linebreaksbr }}</div>{% endif %}
+    </div>
+    <div class="col-6">
+        <div class="section-label">Against</div>
+        <div class="fw-semibold">{{ payment.sale.project.project_name }} &mdash; Flat {{ payment.sale.flat.flat_no }}</div>
+        <div class="text-muted small">Invoice {{ payment.sale.sale_no }}</div>
+    </div>
+</div>
+
+<table class="doc mb-3">
+    <tr><th class="label">Payment method</th><td>{{ payment.get_payment_method_display }}</td></tr>
+    <tr><th class="label">Reference / cheque no.</th><td>{{ payment.reference_no|default:"—" }}</td></tr>
+    {% if payment.notes %}<tr><th class="label">Notes</th><td>{{ payment.notes|linebreaksbr }}</td></tr>{% endif %}
+</table>
+
+<div class="amount-box mb-2">{{ payment.amount|taka }}</div>
+<div class="in-words mb-4"><span class="section-label">Amount in words</span><br><strong>{{ payment.amount|taka_words }}</strong></div>
+
+<div class="section-label">Account position after this payment &mdash; {{ payment.sale.sale_no }}</div>
+<table class="doc" style="max-width: 380px;">
+    <tr><th class="label">Net sale value</th><td class="text-end">{{ payment.sale.net_sale_value|taka }}</td></tr>
+    <tr><th class="label">Total received (incl. this payment)</th><td class="text-end">{{ received_to_date|taka }}</td></tr>
+    <tr><th class="label">Balance due</th><td class="text-end {% if balance_after > 0 %}text-danger{% endif %}"><strong>{{ balance_after|taka }}</strong></td></tr>
+</table>
+
+<div class="signatures">
+    <div>Customer signature</div>
+    <div>Received by<br><small class="text-muted">{{ company_name }}</small></div>
+</div>
+{% endblock %}

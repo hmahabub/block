@@ -23,6 +23,7 @@
                         <th>Method</th>
                         <th>Reference</th>
                         <th>Amount</th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -34,9 +35,10 @@
                         <td>{{ payment.get_payment_method_display }}</td>
                         <td>{{ payment.reference_no|default:"-" }}</td>
                         <td>{{ payment.amount|taka }}</td>
+                        <td><a href="{% url 'sales:payment-receipt' payment.pk %}" target="_blank" class="btn btn-sm btn-success" title="Print receipt"><i class="fas fa-print"></i></a></td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="6" class="text-center py-4">No customer payments recorded yet</td></tr>
+                    <tr><td colspan="7" class="text-center py-4">No customer payments recorded yet</td></tr>
                     {% endfor %}
                 </tbody>
             </table>

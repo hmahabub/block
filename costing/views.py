@@ -181,3 +181,9 @@ class ProjectCostDeleteView(PermissionRequiredMixin, DeleteAuditMixin, DeleteVie
     success_url = reverse_lazy('costing:cost-list')
     permission_required = 'costing.delete_projectcost'
 
+
+
+class ProjectCostVoucherView(LoginRequiredMixin, DetailView):
+    model = ProjectCost
+    template_name = 'costing/cost_voucher.html'
+    context_object_name = 'cost'

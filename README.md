@@ -36,6 +36,17 @@ Visit http://localhost:8010/, log in, and the dashboard links to every module.
 - `dashboard` — home page with company-wide quick stats
 - `activity_log` — explicit create/update/delete audit trail shown on the dashboard
 
+## Printing
+
+Print-ready A4 pages (use the browser's Print, or "Save as PDF"), each with a company header, amount in words and signature lines:
+
+- **Payment voucher** for a cost: `Print Voucher` on the cost page and the print icon in the cost list (`CV-00001`)
+- **Invoice** for a flat sale: `Print Invoice` on the sale page (numbered with the sale number)
+- **Money receipt** for a customer payment: print icon in the sale's payments and in the payments list (`MR-00001`);
+  it shows the balance as of that payment
+
+The header shows `COMPANY_NAME` (default `Block`), and optionally `COMPANY_ADDRESS` / `COMPANY_PHONE`; set them in `.env`.
+
 ## Numbering
 
 - Project codes have no year component: `{COMPANY_CODE_PREFIX}P-{NNN}`, e.g. `ABP-001`.

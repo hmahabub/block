@@ -12,6 +12,7 @@ from .views import (
     ProjectCostDetailView,
     ProjectCostListView,
     ProjectCostUpdateView,
+    ProjectCostVoucherView,
     SharedCostCreateView,
     DirectCostCreateView,
 )
@@ -33,5 +34,6 @@ urlpatterns = [
     path('create/direct/', DirectCostCreateView.as_view(), name='cost-create-direct'),
     path('<int:pk>/', ProjectCostDetailView.as_view(), name='cost-detail'),
     path('<int:pk>/update/', ProjectCostUpdateView.as_view(), name='cost-update'),
+    path('<int:pk>/voucher/', ProjectCostVoucherView.as_view(), name='cost-voucher'),
     path('<int:pk>/delete/', ProjectCostDeleteView.as_view(), name='cost-delete'),
 ]

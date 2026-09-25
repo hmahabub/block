@@ -1,0 +1,72 @@
+{% extends "print_base.html" %}
+{% load core_tags %}
+
+{% block doc_title %}Invoice{% endblock %}
+{% block doc_no %}{{ sale.sale_no }}{% endblock %}
+{% block back_url %}{% url 'sales:detail' sale.pk %}{% endblock %}
+{% block doc_heading %}INVOICE{% endblock %}
+{% block doc_meta %}
+    <div><strong>Invoice No:</strong> {{ sale.sale_no }}</div>
+    <div><strong>Date:</strong> {{ sale.sale_date|date:"j M Y" }}</div>
+    {% if sale.status == 'SOLD' %}<div class="stamp">PAID IN FULL</div>
+    {% elif sale.status == 'CANCELLED' %}<div class="stamp" style="color:#dc3545;border-color:#dc3545;">CANCELLED</div>{% endif %}
+{% endblock %}
+
+{% block body %}
+<div class="row mt-4 mb-3">
+    <div class="col-6">
+        <div class="section-label">Bill to</div>
+        <div class="fs-5 fw-semibold">{{ sale.customer.name }}</div>
+        <div class="text-muted small">Phone: {{ sale.customer.phone }}</div>
+        {% if sale.customer.email %}<div class="text-muted small">{{ sale.customer.email }}</div>{% endif %}
+        {% if sale.customer.identification_no %}<div class="text-muted small">NID / Passport: {{ sale.customer.identification_no }}</div>{% endif %}
+        {% if sale.customer.address %}<div class="text-muted small">{{ sale.customer.address|linebreaksbr }}</div>{% endif %}
+    </div>
+    <div class="col-6">
+        <div class="section-label">Property</div>
+        <div class="fw-semibold">{{ sale.project.project_name }} &mdash; Flat {{ sale.flat.flat_no }}</div>
+        <div class="text-muted small">{{ sale.project.project_code }}{% if sale.project.location %} &middot; {{ sale.project.location }}{% endif %}</div>
+        <div class="text-muted small">
+            Floor {{ sale.flat.floor_no }} &middot; {{ sale.flat.get_flat_type_display }}
+            {% if sale.flat.facing %}&middot; {{ sale.flat.facing }} facing{% endif %}
+            &middot; {{ sale.flat.saleable_area }} sqft
+        </div>
+    </div>
+</div>
+
+<table class="doc mb-3">
+    <thead><tr><th>Description</th><th class="text-end" style="width:32%">Amount</th></tr></thead>
+    <tbody>
+        <tr><td>Flat {{ sale.flat.flat_no }} &mdash; base price</td><td class="text-end">{{ sale.base_price|taka }}</td></tr>
+        {% if sale.other_charges %}<tr><td>Parking / other charges</td><td class="text-end">{{ sale.other_charges|taka }}</td></tr>{% endif %}
+        {% if sale.discount %}<tr><td>Discount</td><td class="text-end">&minus;{{ sale.discount|taka }}</td></tr>{% endif %}
+        <tr><th>Net sale value</th><th class="text-end">{{ sale.net_sale_value|taka }}</th></tr>
+    </tbody>
+</table>
+<div class="in-words mb-4"><span class="section-label">Net sale value in words</span><br><strong>{{ sale.net_sale_value|taka_words }}</strong></div>
+
+<div class="section-label">Payments received</div>
+<table class="doc mb-3">
+    <thead><tr><th>Receipt</th><th>Date</th><th>Method</th><th>Reference</th><th class="text-end">Amount</th></tr></thead>
+    <tbody>
+        {% for payment in payments %}
+        <tr>
+            <td>{{ payment.receipt_no }}</td>
+            <td>{{ payment.payment_date|date:"j M Y" }}</td>
+            <td>{{ payment.get_payment_method_display }}</td>
+            <td>{{ payment.reference_no|default:"—" }}</td>
+            <td class="text-end">{{ payment.amount|taka }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="text-center text-muted">No payments received yet</td></tr>
+        {% endfor %}
+        <tr><th colspan="4" class="text-end">Total received</th><th class="text-end">{{ sale.received_amount|taka }}</th></tr>
+        <tr><th colspan="4" class="text-end">Balance due</th><th class="text-end {% if sale.receivable_amount > 0 %}text-danger{% endif %}">{{ sale.receivable_amount|taka }}</th></tr>
+    </tbody>
+</table>
+
+<div class="signatures">
+    <div>Customer signature</div>
+    <div>Authorized signatory<br><small class="text-muted">{{ company_name }}</small></div>
+</div>
+{% endblock %}

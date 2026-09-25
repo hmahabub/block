@@ -92,6 +92,10 @@ class CustomerPayment(models.Model):
         ordering = ['-payment_date', '-id']
         verbose_name = 'Customer Payment'
 
+    @property
+    def receipt_no(self):
+        return f'MR-{self.pk:05d}'
+
     def __str__(self):
         return f'{self.customer} - {self.amount} ({self.payment_date})'
 

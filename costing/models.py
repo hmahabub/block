@@ -98,6 +98,10 @@ class ProjectCost(models.Model):
     def get_absolute_url(self):
         return reverse('costing:cost-detail', kwargs={'pk': self.pk})
 
+    @property
+    def voucher_no(self):
+        return f'CV-{self.pk:05d}'
+
     def save(self, *args, **kwargs):
         self.allocation_required = self.flat_id is None
         super().save(*args, **kwargs)

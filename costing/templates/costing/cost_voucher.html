@@ -1,0 +1,49 @@
+{% extends "print_base.html" %}
+{% load core_tags %}
+
+{% block doc_title %}Payment Voucher{% endblock %}
+{% block doc_no %}{{ cost.voucher_no }}{% endblock %}
+{% block back_url %}{% url 'costing:cost-detail' cost.pk %}{% endblock %}
+{% block doc_heading %}PAYMENT VOUCHER{% endblock %}
+{% block doc_meta %}
+    <div><strong>Voucher No:</strong> {{ cost.voucher_no }}</div>
+    <div><strong>Date:</strong> {{ cost.date|date:"j M Y" }}</div>
+{% endblock %}
+
+{% block body %}
+<div class="row mt-4 mb-3">
+    <div class="col-7">
+        <div class="section-label">Paid to</div>
+        <div class="fs-5 fw-semibold">{{ cost.supplier.name|default:"—" }}</div>
+        {% if cost.supplier %}
+        <div class="text-muted small">{{ cost.supplier.supplier_code }}{% if cost.supplier.phone %} &middot; {{ cost.supplier.phone }}{% endif %}</div>
+        {% if cost.supplier.address %}<div class="text-muted small">{{ cost.supplier.address }}</div>{% endif %}
+        {% endif %}
+    </div>
+    <div class="col-5">
+        <div class="section-label">Project</div>
+        <div class="fw-semibold">{{ cost.project.project_name }}</div>
+        <div class="text-muted small">{{ cost.project.project_code }}{% if cost.project.location %} &middot; {{ cost.project.location }}{% endif %}</div>
+    </div>
+</div>
+
+<table class="doc mb-3">
+    <tr><th class="label">Cost head</th><td>{{ cost.cost_category }}</td></tr>
+    <tr><th class="label">Charged to</th><td>
+        {% if cost.flat %}Flat {{ cost.flat.flat_no }} (direct cost)
+        {% else %}Whole building &mdash; shared cost, allocated to all flats by saleable area{% endif %}
+    </td></tr>
+    <tr><th class="label">Description</th><td>{{ cost.description|default:"—" }}</td></tr>
+    <tr><th class="label">Bill / reference no.</th><td>{{ cost.reference_no|default:"—" }}</td></tr>
+    {% if cost.notes %}<tr><th class="label">Notes</th><td>{{ cost.notes|linebreaksbr }}</td></tr>{% endif %}
+</table>
+
+<div class="amount-box mb-2">{{ cost.amount|taka }}</div>
+<div class="in-words"><span class="section-label">Amount in words</span><br><strong>{{ cost.amount|taka_words }}</strong></div>
+
+<div class="signatures">
+    <div>Prepared by<br><small class="text-muted">{{ user.get_full_name|default:user.username }}</small></div>
+    <div>Approved by</div>
+    <div>Received by<br><small class="text-muted">(Payee signature)</small></div>
+</div>
+{% endblock %}

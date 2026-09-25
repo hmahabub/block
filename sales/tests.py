@@ -121,3 +121,38 @@ class FlatSaleFormTests(TestCase):
         self.sale.status = FlatSale.Status.CANCELLED
         self.sale.save()
         self.assertEqual(list(CustomerPaymentForm().fields['sale'].queryset), [])
+
+
+class ReceiptPositionTests(TestCase):
+    def setUp(self):
+        project = Project.objects.create(project_name='P', total_saleable_area=1000)
+        flat = Flat.objects.create(project=project, flat_no='A1', floor_no=1, saleable_area=1000, base_price=1000)
+        customer = Customer.objects.create(name='C', phone='+8801700000001')
+        self.sale = FlatSale.objects.create(flat=flat, customer=customer, sale_date='2026-01-01', base_price=1000)
+
+    def context_for(self, payment):
+        from django.test import RequestFactory
+        from .views import CustomerPaymentReceiptView
+
+        view = CustomerPaymentReceiptView()
+        view.setup(RequestFactory().get('/'), pk=payment.pk)
+        view.object = payment
+        return view.get_context_data()
+
+    def test_receipt_shows_position_as_of_that_payment(self):
+        first = CustomerPayment.objects.create(sale=self.sale, payment_date='2026-02-01', amount=300)
+        second = CustomerPayment.objects.create(sale=self.sale, payment_date='2026-03-01', amount=700)
+        one = self.context_for(first)
+        self.assertEqual((one['received_to_date'], one['balance_after']), (300, 700))
+        two = self.context_for(second)
+        self.assertEqual((two['received_to_date'], two['balance_after']), (1000, 0))
+
+    def test_same_day_payments_are_ordered_by_entry(self):
+        first = CustomerPayment.objects.create(sale=self.sale, payment_date='2026-02-01', amount=200)
+        second = CustomerPayment.objects.create(sale=self.sale, payment_date='2026-02-01', amount=100)
+        self.assertEqual(self.context_for(first)['received_to_date'], 200)
+        self.assertEqual(self.context_for(second)['received_to_date'], 300)
+
+    def test_document_numbers(self):
+        payment = CustomerPayment.objects.create(sale=self.sale, payment_date='2026-02-01', amount=1)
+        self.assertEqual(payment.receipt_no, f'MR-{payment.pk:05d}')

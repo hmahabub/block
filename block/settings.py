@@ -75,6 +75,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'core.context_processors.company',
             ],
         },
     },
@@ -142,6 +143,8 @@ MESSAGE_TAGS = {
 # Company identity — used across templates, printed documents and auto-numbering.
 COMPANY_NAME = env('COMPANY_NAME', default='Block')
 COMPANY_CODE_PREFIX = env('COMPANY_CODE_PREFIX', default='AB')
+COMPANY_ADDRESS = env('COMPANY_ADDRESS', default='')
+COMPANY_PHONE = env('COMPANY_PHONE', default='')
 CURRENCY_SYMBOL = '৳'
 
 # Email settings for password reset (configure via .env in production)

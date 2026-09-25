@@ -17,6 +17,7 @@
         </p>
     </div>
     <div>
+        <a href="{% url 'sales:invoice' object.pk %}" target="_blank" class="btn btn-success"><i class="fas fa-print"></i> Print Invoice</a>
         <a href="{% url 'sales:update' object.pk %}" class="btn btn-warning"><i class="fas fa-edit"></i> Edit</a>
         <a href="{% url 'sales:list' %}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Back to List</a>
     </div>
@@ -50,10 +51,10 @@
             <div class="card-body">
                 {% if payments %}
                 <table class="table table-sm mb-0">
-                    <thead class="table-light"><tr><th>Date</th><th>Method</th><th>Amount</th></tr></thead>
+                    <thead class="table-light"><tr><th>Date</th><th>Method</th><th>Amount</th><th></th></tr></thead>
                     <tbody>
                         {% for payment in payments %}
-                        <tr><td>{{ payment.payment_date }}</td><td>{{ payment.get_payment_method_display }}</td><td>{{ payment.amount|taka }}</td></tr>
+                        <tr><td>{{ payment.payment_date }}</td><td>{{ payment.get_payment_method_display }}</td><td>{{ payment.amount|taka }}</td><td><a href="{% url 'sales:payment-receipt' payment.pk %}" target="_blank" title="Print receipt"><i class="fas fa-print"></i></a></td></tr>
                         {% endfor %}
                     </tbody>
                 </table>

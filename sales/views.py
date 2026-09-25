@@ -1,5 +1,5 @@
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
-from django.db.models import Q
+from django.db.models import Q, Sum
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views.generic import CreateView, DetailView, ListView, UpdateView
@@ -116,3 +116,38 @@ class CustomerPaymentCreateView(PermissionRequiredMixin, CreateAuditMixin, Creat
             except FlatSale.DoesNotExist:
                 pass
         return initial
+
+
+class FlatSaleInvoiceView(LoginRequiredMixin, DetailView):
+    model = FlatSale
+    template_name = 'sales/sale_invoice.html'
+    context_object_name = 'sale'
+
+    def get_queryset(self):
+        return super().get_queryset().select_related('customer', 'flat', 'project')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['payments'] = self.object.payments.order_by('payment_date', 'id')
+        return context
+
+
+class CustomerPaymentReceiptView(LoginRequiredMixin, DetailView):
+    model = CustomerPayment
+    template_name = 'sales/payment_receipt.html'
+    context_object_name = 'payment'
+
+    def get_queryset(self):
+        return super().get_queryset().select_related('customer', 'sale', 'sale__flat', 'sale__project')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        payment = self.object
+        earlier = payment.sale.payments.filter(
+            Q(payment_date__lt=payment.payment_date)
+            | Q(payment_date=payment.payment_date, pk__lte=payment.pk)
+        )
+        # Position as of this payment, not today, so an old receipt stays accurate.
+        context['received_to_date'] = earlier.aggregate(total=Sum('amount'))['total'] or 0
+        context['balance_after'] = payment.sale.net_sale_value - context['received_to_date']
+        return context
