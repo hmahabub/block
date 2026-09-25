@@ -225,6 +225,11 @@
                                 <li><a class="dropdown-item" href="{% url 'activity_log:list' %}">
                                     <i class="fas fa-history"></i> Activity Log
                                 </a></li>
+                                {% if perms.core.change_companyprofile %}
+                                <li><a class="dropdown-item" href="{% url 'core:company-settings' %}">
+                                    <i class="fas fa-file-image"></i> Company Letterhead
+                                </a></li>
+                                {% endif %}
                                 <li><hr class="dropdown-divider"></li>
                                 <li>
                                     <form method="post" action="{% url 'logout' %}">

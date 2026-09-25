@@ -4,6 +4,7 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.views.generic import TemplateView
 
+from core.letterhead import letterhead_flowables
 from customers.models import Customer
 from projects.models import Flat, Project
 
@@ -83,7 +84,7 @@ class FlatWisePDFView(LoginRequiredMixin, TemplateView):
         from reportlab.lib import colors
         from reportlab.lib.pagesizes import A4, landscape
         from reportlab.lib.units import cm
-        from reportlab.platypus import Paragraph, SimpleDocTemplate, Table, TableStyle
+        from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
         from reportlab.lib.styles import getSampleStyleSheet
 
         project = get_object_or_404(Project, pk=project_pk)
@@ -94,7 +95,10 @@ class FlatWisePDFView(LoginRequiredMixin, TemplateView):
 
         doc = SimpleDocTemplate(response, pagesize=landscape(A4), topMargin=1.5 * cm, bottomMargin=1.5 * cm)
         styles = getSampleStyleSheet()
+        header, _ = letterhead_flowables(doc.width, styles['Title'], styles['BodyText'])
         elements = [
+            *header,
+            Spacer(1, 6),
             Paragraph(f'Flat-Wise Report — {project.project_name} ({project.project_code})', styles['Title']),
         ]
 

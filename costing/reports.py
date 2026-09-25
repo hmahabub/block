@@ -1,10 +1,11 @@
-from django.conf import settings
 from django.utils import timezone
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+
+from core.letterhead import letterhead_flowables
 
 BRAND = colors.HexColor('#0b3d3a')
 ZEBRA = colors.HexColor('#f4f6f6')
@@ -36,7 +37,7 @@ def _draw_page_footer(canvas, doc):
     canvas.saveState()
     canvas.setFont('Helvetica', 7.5)
     canvas.setFillColor(colors.grey)
-    canvas.drawString(doc.leftMargin, 8 * mm, f'{settings.COMPANY_NAME} - Project Cost Report')
+    canvas.drawString(doc.leftMargin, 8 * mm, f'{doc.company_name} - Project Cost Report')
     canvas.drawRightString(doc.pagesize[0] - doc.rightMargin, 8 * mm, f'Page {canvas.getPageNumber()}')
     canvas.restoreState()
 
@@ -59,8 +60,13 @@ def build_cost_report_pdf(target, costs, applied, user):
     costs = list(costs.select_related('project', 'cost_category', 'cost_category__parent_category', 'supplier', 'flat'))
     total = sum((c.amount for c in costs), 0)
 
+    sub = ParagraphStyle('sub', parent=cell, fontSize=8.5, leading=11, textColor=colors.HexColor('#495057'))
+    header, profile = letterhead_flowables(doc.width, company, sub)
+    doc.company_name = profile.display_name
+
     elements = [
-        Paragraph(settings.COMPANY_NAME, company),
+        *header,
+        Spacer(1, 4),
         Paragraph('Project Cost Report', subtitle),
         Paragraph(' &nbsp;|&nbsp; '.join(describe_filters(applied)), meta),
         Paragraph(f'Generated {timezone.localtime():%d %b %Y, %I:%M %p} by {user.get_full_name() or user.username}', meta),

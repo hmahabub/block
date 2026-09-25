@@ -48,7 +48,12 @@ Print-ready A4 pages (use the browser's Print, or "Save as PDF"), each with a co
 - **Project cost report (PDF)**: "Print PDF of this list" on the cost list exports whatever the list is currently filtered to
   (search, project, shared/direct, month or date range), with a total and a summary by cost head
 
-The header shows `COMPANY_NAME` (default `Block`), and optionally `COMPANY_ADDRESS` / `COMPANY_PHONE`; set them in `.env`.
+**Letterhead:** upload your company letterhead under *your name menu → Company Letterhead* (PNG or JPG, max 5 MB;
+a wide banner around 2480 x 400 px prints at full A4 width). It is used at the top of every voucher, invoice,
+receipt and PDF report in place of the text heading. With no letterhead, the printed heading uses the company name,
+address and phone from the same page, falling back to `COMPANY_NAME`, `COMPANY_ADDRESS` and `COMPANY_PHONE` in `.env`.
+Uploads are stored in `media/letterhead/`; in production make sure the web server serves `MEDIA_URL` from `MEDIA_ROOT`.
+Only users with the `core.change_companyprofile` permission (superusers) see and can use this page.
 
 ## Numbering
 

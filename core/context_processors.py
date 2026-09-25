@@ -1,9 +1,8 @@
-from django.conf import settings
+from django.utils.functional import SimpleLazyObject
+
+from .models import CompanyProfile
 
 
 def company(request):
-    return {
-        'company_name': settings.COMPANY_NAME,
-        'company_address': settings.COMPANY_ADDRESS,
-        'company_phone': settings.COMPANY_PHONE,
-    }
+    # Lazy: the database is only queried on pages that actually use `company` (the printable documents).
+    return {'company': SimpleLazyObject(CompanyProfile.current)}

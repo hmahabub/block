@@ -56,73 +56,7 @@
     </div>
 
     <hr>
-
-    <div class="row">
-        <div class="col-md-4 mb-4">
-            <div class="card h-100">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="fas fa-building"></i> Projects</h5>
-                    <p class="card-text">Manage buildings, floors and flats.</p>
-                    <a href="{% url 'projects:list' %}" class="btn btn-primary">Go to Projects</a>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4 mb-4">
-            <div class="card h-100">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="fas fa-users"></i> Customers</h5>
-                    <p class="card-text">Manage customer contacts and bookings.</p>
-                    <a href="{% url 'customers:list' %}" class="btn btn-primary">Go to Customers</a>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4 mb-4">
-            <div class="card h-100">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="fas fa-truck"></i> Suppliers</h5>
-                    <p class="card-text">Manage suppliers and contractors.</p>
-                    <a href="{% url 'suppliers:list' %}" class="btn btn-primary">Go to Suppliers</a>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4 mb-4">
-            <div class="card h-100">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="fas fa-coins"></i> Costing</h5>
-                    <p class="card-text">Project costs, budgets and area-based allocation.</p>
-                    <a href="{% url 'costing:cost-list' %}" class="btn btn-primary">Go to Costing</a>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4 mb-4">
-            <div class="card h-100">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="fas fa-dollar-sign"></i> Sales</h5>
-                    <p class="card-text">Flat sales and customer payments.</p>
-                    <a href="{% url 'sales:list' %}" class="btn btn-primary">Go to Sales</a>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4 mb-4">
-            <div class="card h-100">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="fas fa-book"></i> Books</h5>
-                    <p class="card-text">Independent Cash Book and Bank Book.</p>
-                    <a class="btn btn-primary" href="{% url 'books:cashbook_list' %}">Cash Book</a>&nbsp;
-                    <a class="btn btn-secondary" href="{% url 'books:bankbook_list' %}">Bank Book</a>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4 mb-4">
-            <div class="card h-100">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="fas fa-chart-line"></i> Reports</h5>
-                    <p class="card-text">Project, flat and receivable reports.</p>
-                    <a href="{% url 'reports:index' %}" class="btn btn-primary">Go to Reports</a>
-                </div>
-            </div>
-        </div>
-    </div>
+    
     {% else %}
     <p>Please log in to access the system</p>
     <a class="btn btn-primary btn-lg" href="{% url 'login' %}" role="button">

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block doc_title %}Document{% endblock %} {% block doc_no %}{% endblock %} - {{ company_name }}</title>
+    <title>{% block doc_title %}Document{% endblock %} {% block doc_no %}{% endblock %} - {{ company.display_name }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -15,12 +15,15 @@
             padding: 14mm 14mm 12mm; border-top: 6px solid var(--brand);
             box-shadow: 0 2px 10px rgba(0, 0, 0, .15); position: relative;
         }
-        .letterhead { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid var(--brand); padding-bottom: 10px; }
-        .letterhead h1 { font-size: 1.6rem; margin: 0; color: var(--brand); font-weight: 700; }
-        .letterhead .sub { color: #6c757d; font-size: .85rem; }
-        .doc-title { text-align: right; }
-        .doc-title h2 { font-size: 1.35rem; letter-spacing: .08em; margin: 0; color: var(--accent); font-weight: 700; }
-        .doc-title .meta { font-size: .9rem; }
+        .company-head h1 { font-size: 1.6rem; margin: 0; color: var(--brand); font-weight: 700; }
+        .company-head .sub { color: #6c757d; font-size: .85rem; }
+        .letterhead-img { display: block; width: 100%; max-height: 45mm; object-fit: contain; margin: 0 auto; }
+        .doc-bar {
+            display: flex; justify-content: space-between; align-items: flex-end;
+            border-top: 2px solid var(--brand); border-bottom: 1px solid #ced4da; padding: 8px 0; margin-top: 10px;
+        }
+        .doc-bar h2 { font-size: 1.35rem; letter-spacing: .08em; margin: 0; color: var(--accent); font-weight: 700; }
+        .doc-bar .meta { text-align: right; font-size: .9rem; }
         .section-label { font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; color: #6c757d; margin-bottom: 2px; }
         table.doc { width: 100%; border-collapse: collapse; }
         table.doc th, table.doc td { border: 1px solid #ced4da; padding: 6px 10px; vertical-align: top; }
@@ -40,7 +43,7 @@
             body { background: #fff; }
             .toolbar { display: none !important; }
             .sheet { box-shadow: none; margin: 0; max-width: none; min-height: 297mm; }
-            table.doc thead th, table.doc th.label { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            table.doc thead th, table.doc th.label, .letterhead-img { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
     </style>
     {% block extra_css %}{% endblock %}
@@ -52,16 +55,19 @@
     </div>
 
     <div class="sheet">
-        <div class="letterhead">
-            <div>
-                <h1>{{ company_name }}</h1>
-                {% if company_address %}<div class="sub">{{ company_address }}</div>{% endif %}
-                {% if company_phone %}<div class="sub">Phone: {{ company_phone }}</div>{% endif %}
-            </div>
-            <div class="doc-title">
-                <h2>{% block doc_heading %}{% endblock %}</h2>
-                <div class="meta">{% block doc_meta %}{% endblock %}</div>
-            </div>
+        {% if company.letterhead_url %}
+        <img class="letterhead-img" src="{{ company.letterhead_url }}" alt="{{ company.display_name }}">
+        {% else %}
+        <div class="company-head">
+            <h1>{{ company.display_name }}</h1>
+            {% if company.display_address %}<div class="sub">{{ company.display_address }}</div>{% endif %}
+            {% if company.display_phone %}<div class="sub">Phone: {{ company.display_phone }}</div>{% endif %}
+        </div>
+        {% endif %}
+
+        <div class="doc-bar">
+            <h2>{% block doc_heading %}{% endblock %}</h2>
+            <div class="meta">{% block doc_meta %}{% endblock %}</div>
         </div>
 
         {% block body %}{% endblock %}

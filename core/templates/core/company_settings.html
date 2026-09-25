@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Company Settings{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h4 class="mb-0"><i class="fas fa-file-image"></i> Company Letterhead &amp; Details</h4>
+    </div>
+    <div class="card-body">
+        <p class="text-muted">
+            The letterhead is printed at the top of every voucher, invoice, receipt and PDF report in place of the
+            plain text heading. Without one, the company name, address and phone below are used instead.
+        </p>
+
+        {% if object.letterhead_url %}
+        <div class="mb-3">
+            <div class="small text-muted mb-1">Current letterhead</div>
+            <div class="border rounded p-2 bg-white text-center">
+                <img src="{{ object.letterhead_url }}" alt="Company letterhead" style="max-width: 100%; max-height: 45mm;">
+            </div>
+        </div>
+        {% endif %}
+
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            {{ form.non_field_errors }}
+            <div class="row">
+                <div class="col-lg-6">{{ form.letterhead|as_crispy_field }}</div>
+            </div>
+            <div class="row">
+                <div class="col-md-4">{{ form.name|as_crispy_field }}</div>
+                <div class="col-md-5">{{ form.address|as_crispy_field }}</div>
+                <div class="col-md-3">{{ form.phone|as_crispy_field }}</div>
+            </div>
+            <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save</button>
+            <a href="{% url 'home' %}" class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}
