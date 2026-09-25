@@ -65,14 +65,6 @@ class Project(models.Model):
         return self.costs.aggregate(total=models.Sum('amount'))['total'] or 0
 
     @property
-    def total_paid(self):
-        return self.costs.aggregate(total=models.Sum('paid_amount'))['total'] or 0
-
-    @property
-    def total_cost_payable(self):
-        return self.costs.aggregate(total=models.Sum('payable_amount'))['total'] or 0
-
-    @property
     def total_sales_value(self):
         return self.sales.aggregate(total=models.Sum('net_sale_value'))['total'] or 0
 

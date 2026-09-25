@@ -6,7 +6,7 @@
 {% block content %}
 <div class="jumbotron mt-4">
     <h1 class="display-5">Welcome to BLOCK ERP</h1>
-    <p class="lead">Real estate project costing, flat sales, receivables, payables and profitability — powered by NOORSYS.</p>
+    <p class="lead">Real estate project costing, flat sales, receivables and profitability — powered by NOORSYS.</p>
     <hr class="my-4">
 
     {% if user.is_authenticated %}
@@ -47,9 +47,8 @@
                         <div class="col-4 border"><h5>{{ total_received|taka }}</h5><p class="mb-0">Received</p></div>
                     </div>
                     <div class="row text-center stat-tile">
-                        <div class="col-4 border"><h5>{{ total_receivable|taka }}</h5><p class="mb-0">Receivable</p></div>
-                        <div class="col-4 border"><h5>{{ total_payable|taka }}</h5><p class="mb-0">Payable</p></div>
-                        <div class="col-4 border"><h5 class="{% if profit >= 0 %}text-success{% else %}text-danger{% endif %}">{{ profit|taka }}</h5><p class="mb-0">Profit</p></div>
+                        <div class="col-6 border"><h5>{{ total_receivable|taka }}</h5><p class="mb-0">Receivable</p></div>
+                        <div class="col-6 border"><h5 class="{% if profit >= 0 %}text-success{% else %}text-danger{% endif %}">{{ profit|taka }}</h5><p class="mb-0">Profit</p></div>
                     </div>
                 </div>
             </div>
@@ -90,7 +89,7 @@
             <div class="card h-100">
                 <div class="card-body">
                     <h5 class="card-title"><i class="fas fa-coins"></i> Costing</h5>
-                    <p class="card-text">Project costs, payments, budgets and area-based allocation.</p>
+                    <p class="card-text">Project costs, budgets and area-based allocation.</p>
                     <a href="{% url 'costing:cost-list' %}" class="btn btn-primary">Go to Costing</a>
                 </div>
             </div>
@@ -118,7 +117,7 @@
             <div class="card h-100">
                 <div class="card-body">
                     <h5 class="card-title"><i class="fas fa-chart-line"></i> Reports</h5>
-                    <p class="card-text">Project, flat and dues reports.</p>
+                    <p class="card-text">Project, flat and receivable reports.</p>
                     <a href="{% url 'reports:index' %}" class="btn btn-primary">Go to Reports</a>
                 </div>
             </div>

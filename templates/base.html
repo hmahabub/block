@@ -178,7 +178,6 @@
                             </a>
                             <ul class="dropdown-menu">
                                 <li><a class="dropdown-item" href="{% url 'costing:cost-list' %}">Project Costs</a></li>
-                                <li><a class="dropdown-item" href="{% url 'costing:cost-list' %}?due=1">Payables (Unpaid Costs)</a></li>
                                 <li><a class="dropdown-item" href="{% url 'costing:budget-list' %}">Project Budget</a></li>
                                 <li><a class="dropdown-item" href="{% url 'costing:category-list' %}">Cost Categories</a></li>
                             </ul>
@@ -211,7 +210,7 @@
                                 <li><a class="dropdown-item" href="{% url 'reports:index' %}">Report Center</a></li>
                                 <li><a class="dropdown-item" href="{% url 'reports:project-profitability' %}">Project Profitability</a></li>
                                 <li><a class="dropdown-item" href="{% url 'reports:flat-wise' %}">Flat-Wise Report</a></li>
-                                <li><a class="dropdown-item" href="{% url 'reports:dues' %}">Receivable &amp; Payable</a></li>
+                                <li><a class="dropdown-item" href="{% url 'reports:dues' %}">Receivables</a></li>
                             </ul>
                         </li>
                         {% endif %}

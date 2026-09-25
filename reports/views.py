@@ -6,7 +6,6 @@ from django.views.generic import TemplateView
 
 from customers.models import Customer
 from projects.models import Flat, Project
-from suppliers.models import Supplier
 
 
 class ReportIndexView(LoginRequiredMixin, TemplateView):
@@ -75,11 +74,6 @@ class DuesReportView(LoginRequiredMixin, TemplateView):
             Customer.objects.annotate(receivable=Sum('sales__receivable_amount'))
             .filter(receivable__gt=0)
             .order_by('-receivable')
-        )
-        context['payables'] = (
-            Supplier.objects.annotate(payable=Sum('project_costs__payable_amount'))
-            .filter(payable__gt=0)
-            .order_by('-payable')
         )
         return context
 

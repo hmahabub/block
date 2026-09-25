@@ -56,11 +56,6 @@
                     {{ form.notes|as_crispy_field }}
                 </div>
             </div>
-            {% if not object %}
-            <p class="text-muted">
-                Once saved, record payments from the cost's page; paid and payable amounts update automatically.
-            </p>
-            {% endif %}
             <div class="mt-3">
                 <button type="submit" class="btn btn-primary">
                     <i class="fas fa-save"></i> {% if object %}Update{% else %}Create{% endif %}

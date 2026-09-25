@@ -26,16 +26,12 @@ class HomeView(TemplateView):
         context['available_count'] = Flat.objects.filter(status=Flat.Status.AVAILABLE).count()
 
         total_cost = ProjectCost.objects.aggregate(total=Sum('amount'))['total'] or 0
-        total_paid = ProjectCost.objects.aggregate(total=Sum('paid_amount'))['total'] or 0
-        total_payable = ProjectCost.objects.aggregate(total=Sum('payable_amount'))['total'] or 0
         total_sales = FlatSale.objects.aggregate(total=Sum('net_sale_value'))['total'] or 0
         total_received = FlatSale.objects.aggregate(total=Sum('received_amount'))['total'] or 0
         total_receivable = FlatSale.objects.aggregate(total=Sum('receivable_amount'))['total'] or 0
 
         context.update({
             'total_cost': total_cost,
-            'total_paid': total_paid,
-            'total_payable': total_payable,
             'total_sales': total_sales,
             'total_received': total_received,
             'total_receivable': total_receivable,

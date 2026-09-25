@@ -39,5 +39,5 @@ class Supplier(models.Model):
         return reverse('suppliers:detail', kwargs={'pk': self.pk})
 
     @property
-    def total_payable(self):
-        return sum((cost.payable_amount for cost in self.project_costs.all()), start=0)
+    def total_cost(self):
+        return sum((cost.amount for cost in self.project_costs.all()), start=0)

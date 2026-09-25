@@ -1,6 +1,6 @@
 # BLOCK ERP
 
-A real-estate project costing, flat sales, receivables, payables and profitability ERP for a small
+A real-estate project costing, flat sales, receivables and profitability ERP for a small
 apartment-development company, built to match the UI/UX of the sister "Inspecta ERP" (inspcta) codebase.
 
 ## Stack
@@ -29,10 +29,10 @@ Visit http://localhost:8010/, log in, and the dashboard links to every module.
 - `customers` — contact master data, identified by a unique phone number (no separate customer code); create/update only, no delete
 - `suppliers` — contact master data with an auto-generated code; create/update only, no delete
 - `projects` — `Project` (one building = one project) and `Flat` (floor, type, facing, area, price). Flat status is automatic: Available (no active sale), Booked (sold to a customer, payment pending), Sold (fully paid)
-- `costing` — `CostCategory` tree, `ProjectBudget`, `ProjectCost`, and the area-based `CostAllocation` engine. Payments to suppliers are recorded from each cost (`CostPayment`; can't exceed the remaining payable) and drive its paid/payable/status. Costs are entered on two separate forms: *Shared* (whole building, allocated across all flats by area) and *Direct* (one flat only)
+- `costing` — `CostCategory` tree, `ProjectBudget`, `ProjectCost`, and the area-based `CostAllocation` engine. Every cost entry counts as paid — there is no payable tracking. Costs are entered on two separate forms: *Shared* (whole building, allocated across all flats by area) and *Direct* (one flat only)
 - `sales` — `FlatSale` and `CustomerPayment` (drives received/receivable)
 - `books` — independent Cash Book / Bank Book / Bank Accounts ledger
-- `reports` — project profitability, flat-wise, and receivable/payable reports (+ PDF export)
+- `reports` — project profitability, flat-wise, and receivables reports (+ PDF export)
 - `dashboard` — home page with company-wide quick stats
 - `activity_log` — explicit create/update/delete audit trail shown on the dashboard
 

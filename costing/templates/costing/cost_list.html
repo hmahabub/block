@@ -19,7 +19,7 @@
 <div class="card mb-4">
     <div class="card-body">
         <form method="get" class="row g-3">
-            <div class="col-md-3">
+            <div class="col-md-4">
                 <input type="text" name="q" class="form-control" placeholder="Search description / reference / supplier..." value="{{ request.GET.q }}">
             </div>
             <div class="col-md-3">
@@ -30,25 +30,11 @@
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-md-2 d-flex align-items-center">
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" name="due" value="1" id="due" {% if request.GET.due %}checked{% endif %}>
-                    <label class="form-check-label" for="due">Unpaid only</label>
-                </div>
-            </div>
             <div class="col-md-2">
                 <select name="type" class="form-select">
                     <option value="">Shared &amp; Direct</option>
                     <option value="shared" {% if request.GET.type == 'shared' %}selected{% endif %}>Shared only</option>
                     <option value="direct" {% if request.GET.type == 'direct' %}selected{% endif %}>Direct only</option>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <select name="status" class="form-select">
-                    <option value="">All Statuses</option>
-                    {% for value, label in status_choices %}
-                    <option value="{{ value }}" {% if request.GET.status == value %}selected{% endif %}>{{ label }}</option>
-                    {% endfor %}
                 </select>
             </div>
             <div class="col-md-2">
@@ -60,13 +46,7 @@
 
 <div class="row mb-3">
     <div class="col-md-4">
-        <div class="card text-center"><div class="card-body"><h4>{{ total_amount|default:0|taka }}</h4><small class="text-muted">Total Cost</small></div></div>
-    </div>
-    <div class="col-md-4">
-        <div class="card text-center"><div class="card-body"><h4>{{ total_paid|default:0|taka }}</h4><small class="text-muted">Total Paid</small></div></div>
-    </div>
-    <div class="col-md-4">
-        <div class="card text-center"><div class="card-body"><h4 class="text-danger">{{ total_payable|default:0|taka }}</h4><small class="text-muted">Total Payable</small></div></div>
+        <div class="card text-center"><div class="card-body"><h4>{{ total_amount|taka }}</h4><small class="text-muted">Total Cost (current filter)</small></div></div>
     </div>
 </div>
 
@@ -82,10 +62,7 @@
                         <th>Supplier</th>
                         <th>Type</th>
                         <th>Flat</th>
-                        <th>Amount</th>
-                        <th>Paid</th>
-                        <th>Payable</th>
-                        <th>Status</th>
+                        <th class="text-end">Amount</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -101,24 +78,16 @@
                             {% else %}<span class="badge bg-secondary">Shared</span>{% endif %}
                         </td>
                         <td>{{ cost.flat|default:"All flats" }}</td>
-                        <td>{{ cost.amount|taka }}</td>
-                        <td>{{ cost.paid_amount|taka }}</td>
-                        <td>{{ cost.payable_amount|taka }}</td>
-                        <td>
-                            <span class="badge {% if cost.status == 'PAID' %}bg-success{% elif cost.status == 'PARTIAL' %}bg-warning text-dark{% else %}bg-danger{% endif %}">
-                                {{ cost.get_status_display }}
-                            </span>
-                        </td>
+                        <td class="text-end">{{ cost.amount|taka }}</td>
                         <td>
                             <div class="btn-group btn-group-sm">
                                 <a href="{% url 'costing:cost-detail' cost.pk %}" class="btn btn-info" title="View"><i class="fas fa-eye"></i></a>
-                                {% if cost.payable_amount > 0 %}<a href="{% url 'costing:cost-pay' cost.pk %}" class="btn btn-success" title="Record payment"><i class="fas fa-hand-holding-usd"></i></a>{% endif %}
                                 <a href="{% url 'costing:cost-update' cost.pk %}" class="btn btn-warning" title="Edit"><i class="fas fa-edit"></i></a>
                             </div>
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="11" class="text-center py-4">No cost entries found</td></tr>
+                    <tr><td colspan="8" class="text-center py-4">No cost entries found</td></tr>
                     {% endfor %}
                 </tbody>
             </table>

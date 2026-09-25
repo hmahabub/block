@@ -28,9 +28,9 @@
             <div class="col-md-6">
                 <div class="card">
                     <div class="card-body">
-                        <h5 class="card-title">Payable Summary</h5>
-                        <h3 class="text-danger">{{ object.total_payable|taka }}</h3>
-                        <p class="text-muted mb-0">Total outstanding across all project costs</p>
+                        <h5 class="card-title">Total Costs</h5>
+                        <h3>{{ object.total_cost|taka }}</h3>
+                        <p class="text-muted mb-0">Total spent across all project costs</p>
                     </div>
                 </div>
             </div>
@@ -47,8 +47,6 @@
                             <th>Category</th>
                             <th>Date</th>
                             <th>Amount</th>
-                            <th>Paid</th>
-                            <th>Payable</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -58,8 +56,6 @@
                             <td>{{ cost.cost_category }}</td>
                             <td>{{ cost.date }}</td>
                             <td>{{ cost.amount|taka }}</td>
-                            <td>{{ cost.paid_amount|taka }}</td>
-                            <td>{{ cost.payable_amount|taka }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
