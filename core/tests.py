@@ -165,3 +165,63 @@ class CompanyProfileTests(TestCase):
         self.save_profile(files={'letterhead': image_file()})
         self.assertIn(b'/Subtype /Image', costs_pdf())
         self.assertIn(b'/Subtype /Image', flats_pdf())
+
+
+from django.core.management import call_command
+from django.core.management.base import CommandError
+from django.db.models import Sum
+
+
+class SeedDemoDataTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        call_command('seed_demo_data')
+
+    def test_two_towers_of_12_floors_and_4_flats_each(self):
+        from projects.models import Flat, Project
+        self.assertEqual(sorted(Project.objects.values_list('project_name', flat=True)), ['Tower 1', 'Tower 2'])
+        for project in Project.objects.all():
+            self.assertEqual(project.floor_no, 12)
+            self.assertEqual(project.flats.count(), 48)
+            self.assertEqual(project.total_saleable_area, 48 * 1700)
+            for floor in range(1, 13):
+                self.assertEqual(project.flats.filter(floor_no=floor).count(), 4)
+        self.assertEqual(Flat.objects.values('flat_no', 'project').distinct().count(), 96)
+
+    def test_flat_specifications(self):
+        from projects.models import Flat
+        for flat in Flat.objects.all():
+            self.assertEqual((flat.saleable_area, flat.parking_area, flat.bedrooms, flat.bathrooms), (1700, 120, 4, 4))
+            for room in ('Drawing', 'Dining', 'Balcony'):
+                self.assertIn(room, flat.features)
+
+    def test_four_customers_and_six_bookings_across_both_towers(self):
+        from customers.models import Customer
+        from projects.models import Flat
+        from sales.models import FlatSale
+        self.assertEqual(Customer.objects.count(), 4)
+        self.assertEqual(FlatSale.objects.count(), 6)
+        self.assertEqual(FlatSale.objects.values('customer').distinct().count(), 4)
+        self.assertEqual(Flat.objects.filter(status=Flat.Status.BOOKED).count(), 6)
+        self.assertEqual(FlatSale.objects.filter(flat__project__project_name='Tower 1').count(), 3)
+        self.assertEqual(FlatSale.objects.filter(flat__project__project_name='Tower 2').count(), 3)
+
+    def test_initial_payments_per_tower(self):
+        from sales.models import FlatSale
+        for sale in FlatSale.objects.select_related('flat__project'):
+            expected = 2_300_000 if sale.flat.project.project_name == 'Tower 1' else 2_100_000
+            self.assertEqual(sale.received_amount, expected)
+            self.assertEqual(sale.status, FlatSale.Status.BOOKED)
+            self.assertEqual(sale.receivable_amount, sale.net_sale_value - expected)
+
+    def test_total_cost_is_15_million_and_budget_5_million_each(self):
+        from costing.models import ProjectCost
+        from projects.models import Project
+        self.assertEqual(ProjectCost.objects.aggregate(t=Sum('amount'))['t'], 15_000_000)
+        for project in Project.objects.all():
+            self.assertEqual(project.total_cost, 7_500_000)
+            self.assertEqual(project.budget_amount, 5_000_000)
+
+    def test_refuses_to_run_twice(self):
+        with self.assertRaises(CommandError):
+            call_command('seed_demo_data')

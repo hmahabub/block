@@ -21,6 +21,9 @@ venv\Scripts\python manage.py createsuperuser
 venv\Scripts\python manage.py runserver 8010
 ```
 
+For a demo database, run `venv\Scripts\python manage.py seed_demo_data` on a fresh database (Tower 1 and Tower 2 with 12 floors
+x 4 flats each, 4 customers, 6 bookings with initial payments, and 15,000,000 of costs). It refuses to run if data already exists.
+
 Visit http://localhost:8010/, log in, and the dashboard links to every module.
 
 ## App layout

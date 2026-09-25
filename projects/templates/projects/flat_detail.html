@@ -41,6 +41,9 @@
                 <table class="table table-bordered mb-0">
                     <tr><th width="40%">Saleable Area</th><td>{{ object.saleable_area }} sqft</td></tr>
                     <tr><th>Facing</th><td>{{ object.facing|default:"-" }}</td></tr>
+                    {% if object.bedrooms or object.bathrooms %}<tr><th>Bedrooms / Bathrooms</th><td>{{ object.bedrooms|default:"-" }} / {{ object.bathrooms|default:"-" }}</td></tr>{% endif %}
+                    {% if object.parking_area %}<tr><th>Parking area</th><td>{{ object.parking_area }} sqft</td></tr>{% endif %}
+                    {% if object.features %}<tr><th>Rooms &amp; features</th><td>{{ object.features }}</td></tr>{% endif %}
                     <tr><th>Base Price</th><td>{{ object.base_price|taka }}</td></tr>
                     <tr><th>Allocated Project Cost</th><td>{{ object.allocated_cost|taka }}</td></tr>
                     <tr><th>Direct Flat Cost</th><td>{{ object.direct_cost|taka }}</td></tr>

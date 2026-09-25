@@ -21,7 +21,10 @@ class ProjectForm(forms.ModelForm):
 class FlatForm(forms.ModelForm):
     class Meta:
         model = Flat
-        fields = ['flat_no', 'floor_no', 'flat_type', 'facing', 'saleable_area', 'base_price', 'notes']
+        fields = [
+            'flat_no', 'floor_no', 'flat_type', 'facing', 'saleable_area', 'base_price',
+            'bedrooms', 'bathrooms', 'parking_area', 'features', 'notes',
+        ]
         widgets = {
             'notes': forms.Textarea(attrs={'rows': 2}),
         }

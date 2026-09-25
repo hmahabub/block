@@ -31,6 +31,14 @@
             {% if sale.flat.facing %}&middot; {{ sale.flat.facing }} facing{% endif %}
             &middot; {{ sale.flat.saleable_area }} sqft
         </div>
+        {% if sale.flat.bedrooms or sale.flat.bathrooms or sale.flat.parking_area %}
+        <div class="text-muted small">
+            {% if sale.flat.bedrooms %}{{ sale.flat.bedrooms }} bed{% endif %}
+            {% if sale.flat.bathrooms %}&middot; {{ sale.flat.bathrooms }} bath{% endif %}
+            {% if sale.flat.parking_area %}&middot; {{ sale.flat.parking_area }} sqft parking{% endif %}
+        </div>
+        {% endif %}
+        {% if sale.flat.features %}<div class="text-muted small">{{ sale.flat.features }}</div>{% endif %}
     </div>
 </div>
 

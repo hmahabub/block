@@ -109,6 +109,11 @@ class Flat(models.Model):
     floor_no = models.IntegerField()
     flat_type = models.CharField(max_length=20, choices=FlatType.choices, default=FlatType.TWO_BED)
     facing = models.CharField(max_length=50, blank=True)
+    bedrooms = models.PositiveSmallIntegerField(null=True, blank=True)
+    bathrooms = models.PositiveSmallIntegerField(null=True, blank=True)
+    parking_area = models.DecimalField('Parking area (sqft)', max_digits=8, decimal_places=2, null=True, blank=True)
+    features = models.CharField('Rooms & features', max_length=255, blank=True,
+                                help_text='e.g. Drawing, Dining, Balcony')
     saleable_area = models.DecimalField('Saleable Area (sqft)', max_digits=10, decimal_places=2)
     base_price = models.DecimalField(max_digits=14, decimal_places=2, validators=[MinValueValidator(0)])
     # Managed by FlatSale: Available (no active sale), Booked (active sale not fully
