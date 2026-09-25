@@ -44,19 +44,26 @@ class FlatSale(models.Model):
             self.project = self.flat.project
         self.net_sale_value = self.base_price + self.other_charges - self.discount
         self.receivable_amount = self.net_sale_value - self.received_amount
+        if self.status != self.Status.CANCELLED:
+            fully_paid = self.net_sale_value > 0 and self.received_amount >= self.net_sale_value
+            self.status = self.Status.SOLD if fully_paid else self.Status.BOOKED
         super().save(*args, **kwargs)
         self._sync_flat_status()
 
     def _sync_flat_status(self):
+        """Flat is Available with no active sale, Booked while payment is pending, Sold once fully paid."""
         from projects.models import Flat
 
         flat = self.flat
-        if self.status == self.Status.CANCELLED:
-            if not flat.sales.exclude(pk=self.pk).exclude(status=self.Status.CANCELLED).exists():
-                flat.status = Flat.Status.AVAILABLE
-                flat.save(update_fields=['status'])
-        elif self.status in (self.Status.BOOKED, self.Status.SOLD):
-            flat.status = Flat.Status.BOOKED if self.status == self.Status.BOOKED else Flat.Status.SOLD
+        active = flat.sales.exclude(status=self.Status.CANCELLED)
+        if not active.exists():
+            new_status = Flat.Status.AVAILABLE
+        elif active.filter(status=self.Status.SOLD).exists():
+            new_status = Flat.Status.SOLD
+        else:
+            new_status = Flat.Status.BOOKED
+        if flat.status != new_status:
+            flat.status = new_status
             flat.save(update_fields=['status'])
 
     def recalc_received_amount(self):

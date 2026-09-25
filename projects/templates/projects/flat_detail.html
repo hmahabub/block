@@ -11,8 +11,7 @@
                 {% if object.status == 'AVAILABLE' %}bg-success
                 {% elif object.status == 'BOOKED' %}bg-warning text-dark
                 {% elif object.status == 'SOLD' %}bg-primary
-                {% elif object.status == 'HANDED_OVER' %}bg-info text-dark
-                {% else %}bg-danger{% endif %}">
+                {% endif %}">
                 {{ object.get_status_display }}
             </span>
         </h3>
@@ -20,6 +19,8 @@
             <a href="{% url 'projects:detail' object.project.pk %}">{{ object.project.project_name }}</a>
             &middot; Floor {{ object.floor_no }} &middot; {{ object.get_flat_type_display }}
             {% if object.facing %}&middot; {{ object.facing }} Facing{% endif %}
+            {% if object.current_sale %}&middot; <i class="fas fa-user"></i>
+            <a href="{% url 'customers:detail' object.current_sale.customer.pk %}">{{ object.current_sale.customer.name }}</a>{% endif %}
         </p>
     </div>
     <div>
@@ -54,9 +55,13 @@
             <div class="card-body">
                 {% if object.current_sale %}
                 <table class="table table-bordered mb-0">
-                    <tr><th width="40%">Net Sale Value</th><td>{{ object.current_sale.net_sale_value|taka }}</td></tr>
-                    <tr><th>Received</th><td>{{ object.current_sale.received_amount|taka }}</td></tr>
-                    <tr><th>Receivable</th><td>{{ object.current_sale.receivable_amount|taka }}</td></tr>
+                    <tr><th width="40%">Customer</th><td>
+                        <a href="{% url 'customers:detail' object.current_sale.customer.pk %}">{{ object.current_sale.customer.name }}</a>
+                        <small class="text-muted">{{ object.current_sale.customer.phone }}</small>
+                    </td></tr>
+                    <tr><th>Net Sale Value</th><td>{{ object.current_sale.net_sale_value|taka }}</td></tr>
+                    <tr><th>Paid</th><td>{{ object.current_sale.received_amount|taka }}</td></tr>
+                    <tr><th>Balance</th><td class="{% if object.current_sale.receivable_amount > 0 %}text-danger{% endif %}">{{ object.current_sale.receivable_amount|taka }}</td></tr>
                     <tr>
                         <th>Estimated Profit</th>
                         <td class="{% if object.profit >= 0 %}text-success{% else %}text-danger{% endif %}">
@@ -101,7 +106,12 @@
 </div>
 
 <div class="card mb-3">
-    <div class="card-header">Direct Flat Costs</div>
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Direct Flat Costs</span>
+        <a href="{% url 'costing:cost-create-direct' %}?flat={{ object.pk }}" class="btn btn-primary btn-sm">
+            <i class="fas fa-plus"></i> Add Direct Cost
+        </a>
+    </div>
     <div class="card-body">
         {% if direct_costs %}
         <div class="table-responsive">

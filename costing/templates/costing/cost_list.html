@@ -6,9 +6,14 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2><i class="fas fa-coins"></i> Project Costs</h2>
-    <a href="{% url 'costing:cost-create' %}" class="btn btn-primary">
-        <i class="fas fa-plus"></i> Add Cost Entry
-    </a>
+    <div>
+        <a href="{% url 'costing:cost-create-shared' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Add Shared Cost
+        </a>
+        <a href="{% url 'costing:cost-create-direct' %}" class="btn btn-outline-primary">
+            <i class="fas fa-plus"></i> Add Direct Flat Cost
+        </a>
+    </div>
 </div>
 
 <div class="card mb-4">
@@ -25,7 +30,14 @@
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
+                <select name="type" class="form-select">
+                    <option value="">Shared &amp; Direct</option>
+                    <option value="shared" {% if request.GET.type == 'shared' %}selected{% endif %}>Shared only</option>
+                    <option value="direct" {% if request.GET.type == 'direct' %}selected{% endif %}>Direct only</option>
+                </select>
+            </div>
+            <div class="col-md-2">
                 <select name="status" class="form-select">
                     <option value="">All Statuses</option>
                     {% for value, label in status_choices %}
@@ -62,6 +74,7 @@
                         <th>Project</th>
                         <th>Category</th>
                         <th>Supplier</th>
+                        <th>Type</th>
                         <th>Flat</th>
                         <th>Amount</th>
                         <th>Paid</th>
@@ -77,7 +90,11 @@
                         <td><a href="{% url 'projects:detail' cost.project.pk %}">{{ cost.project.project_code }}</a></td>
                         <td>{{ cost.cost_category }}</td>
                         <td>{{ cost.supplier|default:"-" }}</td>
-                        <td>{{ cost.flat|default:"Shared" }}</td>
+                        <td>
+                            {% if cost.flat %}<span class="badge bg-info text-dark">Direct</span>
+                            {% else %}<span class="badge bg-secondary">Shared</span>{% endif %}
+                        </td>
+                        <td>{{ cost.flat|default:"All flats" }}</td>
                         <td>{{ cost.amount|taka }}</td>
                         <td>{{ cost.paid_amount|taka }}</td>
                         <td>{{ cost.payable_amount|taka }}</td>
@@ -94,7 +111,7 @@
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="10" class="text-center py-4">No cost entries found</td></tr>
+                    <tr><td colspan="11" class="text-center py-4">No cost entries found</td></tr>
                     {% endfor %}
                 </tbody>
             </table>

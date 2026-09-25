@@ -8,11 +8,12 @@ from .views import (
     ProjectBudgetDeleteView,
     ProjectBudgetListView,
     ProjectBudgetUpdateView,
-    ProjectCostCreateView,
     ProjectCostDeleteView,
     ProjectCostDetailView,
     ProjectCostListView,
     ProjectCostUpdateView,
+    SharedCostCreateView,
+    DirectCostCreateView,
 )
 
 app_name = 'costing'
@@ -28,7 +29,8 @@ urlpatterns = [
     path('budgets/<int:pk>/delete/', ProjectBudgetDeleteView.as_view(), name='budget-delete'),
 
     path('', ProjectCostListView.as_view(), name='cost-list'),
-    path('create/', ProjectCostCreateView.as_view(), name='cost-create'),
+    path('create/shared/', SharedCostCreateView.as_view(), name='cost-create-shared'),
+    path('create/direct/', DirectCostCreateView.as_view(), name='cost-create-direct'),
     path('<int:pk>/', ProjectCostDetailView.as_view(), name='cost-detail'),
     path('<int:pk>/update/', ProjectCostUpdateView.as_view(), name='cost-update'),
     path('<int:pk>/delete/', ProjectCostDeleteView.as_view(), name='cost-delete'),

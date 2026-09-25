@@ -100,8 +100,6 @@ class Flat(models.Model):
         AVAILABLE = 'AVAILABLE', 'Available'
         BOOKED = 'BOOKED', 'Booked'
         SOLD = 'SOLD', 'Sold'
-        CANCELLED = 'CANCELLED', 'Cancelled'
-        HANDED_OVER = 'HANDED_OVER', 'Handed Over'
 
     class FlatType(models.TextChoices):
         STUDIO = 'STUDIO', 'Studio'
@@ -121,7 +119,9 @@ class Flat(models.Model):
     facing = models.CharField(max_length=50, blank=True)
     saleable_area = models.DecimalField('Saleable Area (sqft)', max_digits=10, decimal_places=2)
     base_price = models.DecimalField(max_digits=14, decimal_places=2, validators=[MinValueValidator(0)])
-    status = models.CharField(max_length=20, choices=Status.choices, default=Status.AVAILABLE)
+    # Managed by FlatSale: Available (no active sale), Booked (active sale not fully
+    # paid), Sold (active sale fully paid). Never edited by hand.
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.AVAILABLE, editable=False)
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

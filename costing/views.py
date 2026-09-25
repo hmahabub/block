@@ -4,9 +4,9 @@ from django.urls import reverse_lazy
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
 from core.mixins import CreateAuditMixin, DeleteAuditMixin, UpdateAuditMixin
-from projects.models import Project
+from projects.models import Flat, Project
 
-from .forms import CostCategoryForm, ProjectBudgetForm, ProjectCostForm
+from .forms import CostCategoryForm, DirectCostForm, ProjectBudgetForm, SharedCostForm
 from .models import CostCategory, ProjectBudget, ProjectCost
 
 
@@ -87,11 +87,16 @@ class ProjectCostListView(LoginRequiredMixin, ListView):
         queryset = super().get_queryset().select_related('project', 'cost_category', 'supplier', 'flat')
         project_id = self.request.GET.get('project')
         status = self.request.GET.get('status')
+        cost_type = self.request.GET.get('type')
         q = self.request.GET.get('q')
         if project_id:
             queryset = queryset.filter(project_id=project_id)
         if status:
             queryset = queryset.filter(status=status)
+        if cost_type == 'shared':
+            queryset = queryset.filter(flat__isnull=True)
+        elif cost_type == 'direct':
+            queryset = queryset.filter(flat__isnull=False)
         if q:
             queryset = queryset.filter(
                 Q(description__icontains=q) | Q(reference_no__icontains=q) | Q(supplier__name__icontains=q)
@@ -121,21 +126,58 @@ class ProjectCostDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
-class ProjectCostCreateView(PermissionRequiredMixin, CreateAuditMixin, CreateView):
+class _ProjectCostCreateView(PermissionRequiredMixin, CreateAuditMixin, CreateView):
     model = ProjectCost
-    form_class = ProjectCostForm
     template_name = 'costing/cost_form.html'
     permission_required = 'costing.add_projectcost'
+    cost_type = None
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['cost_type'] = self.cost_type
+        return context
 
     def get_success_url(self):
         return reverse_lazy('costing:cost-detail', kwargs={'pk': self.object.pk})
 
 
+class SharedCostCreateView(_ProjectCostCreateView):
+    form_class = SharedCostForm
+    cost_type = 'shared'
+
+    def get_initial(self):
+        initial = super().get_initial()
+        project = Project.objects.filter(pk=self.request.GET.get('project')).first()
+        if project:
+            initial['project'] = project
+        return initial
+
+
+class DirectCostCreateView(_ProjectCostCreateView):
+    form_class = DirectCostForm
+    cost_type = 'direct'
+
+    def get_initial(self):
+        initial = super().get_initial()
+        flat = Flat.objects.filter(pk=self.request.GET.get('flat')).first()
+        if flat:
+            initial['flat'] = flat
+        return initial
+
+
 class ProjectCostUpdateView(PermissionRequiredMixin, UpdateAuditMixin, UpdateView):
     model = ProjectCost
-    form_class = ProjectCostForm
     template_name = 'costing/cost_form.html'
     permission_required = 'costing.change_projectcost'
+
+    def get_form_class(self):
+        # A cost stays the kind it was created as: direct if it has a flat, shared otherwise.
+        return DirectCostForm if self.object.flat_id else SharedCostForm
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['cost_type'] = 'direct' if self.object.flat_id else 'shared'
+        return context
 
     def get_success_url(self):
         return reverse_lazy('costing:cost-detail', kwargs={'pk': self.object.pk})

@@ -16,7 +16,7 @@
                     {{ form.flat|as_crispy_field }}
                     {{ form.customer|as_crispy_field }}
                     {{ form.sale_date|as_crispy_field }}
-                    {{ form.status|as_crispy_field }}
+                    {% if object %}{{ form.cancel_sale|as_crispy_field }}{% endif %}
                 </div>
                 <div class="col-md-6">
                     {{ form.base_price|as_crispy_field }}
@@ -29,12 +29,11 @@
                     {{ form.notes|as_crispy_field }}
                 </div>
             </div>
-            {% if not object %}
             <div class="alert alert-info">
                 <i class="fas fa-info-circle"></i> Net Sale Value and Receivable are calculated automatically.
-                Received amount is tracked separately through <a href="{% url 'sales:payment-create' %}">Customer Payments</a> once this sale is saved.
+                The sale is <strong>Booked</strong> when created and becomes <strong>Sold</strong> automatically once the
+                full amount is received through <a href="{% url 'sales:payment-create' %}">Customer Payments</a>.
             </div>
-            {% endif %}
             <div class="mt-3">
                 <button type="submit" class="btn btn-primary">
                     <i class="fas fa-save"></i> {% if object %}Update{% else %}Create{% endif %}

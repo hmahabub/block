@@ -28,8 +28,8 @@ Visit http://localhost:8010/, log in, and the dashboard links to every module.
 - `core` — atomic numbering (`Sequence` + `core.numbering`), shared audit-log mixins, `taka` template filter
 - `customers` — contact master data, identified by a unique phone number (no separate customer code); create/update only, no delete
 - `suppliers` — contact master data with an auto-generated code; create/update only, no delete
-- `projects` — `Project` (one building = one project) and `Flat` (floor, type, facing, area, price, status)
-- `costing` — `CostCategory` tree, `ProjectBudget`, `ProjectCost`, and the area-based `CostAllocation` engine
+- `projects` — `Project` (one building = one project) and `Flat` (floor, type, facing, area, price). Flat status is automatic: Available (no active sale), Booked (sold to a customer, payment pending), Sold (fully paid)
+- `costing` — `CostCategory` tree, `ProjectBudget`, `ProjectCost`, and the area-based `CostAllocation` engine. Costs are entered on two separate forms: *Shared* (whole building, allocated across all flats by area) and *Direct* (one flat only)
 - `sales` — `FlatSale` and `CustomerPayment` (drives received/receivable)
 - `payables` — `SupplierPayment` (drives paid/payable on `ProjectCost`; a payment can't exceed the cost's remaining payable amount)
 - `books` — independent Cash Book / Bank Book / Bank Accounts ledger

@@ -5,11 +5,17 @@ from .models import CustomerPayment, FlatSale
 
 
 class FlatSaleForm(forms.ModelForm):
+    cancel_sale = forms.BooleanField(
+        required=False,
+        label='Cancel this sale',
+        help_text='Cancelling frees the flat so it can be sold to someone else.',
+    )
+
     class Meta:
         model = FlatSale
         fields = [
             'flat', 'customer', 'sale_date', 'base_price',
-            'other_charges', 'discount', 'status', 'notes',
+            'other_charges', 'discount', 'notes',
         ]
         widgets = {
             'sale_date': forms.DateInput(attrs={'type': 'date'}),
@@ -18,19 +24,19 @@ class FlatSaleForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Only offer flats that aren't already booked/sold elsewhere. On update,
-        # also keep this sale's own flat selectable even though its status is
-        # now BOOKED/SOLD because of this very sale.
-        queryset = self.fields['flat'].queryset.filter(status='AVAILABLE')
-        if self.instance.pk and self.instance.flat_id:
-            queryset = queryset | self.fields['flat'].queryset.filter(pk=self.instance.flat_id)
-        self.fields['flat'].queryset = queryset.distinct()
+        if self.instance.pk:
+            # The flat is fixed once the sale exists; changing it would leave the
+            # old flat marked as booked/sold.
+            self.fields['flat'].disabled = True
+            self.fields['cancel_sale'].initial = self.instance.status == FlatSale.Status.CANCELLED
+        else:
+            del self.fields['cancel_sale']
+            self.fields['flat'].queryset = self.fields['flat'].queryset.filter(status='AVAILABLE')
 
     def clean(self):
         cleaned_data = super().clean()
         flat = cleaned_data.get('flat')
-        status = cleaned_data.get('status')
-        if flat and status in (FlatSale.Status.BOOKED, FlatSale.Status.SOLD):
+        if flat and not cleaned_data.get('cancel_sale'):
             conflicting = flat.sales.exclude(status=FlatSale.Status.CANCELLED)
             if self.instance.pk:
                 conflicting = conflicting.exclude(pk=self.instance.pk)
@@ -42,6 +48,17 @@ class FlatSaleForm(forms.ModelForm):
                 )
         return cleaned_data
 
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        if self.cleaned_data.get('cancel_sale'):
+            instance.status = FlatSale.Status.CANCELLED
+        elif instance.status == FlatSale.Status.CANCELLED:
+            # Un-cancelling: FlatSale.save() recomputes Booked/Sold from payments.
+            instance.status = FlatSale.Status.BOOKED
+        if commit:
+            instance.save()
+        return instance
+
 
 class CustomerPaymentForm(forms.ModelForm):
     class Meta:
@@ -51,3 +68,7 @@ class CustomerPaymentForm(forms.ModelForm):
             'payment_date': forms.DateInput(attrs={'type': 'date'}),
             'notes': forms.Textarea(attrs={'rows': 2}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['sale'].queryset = self.fields['sale'].queryset.exclude(status=FlatSale.Status.CANCELLED)

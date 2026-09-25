@@ -10,6 +10,14 @@ from .forms import FlatForm, ProjectForm
 from .models import Flat, Project
 
 
+def attach_active_sales(flats):
+    """Give each flat an `active_sale` (customer, paid, balance) without re-querying per template access."""
+    flats = list(flats)
+    for flat in flats:
+        flat.active_sale = flat.current_sale
+    return flats
+
+
 class ProjectListView(LoginRequiredMixin, ListView):
     model = Project
     template_name = 'projects/project_list.html'
@@ -39,7 +47,7 @@ class ProjectDetailView(LoginRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['flats'] = self.object.flats.all()
+        context['flats'] = attach_active_sales(self.object.flats.all())
         return context
 
 
@@ -93,6 +101,7 @@ class FlatListView(LoginRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         context['projects'] = Project.objects.all()
         context['status_choices'] = Flat.Status.choices
+        attach_active_sales(context['object_list'])
         return context
 
 

@@ -23,13 +23,16 @@
                 <div class="col-md-6">
                     {{ form.saleable_area|as_crispy_field }}
                     {{ form.base_price|as_crispy_field }}
-                    {{ form.status|as_crispy_field }}
                 </div>
             </div>
             <div class="row">
                 <div class="col-12">
                     {{ form.notes|as_crispy_field }}
                 </div>
+            </div>
+            <div class="alert alert-info mt-3 mb-0">
+                <i class="fas fa-info-circle"></i> Status is automatic: <strong>Available</strong> until a customer books
+                the flat, <strong>Booked</strong> while payment is pending, <strong>Sold</strong> once fully paid.
             </div>
             <div class="mt-3">
                 <button type="submit" class="btn btn-primary">
