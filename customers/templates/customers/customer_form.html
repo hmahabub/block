@@ -11,6 +11,8 @@
     <div class="card-body">
         <form method="post">
             {% csrf_token %}
+
+            <h5 class="text-muted border-bottom pb-1">Personal Information</h5>
             <div class="row">
                 <div class="col-md-6">
                     {{ form.name|as_crispy_field }}
@@ -19,10 +21,37 @@
                 </div>
                 <div class="col-md-6">
                     {{ form.identification_no|as_crispy_field }}
-                    {{ form.address|as_crispy_field }}
+                    {{ form.date_of_birth|as_crispy_field }}
+                    <div class="row">
+                        <div class="col-6">{{ form.nationality|as_crispy_field }}</div>
+                        <div class="col-6">{{ form.occupation|as_crispy_field }}</div>
+                    </div>
                 </div>
             </div>
+
+            <h5 class="text-muted border-bottom pb-1 mt-3">Family</h5>
             <div class="row">
+                <div class="col-md-4">{{ form.father_name|as_crispy_field }}</div>
+                <div class="col-md-4">{{ form.mother_name|as_crispy_field }}</div>
+                <div class="col-md-4">{{ form.spouse_name|as_crispy_field }}</div>
+            </div>
+
+            <h5 class="text-muted border-bottom pb-1 mt-3">Address</h5>
+            <div class="row">
+                <div class="col-md-6">{{ form.present_address|as_crispy_field }}</div>
+                <div class="col-md-6">
+                    {{ form.same_as_present|as_crispy_field }}
+                    <div id="permanent-wrap">{{ form.permanent_address|as_crispy_field }}</div>
+                </div>
+            </div>
+
+            <h5 class="text-muted border-bottom pb-1 mt-3">Nominee</h5>
+            <div class="row">
+                <div class="col-md-6">{{ form.nominee_name|as_crispy_field }}</div>
+                <div class="col-md-6">{{ form.nominee_relation|as_crispy_field }}</div>
+            </div>
+
+            <div class="row mt-2">
                 <div class="col-12">
                     {{ form.notes|as_crispy_field }}
                 </div>
@@ -39,4 +68,16 @@
         </form>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    (function () {
+        var checkbox = document.getElementById('id_same_as_present');
+        var wrap = document.getElementById('permanent-wrap');
+        function sync() { wrap.style.display = checkbox.checked ? 'none' : ''; }
+        checkbox.addEventListener('change', sync);
+        sync();
+    })();
+</script>
 {% endblock %}

@@ -19,21 +19,47 @@
     <div class="card-body">
         <div class="row">
             <div class="col-md-6">
+                <h5>Personal Information</h5>
                 <table class="table table-bordered">
-                    <tr><th width="35%">Phone</th><td>{{ object.phone|default:"-" }}</td></tr>
+                    <tr><th width="38%">Phone</th><td>{{ object.phone|default:"-" }}</td></tr>
                     <tr><th>Email</th><td>{{ object.email|default:"-" }}</td></tr>
                     <tr><th>NID / Passport</th><td>{{ object.identification_no|default:"-" }}</td></tr>
-                    <tr><th>Address</th><td>{{ object.address|linebreaks|default:"-" }}</td></tr>
+                    <tr><th>Date of birth</th><td>{{ object.date_of_birth|date:"j M Y"|default:"-" }}</td></tr>
+                    <tr><th>Nationality</th><td>{{ object.nationality|default:"-" }}</td></tr>
+                    <tr><th>Occupation</th><td>{{ object.occupation|default:"-" }}</td></tr>
+                </table>
+
+                <h5>Family</h5>
+                <table class="table table-bordered">
+                    <tr><th width="38%">Father's name</th><td>{{ object.father_name|default:"-" }}</td></tr>
+                    <tr><th>Mother's name</th><td>{{ object.mother_name|default:"-" }}</td></tr>
+                    <tr><th>Spouse's name</th><td>{{ object.spouse_name|default:"-" }}</td></tr>
                 </table>
             </div>
             <div class="col-md-6">
-                <div class="card">
+                <div class="card mb-3">
                     <div class="card-body">
                         <h5 class="card-title">Receivable Summary</h5>
                         <h3 class="text-danger">{{ object.total_receivable|taka }}</h3>
                         <p class="text-muted mb-0">Total outstanding across all bookings</p>
                     </div>
                 </div>
+
+                <h5>Address</h5>
+                <table class="table table-bordered">
+                    <tr><th width="38%">Present address</th><td>{{ object.present_address|linebreaksbr|default:"-" }}</td></tr>
+                    <tr><th>Permanent address</th><td>
+                        {% if object.permanent_address and object.permanent_address == object.present_address %}
+                        <span class="text-muted">Same as present address</span>
+                        {% else %}{{ object.permanent_address|linebreaksbr|default:"-" }}{% endif %}
+                    </td></tr>
+                </table>
+
+                <h5>Nominee</h5>
+                <table class="table table-bordered">
+                    <tr><th width="38%">Name</th><td>{{ object.nominee_name|default:"-" }}</td></tr>
+                    <tr><th>Relation</th><td>{{ object.nominee_relation|default:"-" }}</td></tr>
+                </table>
             </div>
         </div>
 

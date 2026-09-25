@@ -20,7 +20,7 @@
         <div class="text-muted small">Phone: {{ sale.customer.phone }}</div>
         {% if sale.customer.email %}<div class="text-muted small">{{ sale.customer.email }}</div>{% endif %}
         {% if sale.customer.identification_no %}<div class="text-muted small">NID / Passport: {{ sale.customer.identification_no }}</div>{% endif %}
-        {% if sale.customer.address %}<div class="text-muted small">{{ sale.customer.address|linebreaksbr }}</div>{% endif %}
+        {% if sale.customer.present_address %}<div class="text-muted small">{{ sale.customer.present_address|linebreaksbr }}</div>{% endif %}
     </div>
     <div class="col-6">
         <div class="section-label">Property</div>

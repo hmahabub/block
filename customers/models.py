@@ -12,8 +12,21 @@ class Customer(models.Model):
     name = models.CharField('Customer Name', max_length=150)
     phone = models.CharField(validators=[phone_regex], max_length=17, unique=True)
     email = models.EmailField(blank=True)
-    address = models.TextField(blank=True)
     identification_no = models.CharField('NID / Passport No.', max_length=50, blank=True)
+    date_of_birth = models.DateField(null=True, blank=True)
+    nationality = models.CharField(max_length=50, default='Bangladeshi', blank=True)
+    occupation = models.CharField('Occupation / Profession', max_length=100, blank=True)
+
+    father_name = models.CharField("Father's name", max_length=150, blank=True)
+    mother_name = models.CharField("Mother's name", max_length=150, blank=True)
+    spouse_name = models.CharField("Spouse's name", max_length=150, blank=True)
+
+    present_address = models.TextField(blank=True)
+    permanent_address = models.TextField(blank=True)
+
+    nominee_name = models.CharField('Nominee name', max_length=150, blank=True)
+    nominee_relation = models.CharField('Nominee relation', max_length=50, blank=True)
+
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

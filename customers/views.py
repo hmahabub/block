@@ -23,6 +23,8 @@ class CustomerListView(LoginRequiredMixin, ListView):
                 Q(name__icontains=q)
                 | Q(phone__icontains=q)
                 | Q(email__icontains=q)
+                | Q(identification_no__icontains=q)
+                | Q(father_name__icontains=q)
             )
         return queryset
 

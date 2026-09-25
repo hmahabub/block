@@ -16,7 +16,7 @@
         <div class="section-label">Received from</div>
         <div class="fs-5 fw-semibold">{{ payment.customer.name }}</div>
         <div class="text-muted small">Phone: {{ payment.customer.phone }}</div>
-        {% if payment.customer.address %}<div class="text-muted small">{{ payment.customer.address|linebreaksbr }}</div>{% endif %}
+        {% if payment.customer.present_address %}<div class="text-muted small">{{ payment.customer.present_address|linebreaksbr }}</div>{% endif %}
     </div>
     <div class="col-6">
         <div class="section-label">Against</div>
