@@ -18,11 +18,13 @@
 
 <div class="card mb-4">
     <div class="card-body">
-        <form method="get" class="row g-3">
-            <div class="col-md-4">
-                <input type="text" name="q" class="form-control" placeholder="Search description / reference / supplier..." value="{{ request.GET.q }}">
+        <form method="get" id="filter-form" class="row g-2 align-items-end">
+            <div class="col-md-5">
+                <label class="form-label small text-muted mb-1">Search</label>
+                <input type="text" name="q" class="form-control" placeholder="Description / reference / supplier..." value="{{ request.GET.q }}">
             </div>
-            <div class="col-md-3">
+            <div class="col-md-4">
+                <label class="form-label small text-muted mb-1">Project</label>
                 <select name="project" class="form-select">
                     <option value="">All Projects</option>
                     {% for project in projects %}
@@ -30,23 +32,45 @@
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-md-2">
+            <div class="col-md-3">
+                <label class="form-label small text-muted mb-1">Type</label>
                 <select name="type" class="form-select">
                     <option value="">Shared &amp; Direct</option>
                     <option value="shared" {% if request.GET.type == 'shared' %}selected{% endif %}>Shared only</option>
                     <option value="direct" {% if request.GET.type == 'direct' %}selected{% endif %}>Direct only</option>
                 </select>
             </div>
+
+            <div class="col-md-3">
+                <label class="form-label small text-muted mb-1">Month</label>
+                <input type="month" name="month" id="f-month" class="form-control" value="{{ month }}">
+            </div>
             <div class="col-md-2">
-                <button type="submit" class="btn btn-primary w-100"><i class="fas fa-filter"></i> Filter</button>
+                <label class="form-label small text-muted mb-1">From date</label>
+                <input type="date" name="date_from" id="f-from" class="form-control" value="{{ date_from }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-muted mb-1">To date</label>
+                <input type="date" name="date_to" id="f-to" class="form-control" value="{{ date_to }}">
+            </div>
+            <div class="col-md-5 d-flex flex-wrap gap-2">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-filter"></i> Filter</button>
+                <a href="{% url 'costing:cost-list' %}" class="btn btn-outline-secondary">Reset</a>
+                <a href="?{% querystring month=None page=None date_from=this_month.0|date:'Y-m-d' date_to=this_month.1|date:'Y-m-d' %}" class="btn btn-outline-primary">This month</a>
+                <a href="?{% querystring month=None page=None date_from=last_month.0|date:'Y-m-d' date_to=last_month.1|date:'Y-m-d' %}" class="btn btn-outline-primary">Last month</a>
             </div>
         </form>
     </div>
 </div>
 
-<div class="row mb-3">
+<div class="row mb-3 align-items-center">
     <div class="col-md-4">
         <div class="card text-center"><div class="card-body"><h4>{{ total_amount|taka }}</h4><small class="text-muted">Total Cost (current filter)</small></div></div>
+    </div>
+    <div class="col-md-8 text-md-end mt-2 mt-md-0">
+        <a href="{% url 'costing:cost-report-pdf' %}?{% querystring page=None %}" target="_blank" class="btn btn-danger">
+            <i class="fas fa-file-pdf"></i> Print PDF of this list
+        </a>
     </div>
 </div>
 
@@ -96,4 +120,19 @@
         {% include "includes/pagination.html" %}
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Month and date range are alternatives: picking one clears the other.
+    (function () {
+        var month = document.getElementById('f-month');
+        var from = document.getElementById('f-from');
+        var to = document.getElementById('f-to');
+        month.addEventListener('change', function () { if (month.value) { from.value = ''; to.value = ''; } });
+        [from, to].forEach(function (input) {
+            input.addEventListener('change', function () { if (input.value) { month.value = ''; } });
+        });
+    })();
+</script>
 {% endblock %}

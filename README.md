@@ -45,6 +45,9 @@ Print-ready A4 pages (use the browser's Print, or "Save as PDF"), each with a co
 - **Money receipt** for a customer payment: print icon in the sale's payments and in the payments list (`MR-00001`);
   it shows the balance as of that payment
 
+- **Project cost report (PDF)**: "Print PDF of this list" on the cost list exports whatever the list is currently filtered to
+  (search, project, shared/direct, month or date range), with a total and a summary by cost head
+
 The header shows `COMPANY_NAME` (default `Block`), and optionally `COMPANY_ADDRESS` / `COMPANY_PHONE`; set them in `.env`.
 
 ## Numbering

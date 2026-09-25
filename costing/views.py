@@ -1,13 +1,20 @@
+import calendar
+import datetime
+
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
-from django.db.models import Q, Sum
+from django.db.models import Sum
+from django.http import HttpResponse
 from django.urls import reverse_lazy
+from django.views import View
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
 from core.mixins import CreateAuditMixin, DeleteAuditMixin, UpdateAuditMixin
 from projects.models import Flat, Project
 
+from .filters import filter_project_costs
 from .forms import CostCategoryForm, DirectCostForm, ProjectBudgetForm, SharedCostForm
 from .models import CostCategory, ProjectBudget, ProjectCost
+from .reports import build_cost_report_pdf
 
 
 class CostCategoryListView(LoginRequiredMixin, ListView):
@@ -85,25 +92,22 @@ class ProjectCostListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         queryset = super().get_queryset().select_related('project', 'cost_category', 'supplier', 'flat')
-        project_id = self.request.GET.get('project')
-        cost_type = self.request.GET.get('type')
-        q = self.request.GET.get('q')
-        if project_id:
-            queryset = queryset.filter(project_id=project_id)
-        if cost_type == 'shared':
-            queryset = queryset.filter(flat__isnull=True)
-        elif cost_type == 'direct':
-            queryset = queryset.filter(flat__isnull=False)
-        if q:
-            queryset = queryset.filter(
-                Q(description__icontains=q) | Q(reference_no__icontains=q) | Q(supplier__name__icontains=q)
-            )
+        queryset, self.applied = filter_project_costs(queryset, self.request.GET)
         return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        params = self.request.GET
         context['projects'] = Project.objects.all()
         context['total_amount'] = self.get_queryset().aggregate(total=Sum('amount'))['total'] or 0
+        context['month'] = params.get('month', '')
+        context['date_from'] = params.get('date_from', '')
+        context['date_to'] = params.get('date_to', '')
+        today = datetime.date.today()
+        this_first = today.replace(day=1)
+        last_end = this_first - datetime.timedelta(days=1)
+        context['this_month'] = (this_first, this_first.replace(day=calendar.monthrange(today.year, today.month)[1]))
+        context['last_month'] = (last_end.replace(day=1), last_end)
         return context
 
 
@@ -187,3 +191,16 @@ class ProjectCostVoucherView(LoginRequiredMixin, DetailView):
     model = ProjectCost
     template_name = 'costing/cost_voucher.html'
     context_object_name = 'cost'
+
+
+class ProjectCostReportPDFView(LoginRequiredMixin, View):
+    """PDF of the project cost list, honouring the same filters as the on-screen list."""
+
+    def get(self, request):
+        costs, applied = filter_project_costs(ProjectCost.objects.all(), request.GET)
+        date_from, date_to = applied['date_from'], applied['date_to']
+        stamp = f'{date_from or "start"}_to_{date_to or "end"}' if (date_from or date_to) else 'all'
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = f'inline; filename="project_costs_{stamp}.pdf"'
+        build_cost_report_pdf(response, costs, applied, request.user)
+        return response
