@@ -3,60 +3,59 @@
 
 {% block title %}{% if object %}Update{% else %}Create{% endif %} Customer{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* Compact layout so the whole customer form fits on one screen. */
+    .compact-form .card-header { padding: .5rem 1rem; }
+    .compact-form .card-body { padding: .75rem 1rem; }
+    .compact-form .mb-3 { margin-bottom: .55rem !important; }
+    .compact-form label.form-label { font-size: .78rem; font-weight: 600; color: #6c757d; margin-bottom: .1rem; }
+    .compact-form .form-control, .compact-form .form-select { padding: .25rem .5rem; font-size: .875rem; }
+    .compact-form .form-check { margin-bottom: 0; min-height: 0; }
+    .compact-form .form-check-label { font-size: .78rem; }
+    .compact-form .invalid-feedback, .compact-form .form-text { font-size: .75rem; margin-top: .1rem; }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="card">
-    <div class="card-header">
-        <h3 class="mb-0">{% if object %}Update{% else %}Create New{% endif %} Customer</h3>
+<div class="card compact-form">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h4 class="mb-0">{% if object %}Update{% else %}Create New{% endif %} Customer</h4>
+        <small class="text-muted"><span class="text-danger">*</span> required</small>
     </div>
     <div class="card-body">
         <form method="post">
             {% csrf_token %}
+            {{ form.non_field_errors }}
 
-            <h5 class="text-muted border-bottom pb-1">Personal Information</h5>
-            <div class="row">
-                <div class="col-md-6">
-                    {{ form.name|as_crispy_field }}
-                    {{ form.phone|as_crispy_field }}
-                    {{ form.email|as_crispy_field }}
-                </div>
-                <div class="col-md-6">
-                    {{ form.identification_no|as_crispy_field }}
-                    {{ form.date_of_birth|as_crispy_field }}
-                    <div class="row">
-                        <div class="col-6">{{ form.nationality|as_crispy_field }}</div>
-                        <div class="col-6">{{ form.occupation|as_crispy_field }}</div>
-                    </div>
-                </div>
+            <div class="row gx-3">
+                <div class="col-md-3">{{ form.name|as_crispy_field }}</div>
+                <div class="col-md-3">{{ form.phone|as_crispy_field }}</div>
+                <div class="col-md-3">{{ form.email|as_crispy_field }}</div>
+                <div class="col-md-3">{{ form.identification_no|as_crispy_field }}</div>
             </div>
-
-            <h5 class="text-muted border-bottom pb-1 mt-3">Family</h5>
-            <div class="row">
-                <div class="col-md-4">{{ form.father_name|as_crispy_field }}</div>
-                <div class="col-md-4">{{ form.mother_name|as_crispy_field }}</div>
-                <div class="col-md-4">{{ form.spouse_name|as_crispy_field }}</div>
+            <div class="row gx-3">
+                <div class="col-md-3">{{ form.date_of_birth|as_crispy_field }}</div>
+                <div class="col-md-3">{{ form.nationality|as_crispy_field }}</div>
+                <div class="col-md-3">{{ form.occupation|as_crispy_field }}</div>
+                <div class="col-md-3">{{ form.spouse_name|as_crispy_field }}</div>
             </div>
-
-            <h5 class="text-muted border-bottom pb-1 mt-3">Address</h5>
-            <div class="row">
-                <div class="col-md-6">{{ form.present_address|as_crispy_field }}</div>
-                <div class="col-md-6">
-                    {{ form.same_as_present|as_crispy_field }}
+            <div class="row gx-3">
+                <div class="col-md-3">{{ form.father_name|as_crispy_field }}</div>
+                <div class="col-md-3">{{ form.mother_name|as_crispy_field }}</div>
+                <div class="col-md-3">{{ form.nominee_name|as_crispy_field }}</div>
+                <div class="col-md-3">{{ form.nominee_relation|as_crispy_field }}</div>
+            </div>
+            <div class="row gx-3">
+                <div class="col-md-4">{{ form.present_address|as_crispy_field }}</div>
+                <div class="col-md-4">
                     <div id="permanent-wrap">{{ form.permanent_address|as_crispy_field }}</div>
+                    {{ form.same_as_present|as_crispy_field }}
                 </div>
+                <div class="col-md-4">{{ form.notes|as_crispy_field }}</div>
             </div>
 
-            <h5 class="text-muted border-bottom pb-1 mt-3">Nominee</h5>
-            <div class="row">
-                <div class="col-md-6">{{ form.nominee_name|as_crispy_field }}</div>
-                <div class="col-md-6">{{ form.nominee_relation|as_crispy_field }}</div>
-            </div>
-
-            <div class="row mt-2">
-                <div class="col-12">
-                    {{ form.notes|as_crispy_field }}
-                </div>
-            </div>
-            <div class="mt-3">
+            <div class="mt-2">
                 <button type="submit" class="btn btn-primary">
                     <i class="fas fa-save"></i> {% if object %}Update{% else %}Create{% endif %}
                 </button>

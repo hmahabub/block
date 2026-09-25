@@ -20,9 +20,9 @@ class CustomerForm(forms.ModelForm):
         ]
         widgets = {
             'date_of_birth': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
-            'present_address': forms.Textarea(attrs={'rows': 3}),
-            'permanent_address': forms.Textarea(attrs={'rows': 3}),
-            'notes': forms.Textarea(attrs={'rows': 3}),
+            'present_address': forms.Textarea(attrs={'rows': 2}),
+            'permanent_address': forms.Textarea(attrs={'rows': 2}),
+            'notes': forms.Textarea(attrs={'rows': 2}),
         }
 
     def __init__(self, *args, **kwargs):
