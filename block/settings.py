@@ -22,12 +22,15 @@ DEBUG = env('DEBUG')
 
 
 def _clean_hosts(hosts):
-    """Tidy a hand-edited ALLOWED_HOSTS: ignore stray spaces/empties, reject URLs.
+    """Tidy a hand-edited ALLOWED_HOSTS: ignore spaces, quotes and empties, reject URLs.
 
-    django-environ keeps the space in "a.com, b.com", which would silently never match and
-    show visitors a 400 error; a pasted "https://a.com" fails the same way.
+    django-environ keeps the space in "a.com, b.com" and the quotes in "'a.com'", so those
+    entries would silently never match and show visitors a 400 error; a pasted
+    "https://a.com" fails the same way.
     """
-    cleaned = [host.strip() for host in hosts if host.strip()]
+    quote_marks = '"' + "'"
+    cleaned = [host.strip().strip(quote_marks).strip() for host in hosts]
+    cleaned = [host for host in cleaned if host]
     for host in cleaned:
         if '://' in host or '/' in host:
             raise ImproperlyConfigured(

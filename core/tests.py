@@ -239,6 +239,13 @@ class AllowedHostsConfigTests(SimpleTestCase):
     def test_spaces_and_empty_entries_are_ignored(self):
         self.assertEqual(_clean_hosts(['example.com', ' www.example.com', ' ', '']), ['example.com', 'www.example.com'])
 
+    def test_quotes_around_names_are_ignored(self):
+        hosts = ['localhost', "'asgroupbd.com'", ' "daj.asgroupbd.com" ', "'www.daj.asgroupbd.com'", '']
+        self.assertEqual(_clean_hosts(hosts), ['localhost', 'asgroupbd.com', 'daj.asgroupbd.com', 'www.daj.asgroupbd.com'])
+
+    def test_a_lone_pair_of_quotes_counts_as_empty(self):
+        self.assertEqual(_clean_hosts(["''", '""']), [])
+
     def test_wildcards_and_leading_dot_are_kept(self):
         self.assertEqual(_clean_hosts(['.example.com', '*', '192.168.1.5']), ['.example.com', '*', '192.168.1.5'])
 
