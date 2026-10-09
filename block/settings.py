@@ -37,7 +37,10 @@ def _clean_hosts(hosts):
     return cleaned
 
 
-ALLOWED_HOSTS = _clean_hosts(env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1']))
+ALLOWED_HOSTS = _clean_hosts(env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1', 'asgroupbd.com',
+        'daj.asgroupbd.com',
+    'www.daj.asgroupbd.com',
+]))
 
 
 # Application definition
