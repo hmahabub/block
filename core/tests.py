@@ -225,3 +225,38 @@ class SeedDemoDataTests(TestCase):
     def test_refuses_to_run_twice(self):
         with self.assertRaises(CommandError):
             call_command('seed_demo_data')
+
+
+import re
+from pathlib import Path
+
+from django.core.exceptions import ImproperlyConfigured
+
+from block.settings import _clean_hosts
+
+
+class AllowedHostsConfigTests(SimpleTestCase):
+    def test_spaces_and_empty_entries_are_ignored(self):
+        self.assertEqual(_clean_hosts(['example.com', ' www.example.com', ' ', '']), ['example.com', 'www.example.com'])
+
+    def test_wildcards_and_leading_dot_are_kept(self):
+        self.assertEqual(_clean_hosts(['.example.com', '*', '192.168.1.5']), ['.example.com', '*', '192.168.1.5'])
+
+    def test_urls_are_rejected_with_a_helpful_message(self):
+        for bad in ('https://example.com', 'example.com/', 'http://example.com/app'):
+            with self.assertRaisesMessage(ImproperlyConfigured, 'bare domain'):
+                _clean_hosts([bad])
+
+    def test_empty_means_no_hosts(self):
+        self.assertEqual(_clean_hosts([]), [])
+
+
+class EnvExampleTests(SimpleTestCase):
+    def test_every_setting_read_from_the_environment_is_documented(self):
+        root = Path(__file__).resolve().parent.parent
+        settings_source = (root / 'block' / 'settings.py').read_text(encoding='utf-8')
+        example = (root / '.env.example').read_text(encoding='utf-8')
+        names = set(re.findall(r"\benv(?:\.\w+)?\(\s*'([A-Z_]+)'", settings_source))
+        self.assertIn('ALLOWED_HOSTS', names)  # guards the regex itself
+        for name in sorted(names):
+            self.assertRegex(example, rf'(?m)^#?\s*{name}=', f'{name} is missing from .env.example')

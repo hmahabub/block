@@ -6,7 +6,7 @@ apartment-development company, built to match the UI/UX of the sister "Inspecta 
 ## Stack
 
 - Django 4.2.20, Python 3
-- SQLite for local dev; MySQL/Postgres in production via `DATABASE_URL` in `.env`
+- SQLite for local dev; another database via `DATABASE_URL` in `.env`
 - Bootstrap 5 + Font Awesome (CDN), django-crispy-forms with crispy-bootstrap5
 - reportlab for PDF report export
 
@@ -15,6 +15,7 @@ apartment-development company, built to match the UI/UX of the sister "Inspecta 
 ```bash
 python -m venv venv
 venv\Scripts\pip install -r requirements.txt
+copy .env.example .env
 venv\Scripts\python manage.py migrate
 venv\Scripts\python manage.py seed_cost_categories
 venv\Scripts\python manage.py createsuperuser
@@ -25,6 +26,24 @@ For a demo database, run `venv\Scripts\python manage.py seed_demo_data` on a fre
 x 4 flats each, 4 customers, 6 bookings with initial payments, and 15,000,000 of costs). It refuses to run if data already exists.
 
 Visit http://localhost:8010/, log in, and the dashboard links to every module.
+
+## Configuration (`.env`)
+
+Settings that differ per server live in a `.env` file next to `manage.py`, not in the code. Copy `.env.example` to `.env`
+(it documents every setting) and edit it on each machine; `.env` is git-ignored so a server keeps its own. Restart the
+app after changing it. Real environment variables set by the hosting panel override the file.
+
+On a hosting server the ones to set are:
+
+```
+DEBUG=False
+SECRET_KEY='a-long-random-string'
+ALLOWED_HOSTS=erp.example.com,www.example.com
+```
+
+`ALLOWED_HOSTS` is a comma-separated list of bare domain names (no `https://`, no trailing `/`; a leading dot such as
+`.example.com` also allows subdomains). Visitors using any other name see "Bad Request (400)". A pasted URL stops the app
+with a message naming the bad entry.
 
 ## App layout
 

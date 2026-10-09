@@ -3,7 +3,9 @@ Django settings for block project (BLOCK ERP powered by NOORSYS).
 """
 
 from pathlib import Path
+
 import environ
+from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -18,7 +20,24 @@ SECRET_KEY = env('SECRET_KEY', default='django-insecure-@^hb((ut^q6&1x@xeq+jrmk5
 
 DEBUG = env('DEBUG')
 
-ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1'])
+
+def _clean_hosts(hosts):
+    """Tidy a hand-edited ALLOWED_HOSTS: ignore stray spaces/empties, reject URLs.
+
+    django-environ keeps the space in "a.com, b.com", which would silently never match and
+    show visitors a 400 error; a pasted "https://a.com" fails the same way.
+    """
+    cleaned = [host.strip() for host in hosts if host.strip()]
+    for host in cleaned:
+        if '://' in host or '/' in host:
+            raise ImproperlyConfigured(
+                f'ALLOWED_HOSTS entry {host!r} must be a bare domain such as example.com '
+                '(no http(s):// and no path). Separate several with commas.'
+            )
+    return cleaned
+
+
+ALLOWED_HOSTS = _clean_hosts(env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1']))
 
 
 # Application definition
@@ -85,8 +104,7 @@ WSGI_APPLICATION = 'block.wsgi.application'
 
 
 # Database
-# Defaults to SQLite for local dev. Set DATABASE_URL (or the DB_* vars below)
-# in a .env file to point at MySQL/Postgres in production.
+# Defaults to SQLite for local dev. Set DATABASE_URL in the .env file to use another database.
 
 if env('DATABASE_URL', default=None):
     DATABASES = {'default': env.db('DATABASE_URL')}
