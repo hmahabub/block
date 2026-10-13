@@ -3,6 +3,7 @@ from django.db import models
 from django.urls import reverse
 
 from core.numbering import generate_dashed_code
+from core.phone import normalize_phone
 
 phone_regex = RegexValidator(
     regex=r'^\+?1?\d{9,15}$',
@@ -12,10 +13,17 @@ phone_regex = RegexValidator(
 
 class Supplier(models.Model):
     supplier_code = models.CharField(max_length=20, unique=True, editable=False)
-    name = models.CharField('Supplier / Contractor Name', max_length=150)
-    contact_person = models.CharField(max_length=100, blank=True)
-    phone = models.CharField(validators=[phone_regex], max_length=17, blank=True)
+    name = models.CharField('Company name', max_length=150)
+    owner_name = models.CharField(max_length=100, blank=True)
+    phone = models.CharField(validators=[phone_regex], max_length=17, blank=True,
+                             help_text='+88 is added automatically to local numbers.')
+    email = models.EmailField(blank=True)
     address = models.TextField(blank=True)
+    bank_account = models.CharField(max_length=150, blank=True, help_text='Bank, account name and number.')
+    cost_category = models.ForeignKey(
+        'costing.CostCategory', null=True, blank=True, on_delete=models.SET_NULL, related_name='suppliers',
+        verbose_name='Type', help_text='The kind of work this supplier does (same list as the cost categories).',
+    )
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -33,6 +41,7 @@ class Supplier(models.Model):
     def save(self, *args, **kwargs):
         if not self.supplier_code:
             self.supplier_code = generate_dashed_code('supplier', 'S')
+        self.phone = normalize_phone(self.phone)
         super().save(*args, **kwargs)
 
     def get_absolute_url(self):

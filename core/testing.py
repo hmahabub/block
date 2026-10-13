@@ -23,3 +23,24 @@ def make_request(user=None, path='/', method='get', data=None, session=None):
     if user is not None:
         request.user = user
     return request
+
+
+def make_project(name='P', floors=2, units=2, base=1000, quoted=1200, parking=100, area=1000, **extra):
+    """A project with identical flats named A1, B1, A2, B2 ... (unit letter + floor)."""
+    from projects.models import Flat, Project
+
+    project = Project.objects.create(
+        project_name=name, floor_no=floors, flat_area=area, base_price=base, quoted_price=quoted,
+        parking_price=parking, **extra,
+    )
+    flats = [
+        Flat.objects.create(project=project, unit=chr(65 + index), floor_no=floor)
+        for floor in range(1, floors + 1) for index in range(units)
+    ]
+    return project, flats
+
+
+def make_account(name='Bank 1', **extra):
+    from books.models import Account
+
+    return Account.objects.create(name=name, **extra)

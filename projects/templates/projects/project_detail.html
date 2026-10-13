@@ -3,6 +3,28 @@
 
 {% block title %}{{ object.project_name }}{% endblock %}
 
+{% block extra_css %}
+<style>
+    .seat-map { border-collapse: separate; border-spacing: 6px; }
+    .seat-map th { font-size: .75rem; color: #6c757d; text-align: center; font-weight: 600; }
+    .seat-map .floor-label { font-size: .8rem; font-weight: 600; color: #6c757d; padding-right: 8px; white-space: nowrap; }
+    .seat {
+        display: block; width: 118px; min-height: 74px; padding: 6px 8px; border-radius: 8px;
+        text-decoration: none !important; color: #fff !important; font-size: .78rem; line-height: 1.25;
+        border: 2px solid transparent; transition: transform .1s, box-shadow .1s;
+    }
+    .seat:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,.18); }
+    .seat .seat-no { font-size: 1rem; font-weight: 700; }
+    .seat .seat-parking { opacity: .9; font-size: .7rem; }
+    .seat .seat-customer { font-size: .72rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .seat-available { background: #2f9e6b; }
+    .seat-booked { background: #e0a100; color: #2b2100 !important; }
+    .seat-sold { background: #0b3d3a; }
+    .seat-empty { display: block; width: 118px; height: 74px; border: 2px dashed #dee2e6; border-radius: 8px; }
+    .legend-dot { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 4px; vertical-align: middle; }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
@@ -24,7 +46,7 @@
 <div class="row">
     <div class="col-lg-3 col-md-6 mb-3">
         <div class="card h-100">
-            <div class="card-header">Project</div>
+            <div class="card-header">Flats</div>
             <div class="card-body">
                 <div class="row text-center stat-tile">
                     <div class="col-6"><h5>{{ object.floor_no }}</h5><small>Floors</small></div>
@@ -37,39 +59,59 @@
             </div>
         </div>
     </div>
+    {% if costs_visible %}
     <div class="col-lg-3 col-md-6 mb-3">
         <div class="card h-100">
             <div class="card-header">Cost</div>
             <div class="card-body">
                 <table class="table table-sm mb-0">
                     <tr><th>Budget</th><td class="text-end">{{ object.budget_amount|taka }}</td></tr>
-                    <tr><th>Total Cost</th><td class="text-end">{{ object.total_cost|taka }}</td></tr>
-                    <tr><th>Cost / Sqft</th><td class="text-end">{{ object.cost_per_sqft|taka }}</td></tr>
+                    <tr><th>Pre-development</th><td class="text-end">{{ object.pre_development_cost|taka }}</td></tr>
+                    <tr><th>Post-development</th><td class="text-end">{{ object.post_development_cost|taka }}</td></tr>
+                    <tr><th>Total</th><td class="text-end"><strong>{{ object.total_cost|taka }}</strong></td></tr>
+                    <tr><th>Post cost / flat</th><td class="text-end">{{ object.cost_per_flat|taka }}</td></tr>
                 </table>
             </div>
         </div>
     </div>
+    {% endif %}
     <div class="col-lg-3 col-md-6 mb-3">
         <div class="card h-100">
             <div class="card-header">Sales</div>
             <div class="card-body">
                 <table class="table table-sm mb-0">
                     <tr><th>Sales Value</th><td class="text-end">{{ object.total_sales_value|taka }}</td></tr>
-                    <tr><th>Net Received</th><td class="text-end">{{ object.total_received|taka }}</td></tr>
+                    <tr><th>Received</th><td class="text-end">{{ object.total_received|taka }}</td></tr>
                     <tr><th>Receivable</th><td class="text-end text-danger">{{ object.total_receivable|taka }}</td></tr>
                 </table>
             </div>
         </div>
     </div>
+    {% if costs_visible %}
     <div class="col-lg-3 col-md-6 mb-3">
         <div class="card h-100">
-            <div class="card-header">Profitability</div>
+            <div class="card-header">Pre-development result</div>
             <div class="card-body d-flex flex-column justify-content-center h-100">
-                <h4 class="{% if object.estimated_profit >= 0 %}text-success{% else %}text-danger{% endif %}">
-                    {{ object.estimated_profit|taka }}
+                <h4 class="{% if object.pre_development_profit >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    {{ object.pre_development_profit|taka }}
                 </h4>
-                <p class="text-muted mb-0">Estimated Project Profit</p>
+                <p class="text-muted mb-0 small">Share sales at base price ({{ object.total_base_value|taka }}) less
+                    land, marketing and pre-development cost.</p>
             </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">Flat specification &amp; prices <small class="text-muted">(the same for every flat)</small></div>
+    <div class="card-body py-2">
+        <div class="row small">
+            <div class="col-md-3"><strong>Type</strong><br>{{ object.get_flat_type_display }}{% if object.bedrooms or object.bathrooms %} &middot; {{ object.bedrooms|default:"-" }} bed / {{ object.bathrooms|default:"-" }} bath{% endif %}</div>
+            <div class="col-md-3"><strong>Saleable area</strong><br>{{ object.flat_area }} sqft{% if object.parking_area %} &middot; parking {{ object.parking_area }} sqft{% endif %}</div>
+            <div class="col-md-3"><strong>Base / Quoted price</strong><br>{{ object.base_price|taka }} / {{ object.quoted_price|taka }}</div>
+            <div class="col-md-3"><strong>Parking price (optional)</strong><br>{{ object.parking_price|taka }}</div>
+            {% if object.features %}<div class="col-12 mt-1"><strong>Rooms &amp; features:</strong> {{ object.features }}</div>{% endif %}
         </div>
     </div>
 </div>
@@ -82,68 +124,123 @@
 
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0"><i class="fas fa-door-open"></i> Flats</h5>
-        <a href="{% url 'projects:flat-create' object.pk %}" class="btn btn-primary btn-sm">
-            <i class="fas fa-plus"></i> Add Flat
-        </a>
+        <ul class="nav nav-pills" role="tablist">
+            <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#tab-map" type="button"><i class="fas fa-border-all"></i> Booking map</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tab-list" type="button"><i class="fas fa-list"></i> Flat list</button></li>
+        </ul>
+        <div>
+            {% if perms.projects.add_flat %}
+            <a href="{% url 'projects:flat-generate' object.pk %}" class="btn btn-outline-primary btn-sm">
+                <i class="fas fa-magic"></i> Generate flats
+            </a>
+            <a href="{% url 'projects:flat-create' object.pk %}" class="btn btn-primary btn-sm">
+                <i class="fas fa-plus"></i> Add Flat
+            </a>
+            {% endif %}
+        </div>
     </div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead class="table-light">
-                    <tr>
-                        <th>No.</th>
-                        <th>Floor</th>
-                        <th>Type</th>
-                        <th>Facing</th>
-                        <th>Area (sqft)</th>
-                        <th>Base Price</th>
-                        <th>Status</th>
-                        <th>Customer</th>
-                        <th class="text-end">Paid</th>
-                        <th class="text-end">Balance</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for flat in flats %}
-                    <tr>
-                        <td><a href="{% url 'projects:flat-detail' flat.pk %}">{{ flat.flat_no }}</a></td>
-                        <td>{{ flat.floor_no }}</td>
-                        <td>{{ flat.get_flat_type_display }}</td>
-                        <td>{{ flat.facing|default:"-" }}</td>
-                        <td>{{ flat.saleable_area }}</td>
-                        <td>{{ flat.base_price|taka }}</td>
-                        <td>
-                            <span class="badge
-                                {% if flat.status == 'AVAILABLE' %}bg-success
-                                {% elif flat.status == 'BOOKED' %}bg-warning text-dark
-                                {% elif flat.status == 'SOLD' %}bg-primary
-                                {% endif %}">
-                                {{ flat.get_status_display }}
-                            </span>
-                        </td>
-                        {% if flat.active_sale %}
-                        <td><a href="{% url 'customers:detail' flat.active_sale.customer.pk %}">{{ flat.active_sale.customer.name }}</a></td>
-                        <td class="text-end">{{ flat.active_sale.received_amount|taka }}</td>
-                        <td class="text-end {% if flat.active_sale.receivable_amount > 0 %}text-danger{% endif %}">{{ flat.active_sale.receivable_amount|taka }}</td>
-                        {% else %}
-                        <td class="text-muted">-</td>
-                        <td class="text-end text-muted">-</td>
-                        <td class="text-end text-muted">-</td>
-                        {% endif %}
-                        <td>
-                            <div class="btn-group btn-group-sm">
-                                <a href="{% url 'projects:flat-detail' flat.pk %}" class="btn btn-info" title="View"><i class="fas fa-eye"></i></a>
-                                <a href="{% url 'projects:flat-update' flat.pk %}" class="btn btn-warning" title="Edit"><i class="fas fa-edit"></i></a>
-                            </div>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr><td colspan="11" class="text-center py-4">No flats added yet</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+    <div class="card-body tab-content">
+        <div class="tab-pane fade show active" id="tab-map">
+            <div class="mb-2 small">
+                <span class="me-3"><span class="legend-dot" style="background:#2f9e6b"></span>Free</span>
+                <span class="me-3"><span class="legend-dot" style="background:#e0a100"></span>Booked</span>
+                <span class="me-3"><span class="legend-dot" style="background:#0b3d3a"></span>Sold</span>
+                <span class="text-muted">Each flat shows its linked parking lot. Click a free flat to book it.</span>
+            </div>
+            {% if map_rows %}
+            <div class="table-responsive">
+                <table class="seat-map">
+                    <thead>
+                        <tr><th></th>{% for unit in map_units %}<th>Unit {{ unit }}</th>{% endfor %}</tr>
+                    </thead>
+                    <tbody>
+                        {% for floor, cells in map_rows %}
+                        <tr>
+                            <td class="floor-label">Floor {{ floor }}</td>
+                            {% for flat in cells %}
+                            <td>
+                                {% if flat %}
+                                <a class="seat seat-{{ flat.status|lower }}"
+                                   href="{% if flat.status == 'AVAILABLE' and perms.sales.add_flatsale %}{% url 'sales:create' %}?flat={{ flat.pk }}{% else %}{% url 'projects:flat-detail' flat.pk %}{% endif %}"
+                                   title="{{ flat.flat_no }} &middot; {{ flat.get_status_display }}{% if flat.active_sale %} &middot; {{ flat.active_sale.customer.display_name }}{% endif %}">
+                                    <span class="seat-no">{{ flat.flat_no }}</span>
+                                    <span class="seat-parking d-block"><i class="fas fa-car-side"></i> {{ flat.parking_lot|default:"-" }}</span>
+                                    {% if flat.active_sale %}
+                                    <span class="seat-customer d-block">{{ flat.active_sale.customer.name }}</span>
+                                    {% else %}
+                                    <span class="seat-customer d-block">{{ flat.get_status_display }}</span>
+                                    {% endif %}
+                                </a>
+                                {% else %}<span class="seat-empty"></span>{% endif %}
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% elif not map_others %}
+            <div class="alert alert-info mb-0">No flats yet. Use <strong>Generate flats</strong> to create every unit and floor in one step.</div>
+            {% endif %}
+            {% if map_others %}
+            <p class="mt-3 mb-1 small text-muted">Flats numbered the older way (no unit letter) are listed in the Flat list tab.</p>
+            {% endif %}
+        </div>
+
+        <div class="tab-pane fade" id="tab-list">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>No.</th>
+                            <th>Floor</th>
+                            <th>Parking</th>
+                            <th>Facing</th>
+                            <th>Status</th>
+                            <th>Customer</th>
+                            <th class="text-end">Paid</th>
+                            <th class="text-end">Balance</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for flat in flats %}
+                        <tr>
+                            <td><a href="{% url 'projects:flat-detail' flat.pk %}">{{ flat.flat_no }}</a></td>
+                            <td>{{ flat.floor_no }}</td>
+                            <td>{{ flat.parking_lot|default:"-" }}</td>
+                            <td>{{ flat.facing|default:"-" }}</td>
+                            <td>
+                                <span class="badge
+                                    {% if flat.status == 'AVAILABLE' %}bg-success
+                                    {% elif flat.status == 'BOOKED' %}bg-warning text-dark
+                                    {% elif flat.status == 'SOLD' %}bg-primary
+                                    {% endif %}">
+                                    {{ flat.get_status_display }}
+                                </span>
+                            </td>
+                            {% if flat.active_sale %}
+                            <td><a href="{% url 'customers:detail' flat.active_sale.customer.pk %}">{{ flat.active_sale.customer.name }}</a></td>
+                            <td class="text-end">{{ flat.active_sale.received_amount|taka }}</td>
+                            <td class="text-end {% if flat.active_sale.receivable_amount > 0 %}text-danger{% endif %}">{{ flat.active_sale.receivable_amount|taka }}</td>
+                            {% else %}
+                            <td class="text-muted">-</td>
+                            <td class="text-end text-muted">-</td>
+                            <td class="text-end text-muted">-</td>
+                            {% endif %}
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'projects:flat-detail' flat.pk %}" class="btn btn-info" title="View"><i class="fas fa-eye"></i></a>
+                                    <a href="{% url 'projects:flat-update' flat.pk %}" class="btn btn-warning" title="Edit"><i class="fas fa-edit"></i></a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="9" class="text-center py-4">No flats added yet</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>

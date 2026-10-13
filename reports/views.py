@@ -1,129 +1,124 @@
+import datetime
+
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import Sum
 from django.http import HttpResponse
-from django.shortcuts import get_object_or_404
 from django.views.generic import TemplateView
 
-from core.letterhead import letterhead_flowables
-from customers.models import Customer
-from projects.models import Flat, Project
+from core.utils import int_or_none
+from projects.models import Project
+
+from . import builders
+from .tables import build_pdf
+
+
+def _date(value):
+    try:
+        return datetime.date.fromisoformat(value) if value else None
+    except ValueError:
+        return None
 
 
 class ReportIndexView(LoginRequiredMixin, TemplateView):
     template_name = 'reports/index.html'
 
 
-class ProjectProfitabilityReportView(LoginRequiredMixin, TemplateView):
-    template_name = 'reports/project_profitability.html'
+class ReportView(LoginRequiredMixin, TemplateView):
+    """One report, shown as tables on screen; add ?format=pdf for the letterhead PDF of the same tables."""
+
+    template_name = 'reports/report.html'
+    title = ''
+    description = ''
+    phase = ''
+    uses_period = False
+    pdf_name = 'report'
+
+    def filters(self):
+        params = self.request.GET
+        project_id = int_or_none(params.get('project'))
+        project = Project.objects.filter(pk=project_id).first() if project_id else None
+        return {'project': project, 'date_from': _date(params.get('date_from')), 'date_to': _date(params.get('date_to'))}
+
+    def build(self, filters):
+        raise NotImplementedError
+
+    def get(self, request, *args, **kwargs):
+        filters = self.filters()
+        lines, tables = self.build(filters)
+        if request.GET.get('format') == 'pdf':
+            response = HttpResponse(content_type='application/pdf')
+            response['Content-Disposition'] = f'inline; filename="{self.pdf_name}.pdf"'
+            build_pdf(response, self.title, lines, tables, request.user)
+            return response
+        context = self.get_context_data(filters=filters, filter_lines=lines, tables=tables, **kwargs)
+        return self.render_to_response(context)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        projects = Project.objects.all()
-        rows = []
-        totals = {'sales': 0, 'cost': 0, 'profit': 0}
-        for project in projects:
-            sales = project.total_sales_value
-            cost = project.total_cost
-            profit = sales - cost
-            rows.append({
-                'project': project,
-                'sales': sales,
-                'cost': cost,
-                'profit': profit,
-                'margin': (profit / sales * 100) if sales else None,
-            })
-            totals['sales'] += sales
-            totals['cost'] += cost
-            totals['profit'] += profit
-        context['rows'] = rows
-        context['totals'] = totals
+        filters = kwargs['filters']
+        context.update({
+            'title': self.title, 'description': self.description, 'phase': self.phase,
+            'uses_period': self.uses_period, 'projects': Project.objects.all(),
+            'selected_project': filters['project'], 'date_from': filters['date_from'], 'date_to': filters['date_to'],
+        })
         return context
 
 
-class FlatWiseReportView(LoginRequiredMixin, TemplateView):
-    template_name = 'reports/flat_wise.html'
+class FinanceReportView(ReportView):
+    title = 'Finance Report'
+    description = 'Sales, cost, receivable and payable across every phase, plus the money in hand.'
+    phase = 'All phases'
+    pdf_name = 'finance_report'
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        project_id = self.request.GET.get('project')
-        flats = Flat.objects.select_related('project').all()
-        if project_id:
-            flats = flats.filter(project_id=project_id)
-        rows = []
-        for flat in flats:
-            sale = flat.current_sale
-            rows.append({
-                'flat': flat,
-                'sale_value': sale.net_sale_value if sale else 0,
-                'cost': flat.total_cost,
-                'received': sale.received_amount if sale else 0,
-                'receivable': sale.receivable_amount if sale else 0,
-                'profit': flat.profit,
-            })
-        context['rows'] = rows
-        context['projects'] = Project.objects.all()
-        context['selected_project'] = Project.objects.filter(pk=project_id).first() if project_id else None
-        return context
+    def build(self, filters):
+        return builders.finance_report(filters['project'])
 
 
-class DuesReportView(LoginRequiredMixin, TemplateView):
-    template_name = 'reports/dues.html'
+class PeriodicCollectionReportView(ReportView):
+    title = 'Periodic Payment Collection'
+    description = 'Customer payments collected, grouped by month, customer and account.'
+    phase = 'Pre-development'
+    uses_period = True
+    pdf_name = 'periodic_collection'
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['receivables'] = (
-            Customer.objects.annotate(receivable=Sum('sales__receivable_amount'))
-            .filter(receivable__gt=0)
-            .order_by('-receivable')
-        )
-        return context
+    def build(self, filters):
+        return builders.periodic_collection_report(filters['project'], filters['date_from'], filters['date_to'])
 
 
-class FlatWisePDFView(LoginRequiredMixin, TemplateView):
-    def get(self, request, project_pk, *args, **kwargs):
-        from reportlab.lib import colors
-        from reportlab.lib.pagesizes import A4, landscape
-        from reportlab.lib.units import cm
-        from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
-        from reportlab.lib.styles import getSampleStyleSheet
+class ProfitLossReportView(ReportView):
+    title = 'Profit, Loss, Collection and Due'
+    description = 'What share sales earn against land, marketing and pre-development cost; what is collected and what is still due.'
+    phase = 'Pre-development'
+    pdf_name = 'profit_loss_collection_due'
 
-        project = get_object_or_404(Project, pk=project_pk)
-        flats = project.flats.all()
+    def build(self, filters):
+        return builders.profit_loss_report(filters['project'])
 
-        response = HttpResponse(content_type='application/pdf')
-        response['Content-Disposition'] = f'inline; filename="{project.project_code}_flat_report.pdf"'
 
-        doc = SimpleDocTemplate(response, pagesize=landscape(A4), topMargin=1.5 * cm, bottomMargin=1.5 * cm)
-        styles = getSampleStyleSheet()
-        header, _ = letterhead_flowables(doc.width, styles['Title'], styles['BodyText'])
-        elements = [
-            *header,
-            Spacer(1, 6),
-            Paragraph(f'Flat-Wise Report — {project.project_name} ({project.project_code})', styles['Title']),
-        ]
+class CustomerPostReportView(ReportView):
+    title = 'Customer Balance, Cost, Receivable and Payable'
+    description = 'Per customer: balance held, receivable, share of post-development cost and what is payable.'
+    phase = 'Post-development'
+    pdf_name = 'customer_balance_cost'
 
-        table_data = [['Flat', 'Floor', 'Area (sqft)', 'Sale Value', 'Cost', 'Received', 'Receivable', 'Profit']]
-        for flat in flats:
-            sale = flat.current_sale
-            table_data.append([
-                flat.flat_no,
-                str(flat.floor_no),
-                f'{flat.saleable_area:,.2f}',
-                f'{sale.net_sale_value:,.2f}' if sale else '-',
-                f'{flat.total_cost:,.2f}',
-                f'{sale.received_amount:,.2f}' if sale else '-',
-                f'{sale.receivable_amount:,.2f}' if sale else '-',
-                f'{flat.profit:,.2f}' if flat.profit is not None else '-',
-            ])
+    def build(self, filters):
+        return builders.customer_post_report(filters['project'])
 
-        table = Table(table_data, repeatRows=1)
-        table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#212529')),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('FONTSIZE', (0, 0), (-1, -1), 8),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-            ('ALIGN', (2, 1), (-1, -1), 'RIGHT'),
-        ]))
-        elements.append(table)
-        doc.build(elements)
-        return response
+
+class FlatWiseReportView(ReportView):
+    title = 'Flat-Wise Report'
+    description = 'Sale, collection and cost share for each flat.'
+    phase = 'All phases'
+    pdf_name = 'flat_wise_report'
+
+    def build(self, filters):
+        return builders.flat_wise_report(filters['project'])
+
+
+class DuesReportView(ReportView):
+    title = 'Receivables'
+    description = 'Outstanding balances still to be collected from customers.'
+    phase = 'All phases'
+    pdf_name = 'receivables'
+
+    def build(self, filters):
+        return builders.dues_report(filters['project'])

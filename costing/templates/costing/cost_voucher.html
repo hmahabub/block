@@ -29,10 +29,13 @@
 
 <table class="doc mb-3">
     <tr><th class="label">Cost head</th><td>{{ cost.cost_category }}</td></tr>
+    <tr><th class="label">Phase</th><td>{{ cost.get_phase_display }}</td></tr>
     <tr><th class="label">Charged to</th><td>
         {% if cost.flat %}Flat {{ cost.flat.flat_no }} (direct cost)
-        {% else %}Whole building &mdash; shared cost, allocated to all flats by saleable area{% endif %}
+        {% elif cost.phase == 'PRE' %}Company &mdash; pre-development cost
+        {% else %}Whole building &mdash; shared equally by the owners of all flats{% endif %}
     </td></tr>
+    <tr><th class="label">Paid from</th><td>{{ cost.account|default:"—" }}</td></tr>
     <tr><th class="label">Description</th><td>{{ cost.description|default:"—" }}</td></tr>
     <tr><th class="label">Bill / reference no.</th><td>{{ cost.reference_no|default:"—" }}</td></tr>
     {% if cost.notes %}<tr><th class="label">Notes</th><td>{{ cost.notes|linebreaksbr }}</td></tr>{% endif %}

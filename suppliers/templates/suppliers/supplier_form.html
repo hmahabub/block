@@ -14,10 +14,13 @@
             <div class="row">
                 <div class="col-md-6">
                     {{ form.name|as_crispy_field }}
-                    {{ form.contact_person|as_crispy_field }}
+                    {{ form.owner_name|as_crispy_field }}
                     {{ form.phone|as_crispy_field }}
+                    {{ form.email|as_crispy_field }}
                 </div>
                 <div class="col-md-6">
+                    {{ form.cost_category|as_crispy_field }}
+                    {{ form.bank_account|as_crispy_field }}
                     {{ form.address|as_crispy_field }}
                 </div>
             </div>

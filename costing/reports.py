@@ -23,6 +23,7 @@ def describe_filters(applied):
     else:
         period = 'All dates'
     parts = [f'Period: {period}', f'Project: {applied["project"].project_name if applied["project"] else "All"}']
+    parts.append({'PRE': 'Phase: Pre-development', 'POST': 'Phase: Post-development'}.get(applied.get('phase'), 'Phase: Pre & post'))
     parts.append({'shared': 'Type: Shared costs only', 'direct': 'Type: Direct flat costs only'}.get(applied['type'], 'Type: Shared & direct'))
     if applied['q']:
         parts.append(f'Search: "{applied["q"]}"')
@@ -57,7 +58,7 @@ def build_cost_report_pdf(target, costs, applied, user):
         topMargin=12 * mm, bottomMargin=16 * mm, title='Project Cost Report',
     )
 
-    costs = list(costs.select_related('project', 'cost_category', 'cost_category__parent_category', 'supplier', 'flat'))
+    costs = list(costs.select_related('project', 'cost_category', 'cost_category__parent_category', 'supplier', 'flat', 'account'))
     total = sum((c.amount for c in costs), 0)
 
     sub = ParagraphStyle('sub', parent=cell, fontSize=8.5, leading=11, textColor=colors.HexColor('#495057'))
@@ -73,7 +74,7 @@ def build_cost_report_pdf(target, costs, applied, user):
         Spacer(1, 6),
     ]
 
-    header = [Paragraph(h, head) for h in ('Date', 'Voucher', 'Project', 'Cost head', 'Supplier', 'Charged to', 'Description / Ref', 'Amount (BDT)')]
+    header = [Paragraph(h, head) for h in ('Date', 'Voucher', 'Project', 'Cost head', 'Phase', 'Supplier', 'Charged to', 'Paid from', 'Description / Ref', 'Amount (BDT)')]
     rows = [header]
     for cost in costs:
         detail = cost.description or ''
@@ -84,16 +85,18 @@ def build_cost_report_pdf(target, costs, applied, user):
             cost.voucher_no,
             cost.project.project_code,
             Paragraph(str(cost.cost_category), cell),
+            'Pre' if cost.phase == 'PRE' else 'Post',
             Paragraph(cost.supplier.name if cost.supplier else '-', cell),
-            f'Flat {cost.flat.flat_no}' if cost.flat else 'Shared',
+            f'Flat {cost.flat.flat_no}' if cost.flat else ('Company' if cost.phase == 'PRE' else 'All flats'),
+            Paragraph(str(cost.account) if cost.account else '-', cell),
             Paragraph(detail or '-', cell),
             _money(cost.amount),
         ])
     if not costs:
-        rows.append(['No cost entries for the selected filters', '', '', '', '', '', '', ''])
-    rows.append(['', '', '', '', '', '', Paragraph(f'<b>TOTAL ({len(costs)} entries)</b>', cell), _money(total)])
+        rows.append(['No cost entries for the selected filters'] + [''] * 9)
+    rows.append([''] * 8 + [Paragraph(f'<b>TOTAL ({len(costs)} entries)</b>', cell), _money(total)])
 
-    widths = [22, 22, 22, 46, 44, 24, 60, 27]
+    widths = [20, 18, 18, 38, 10, 34, 20, 26, 52, 26]
     table = Table(rows, colWidths=[w * mm for w in widths], repeatRows=1)
     style = [
         ('BACKGROUND', (0, 0), (-1, 0), BRAND),

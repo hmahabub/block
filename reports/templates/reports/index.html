@@ -5,33 +5,39 @@
 {% block content %}
 <h2 class="mb-4"><i class="fas fa-chart-line"></i> Report Center</h2>
 
+<h5 class="text-muted">All phases</h5>
+<div class="row mb-3">
+    <div class="col-md-4 mb-3"><div class="card h-100"><div class="card-body">
+        <h5 class="card-title"><i class="fas fa-scale-balanced"></i> Finance report</h5>
+        <p class="card-text">Sales, cost, receivable and payable, plus the money in hand.</p>
+        <a href="{% url 'reports:finance' %}" class="btn btn-primary">Open</a></div></div></div>
+    <div class="col-md-4 mb-3"><div class="card h-100"><div class="card-body">
+        <h5 class="card-title"><i class="fas fa-door-open"></i> Flat-wise report</h5>
+        <p class="card-text">Sale, collection and cost share for each flat.</p>
+        <a href="{% url 'reports:flat-wise' %}" class="btn btn-primary">Open</a></div></div></div>
+    <div class="col-md-4 mb-3"><div class="card h-100"><div class="card-body">
+        <h5 class="card-title"><i class="fas fa-hand-holding-usd"></i> Receivables</h5>
+        <p class="card-text">Outstanding balances still to be collected from customers.</p>
+        <a href="{% url 'reports:dues' %}" class="btn btn-primary">Open</a></div></div></div>
+</div>
+
+<h5 class="text-muted">Pre-development <small>(flat share sales against land, marketing and pre-development cost)</small></h5>
+<div class="row mb-3">
+    <div class="col-md-6 mb-3"><div class="card h-100"><div class="card-body">
+        <h5 class="card-title"><i class="fas fa-calendar-days"></i> Periodic payment collection</h5>
+        <p class="card-text">Payments collected by month, customer and account, for any period.</p>
+        <a href="{% url 'reports:collection' %}" class="btn btn-primary">Open</a></div></div></div>
+    <div class="col-md-6 mb-3"><div class="card h-100"><div class="card-body">
+        <h5 class="card-title"><i class="fas fa-sack-dollar"></i> Profit, loss, collection and due</h5>
+        <p class="card-text">What the share sales earn, what is collected and what is still due.</p>
+        <a href="{% url 'reports:profit-loss' %}" class="btn btn-primary">Open</a></div></div></div>
+</div>
+
+<h5 class="text-muted">Post-development <small>(costs shared equally by the owners of all flats)</small></h5>
 <div class="row">
-    <div class="col-md-4 mb-4">
-        <div class="card h-100">
-            <div class="card-body">
-                <h5 class="card-title"><i class="fas fa-building"></i> Project Profitability</h5>
-                <p class="card-text">Sales, cost and estimated profit for every project.</p>
-                <a href="{% url 'reports:project-profitability' %}" class="btn btn-primary">Open Report</a>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4 mb-4">
-        <div class="card h-100">
-            <div class="card-body">
-                <h5 class="card-title"><i class="fas fa-door-open"></i> Flat-Wise Report</h5>
-                <p class="card-text">Area, sale value, cost, received, receivable and profit per flat.</p>
-                <a href="{% url 'reports:flat-wise' %}" class="btn btn-primary">Open Report</a>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4 mb-4">
-        <div class="card h-100">
-            <div class="card-body">
-                <h5 class="card-title"><i class="fas fa-hand-holding-usd"></i> Receivables</h5>
-                <p class="card-text">Outstanding balances still to be collected from customers.</p>
-                <a href="{% url 'reports:dues' %}" class="btn btn-primary">Open Report</a>
-            </div>
-        </div>
-    </div>
+    <div class="col-md-6 mb-3"><div class="card h-100"><div class="card-body">
+        <h5 class="card-title"><i class="fas fa-users"></i> Customer balance, cost, receivable and payable</h5>
+        <p class="card-text">Each customer's balance, share of the cost, receivable and payable.</p>
+        <a href="{% url 'reports:customers' %}" class="btn btn-primary">Open</a></div></div></div>
 </div>
 {% endblock %}

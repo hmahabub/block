@@ -1,14 +1,15 @@
-# BLOCK ERP
+# DAR AL JANNAH ERP
 
-A real-estate project costing, flat sales, receivables and profitability ERP for a small
-apartment-development company, built to match the UI/UX of the sister "Inspecta ERP" (inspcta) codebase.
+A real-estate ERP for a company that sells **flat shares before development** and then builds the project, with
+**post-development costs shared equally by the owners of every flat**. Powered by NOORSYS. It follows the UI/UX of the
+sister "Inspecta ERP" (inspcta) codebase.
 
 ## Stack
 
 - Django 4.2.20, Python 3
 - SQLite for local dev; another database via `DATABASE_URL` in `.env`
 - Bootstrap 5 + Font Awesome (CDN), django-crispy-forms with crispy-bootstrap5
-- reportlab for PDF report export
+- reportlab for PDF export
 
 ## Setup
 
@@ -22,10 +23,103 @@ venv\Scripts\python manage.py createsuperuser
 venv\Scripts\python manage.py runserver 8010
 ```
 
-For a demo database, run `venv\Scripts\python manage.py seed_demo_data` on a fresh database (Tower 1 and Tower 2 with 12 floors
-x 4 flats each, 4 customers, 6 bookings with initial payments, and 15,000,000 of costs). It refuses to run if data already exists.
+For a demo database, run `venv\Scripts\python manage.py seed_demo_data` on a fresh database (Tower 1 and Tower 2, 12 floors
+x 4 flats each, 3 accounts, 4 customers, 6 bookings with initial payments, a reference, and 15,000,000 of costs). It refuses
+to run if data already exists.
 
-Visit http://localhost:8010/, log in, and the dashboard links to every module.
+### Upgrading an existing database
+
+`python manage.py migrate` keeps your data: numeric flat numbers (`101`) become unit + floor (`A1`) where that is
+unambiguous, the first flat's type/size/price moves up to the project, existing sales keep their value as the new
+*sale value*, costs get their phase from their category, and customer/supplier phone numbers get `+88`. Two things
+need a look afterwards:
+
+- **Payments and costs made before accounts existed have no bank/cash account.** They are not in any balance until you
+  open each record's account (the Books page lists them under "No account yet").
+- The hand-typed Cash Book and Bank Book are gone (the book is now collected automatically). Their rows are written to
+  `backups/old_cash_and_bank_book_<time>.csv` during the migration. Keep a copy of your database before upgrading.
+
+## How the money works
+
+**Pre-development (before construction).** The company sells flat *shares* at a base price.
+
+| | |
+|---|---|
+| Base price | what the company needs per flat share (set once on the project) |
+| Parking | optional; its price is added to the base price when the buyer takes the parking lot |
+| Total base price | base price + parking price |
+| Sale value | what the buyer agrees to pay, never below the total base price |
+| **Honorarium** | sale value − total base price, paid to the reference (the "Ref") |
+| Reg value | registration cost, borne by the customer |
+| Net value | sale value + reg value: everything the customer owes |
+
+A booking becomes **Sold** once the sale value is fully received (**Booked** until then). Paying more than the net value
+is kept as the **customer balance**. Cancelling a booking returns a **refund percentage** of everything received (it can
+be below 100%); the company keeps the rest. Pre-development profit = base price earned from share sales (+ money kept on
+cancellations) − land, marketing and pre-development administrative costs.
+
+**Post-development (after construction starts).** All costs are borne **equally by the owners of every flat, sold or not**
+(per flat, not by area). The cost screens, books and reports keep the two phases apart.
+
+| Cost category | Phase |
+|---|---|
+| Land, Marketing | Pre-development |
+| Administration | Either: chosen on each entry |
+| Everything else | Post-development |
+
+A cost recorded against a single flat (a *direct* cost) is always post-development and is added to that flat only.
+
+## The book
+
+Bank 1, Bank 2, Petty cash ... are **accounts** (Books → Accounts). There is one book for all of them, and **nothing is typed
+into it**: every line is collected from where the money was first recorded, so nothing is entered twice.
+
+- customer payments (money in), refunds, honorarium payments and cost payments (money out)
+- internal transfers between your own accounts (Books → Internal Transfers)
+
+Each payment/cost screen asks which account the money moved through. Every book line has a **Checked** tick:
+a user with the *Can confirm book entries* permission confirms lines in bulk. The accounts page shows the *confirmed*
+balance (opening + checked lines) next to the *book* balance (everything). Editing a confirmed cost clears its confirmation
+so it is checked again.
+
+## Flats and the booking map
+
+All flats in a project are identical, so type, area, rooms and prices are set **once on the project**. Flats are numbered
+**unit letter + floor** (A1 = unit A, floor 1) and each has a linked parking lot (default `P-A1`). *Generate flats*
+creates every unit on every floor in one step. The project page has a bus-seat style **booking map** (free / booked / sold,
+parking lot and customer on each seat); click a free flat to book it.
+
+Flats cannot be deleted directly. An admin (superuser, or a user with `projects.delete_flat`) **requests** the deletion with
+a reason and a *different* admin **approves** it (Projects → Flat deletion requests). A flat with sales or direct costs can
+never be deleted.
+
+## Sensitive screens (password re-entry)
+
+The software is shown to buyers but also records money, so Costing, Books and Reports ask the signed-in user to type
+their password again. It stays unlocked while they keep working and locks after `REAUTH_MINUTES` of inactivity (or via the
+user menu → *Lock sensitive screens*). Cost figures on the home page, project page and flat page stay hidden until then.
+Change which areas are guarded with `SENSITIVE_NAMESPACES` in `.env`.
+
+## Customer SMS
+
+- An SMS is sent on **every payment received** (receipt number, amount, balance).
+- **Balance reminders** are only sent when a user does it: Sales → Balance reminders → tick customers → Send.
+- Tick **Send SMS** off on a customer to exclude them from everything.
+- Every message is recorded in Sales → SMS log.
+
+`SMS_BACKEND=log` (the default) only records messages. `SMS_BACKEND=http` posts to your provider using `SMS_API_URL`,
+`SMS_API_KEY` and `SMS_SENDER_ID`. **The gateway integration has not been tested against a live provider**; check
+`sms/backends.py` against your provider's API documentation first. A gateway failure never stops a payment from saving.
+
+## Reports (Reports menu, PDF button on each)
+
+- **Finance report** (all phases): sales, cost, receivable, payable and money in hand
+- **Periodic payment collection** (pre-development): by month, customer and account, for any period
+- **Profit, loss, collection and due** (pre-development)
+- **Customer balance, cost, receivable and payable** (post-development)
+- Flat-wise report and Receivables
+
+The dashboard shows quick cost statistics (pre/post/total, per-flat share, this month, biggest heads) once unlocked.
 
 ## Configuration (`.env`)
 
@@ -39,6 +133,7 @@ On a hosting server the ones to set are:
 DEBUG=False
 SECRET_KEY='a-long-random-string'
 ALLOWED_HOSTS=erp.example.com,www.example.com
+COMPANY_NAME=DAR AL JANNAH
 ```
 
 `ALLOWED_HOSTS` is a comma-separated list of bare domain names (no `https://`, no trailing `/`; a leading dot such as
@@ -47,42 +142,43 @@ with a message naming the bad entry.
 
 ## App layout
 
-- `core` — atomic numbering (`Sequence` + `core.numbering`), shared audit-log mixins, `taka` template filter
-- `customers` — contact master data, identified by a unique phone number (no separate customer code); create/update only, no delete
-- `suppliers` — contact master data with an auto-generated code; create/update only, no delete
-- `projects` — `Project` (one building = one project) and `Flat` (floor, type, facing, area, price). Flat status is automatic: Available (no active sale), Booked (sold to a customer, payment pending), Sold (fully paid)
-- `costing` — `CostCategory` tree, `ProjectBudget`, `ProjectCost`, and the area-based `CostAllocation` engine. Every cost entry counts as paid — there is no payable tracking. Costs are entered on two separate forms: *Shared* (whole building, allocated across all flats by area) and *Direct* (one flat only)
-- `sales` — `FlatSale` and `CustomerPayment` (drives received/receivable)
-- `books` — independent Cash Book / Bank Book / Bank Accounts ledger
-- `reports` — project profitability, flat-wise, and receivables reports (+ PDF export)
-- `dashboard` — home page with company-wide quick stats
-- `activity_log` — explicit create/update/delete audit trail shown on the dashboard
+- `core` — atomic numbering, audit-log mixins, `taka` filter, password re-entry (`core.reauth`), `+88` phone normalising
+- `customers` — title, phones (`+88` added automatically), WhatsApp, emergency contact, TIN, SMS opt-out; unique phone, no delete
+- `suppliers` — company, owner, contact, bank account and a *type* (the cost categories); no delete
+- `projects` — `Project` (flat spec and prices set once), `Flat` (unit + floor, parking lot), booking map, two-admin flat deletion
+- `costing` — categories with phases, budgets, project costs (shared / direct, "paid from" account)
+- `sales` — `FlatSale`, `CustomerPayment`, `Reference`, `HonorariumPayment`, `RefundPayment`
+- `books` — accounts, internal transfers and the collected book with its confirmation layer
+- `sms` — payment SMS, balance reminders, SMS log
+- `reports` — the reports above, shown on screen and as letterhead PDFs
+- `dashboard` — home page with quick stats
+- `activity_log` — create/update/delete audit trail
 
 ## Printing
 
 Print-ready A4 pages (use the browser's Print, or "Save as PDF"), each with a company header, amount in words and signature lines:
 
-- **Payment voucher** for a cost: `Print Voucher` on the cost page and the print icon in the cost list (`CV-00001`)
-- **Invoice** for a flat sale: `Print Invoice` on the sale page (numbered with the sale number)
-- **Money receipt** for a customer payment: print icon in the sale's payments and in the payments list (`MR-00001`);
-  it shows the balance as of that payment
-
-- **Project cost report (PDF)**: "Print PDF of this list" on the cost list exports whatever the list is currently filtered to
-  (search, project, shared/direct, month or date range), with a total and a summary by cost head
+- **Payment voucher** for a cost (`CV-00001`), showing phase and the account it was paid from
+- **Invoice** for a flat sale. It is given to the buyer, so it shows only the sale value, reg value, net value and payments, never the base price or honorarium
+- **Money receipt** for a customer payment (`MR-00001`); it shows the balance as of that payment
+- **Project cost report (PDF)** from the cost list, honouring the list's filters (search, project, type, phase, month or dates)
 
 **Letterhead:** upload your company letterhead under *your name menu → Company Letterhead* (PNG or JPG, max 5 MB;
 a wide banner around 2480 x 400 px prints at full A4 width). It is used at the top of every voucher, invoice,
 receipt and PDF report in place of the text heading. With no letterhead, the printed heading uses the company name,
 address and phone from the same page, falling back to `COMPANY_NAME`, `COMPANY_ADDRESS` and `COMPANY_PHONE` in `.env`.
 Uploads are stored in `media/letterhead/`; in production make sure the web server serves `MEDIA_URL` from `MEDIA_ROOT`.
-Only users with the `core.change_companyprofile` permission (superusers) see and can use this page.
 
 ## Numbering
 
-- Project codes have no year component: `{COMPANY_CODE_PREFIX}P-{NNN}`, e.g. `ABP-001`.
-- Supplier codes also have no year component, dash-separated: `{COMPANY_CODE_PREFIX}-S-{NNN}`, e.g. `AB-S-001`.
-- Customers have no code at all — they're identified by name + a unique phone number.
-- Sale numbers use `{PREFIX}/{YYYY}/{NNNNN}`, e.g. `AB/2026/00001`.
+- Project codes: `{COMPANY_CODE_PREFIX}P-{NNN}`, e.g. `ABP-001`. Supplier codes: `{COMPANY_CODE_PREFIX}-S-{NNN}`, e.g. `AB-S-001`.
+- Customers have no code; they are identified by name + a unique phone number.
+- Sale numbers: `{PREFIX}/{YYYY}/{NNNNN}`; receipts `MR-`, vouchers `CV-`, honorarium `HP-`, refunds `RF-`, transfers `TR-`.
 
-All of these are minted atomically via `core.numbering` (`select_for_update` on a `Sequence` row), not a
-racy `count()+1`.
+All of these are minted atomically via `core.numbering` (`select_for_update` on a `Sequence` row), not a racy `count()+1`.
+
+## Tests
+
+```bash
+venv\Scripts\python manage.py test
+```

@@ -65,6 +65,7 @@ INSTALLED_APPS = [
     'costing',
     'sales',
     'books',
+    'sms',
     'reports',
     'dashboard',
     'activity_log',
@@ -102,6 +103,8 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'core.context_processors.company',
+                'core.context_processors.flat_deletion_pending',
+                'core.context_processors.reauth_state',
             ],
         },
     },
@@ -185,3 +188,9 @@ EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=True)
 EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
 DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='DAR AL JANNAH <noreply@example.com>')
+
+# Customer SMS. 'log' only records messages in the SMS log; 'http' posts to a gateway (see sms/backends.py).
+SMS_BACKEND = env('SMS_BACKEND', default='log')
+SMS_API_URL = env('SMS_API_URL', default='')
+SMS_API_KEY = env('SMS_API_KEY', default='')
+SMS_SENDER_ID = env('SMS_SENDER_ID', default='')

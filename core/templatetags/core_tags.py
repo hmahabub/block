@@ -103,3 +103,4 @@ def taka_words(value):
     if paisa:
         words += f' and {int_to_words(paisa)} Paisa'
     return words + ' Only'
+

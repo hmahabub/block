@@ -3,6 +3,7 @@ import datetime
 
 from django.db.models import Q
 
+from core.utils import int_or_none
 from projects.models import Project
 
 
@@ -39,13 +40,17 @@ def filter_project_costs(queryset, params):
     Shared by the on-screen list and the PDF report so both always show the same rows.
     Returns the filtered queryset and a dict describing what was applied.
     """
-    project = Project.objects.filter(pk=params.get('project')).first() if params.get('project') else None
+    project_id = int_or_none(params.get('project'))
+    project = Project.objects.filter(pk=project_id).first() if project_id else None
     cost_type = params.get('type') if params.get('type') in ('shared', 'direct') else ''
+    phase = params.get('phase') if params.get('phase') in ('PRE', 'POST') else ''
     q = (params.get('q') or '').strip()
     date_from, date_to = period_from_params(params)
 
     if project:
         queryset = queryset.filter(project=project)
+    if phase:
+        queryset = queryset.filter(phase=phase)
     if cost_type == 'shared':
         queryset = queryset.filter(flat__isnull=True)
     elif cost_type == 'direct':
@@ -60,5 +65,5 @@ def filter_project_costs(queryset, params):
         queryset = queryset.filter(date__lte=date_to)
 
     return queryset, {
-        'project': project, 'type': cost_type, 'q': q, 'date_from': date_from, 'date_to': date_to,
+        'project': project, 'type': cost_type, 'phase': phase, 'q': q, 'date_from': date_from, 'date_to': date_to,
     }

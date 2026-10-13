@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}New Transfer{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header"><h3 class="mb-0">Internal transfer</h3></div>
+    <div class="card-body">
+        <p class="text-muted">Move money between your own accounts, for example from a bank to petty cash. It shows as
+            money out of one account and money in to the other.</p>
+        <form method="post" class="col-md-6 px-0">
+            {% csrf_token %}
+            {{ form|crispy }}
+            <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save</button>
+            <a href="{% url 'books:transfers' %}" class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

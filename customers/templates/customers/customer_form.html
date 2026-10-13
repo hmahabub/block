@@ -29,20 +29,28 @@
             {{ form.non_field_errors }}
 
             <div class="row gx-3">
+                <div class="col-md-1">{{ form.title|as_crispy_field }}</div>
                 <div class="col-md-3">{{ form.name|as_crispy_field }}</div>
                 <div class="col-md-3">{{ form.phone|as_crispy_field }}</div>
+                <div class="col-md-2">{{ form.whatsapp_no|as_crispy_field }}</div>
                 <div class="col-md-3">{{ form.email|as_crispy_field }}</div>
-                <div class="col-md-3">{{ form.identification_no|as_crispy_field }}</div>
             </div>
             <div class="row gx-3">
-                <div class="col-md-3">{{ form.date_of_birth|as_crispy_field }}</div>
-                <div class="col-md-3">{{ form.nationality|as_crispy_field }}</div>
+                <div class="col-md-3">{{ form.identification_no|as_crispy_field }}</div>
+                <div class="col-md-2">{{ form.tin|as_crispy_field }}</div>
+                <div class="col-md-2">{{ form.date_of_birth|as_crispy_field }}</div>
+                <div class="col-md-2">{{ form.nationality|as_crispy_field }}</div>
                 <div class="col-md-3">{{ form.occupation|as_crispy_field }}</div>
-                <div class="col-md-3">{{ form.spouse_name|as_crispy_field }}</div>
             </div>
             <div class="row gx-3">
                 <div class="col-md-3">{{ form.father_name|as_crispy_field }}</div>
                 <div class="col-md-3">{{ form.mother_name|as_crispy_field }}</div>
+                <div class="col-md-3">{{ form.spouse_name|as_crispy_field }}</div>
+                <div class="col-md-3 pt-4">{{ form.sms_enabled|as_crispy_field }}</div>
+            </div>
+            <div class="row gx-3">
+                <div class="col-md-3">{{ form.emergency_contact_name|as_crispy_field }}</div>
+                <div class="col-md-3">{{ form.emergency_contact_phone|as_crispy_field }}</div>
                 <div class="col-md-3">{{ form.nominee_name|as_crispy_field }}</div>
                 <div class="col-md-3">{{ form.nominee_relation|as_crispy_field }}</div>
             </div>

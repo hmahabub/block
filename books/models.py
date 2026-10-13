@@ -1,121 +1,80 @@
+from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
-from django.db.models import Sum
+from django.urls import reverse
+
+from core.models import ConfirmableModel
 
 
-class BankAccount(models.Model):
+class Account(models.Model):
+    """A bank account or a cash box (e.g. Bank 1, Bank 2, Petty cash).
+
+    The single book is a view over these accounts: every payment in or out is collected from
+    its source module (customer payments, cost entries, honorarium, refunds) or from an internal
+    transfer. Nothing is typed into the book itself.
+    """
+
     class AccountType(models.TextChoices):
+        BANK = 'BANK', 'Bank'
+        CASH = 'CASH', 'Cash'
+
+    class BankKind(models.TextChoices):
         CURRENT = 'CURRENT', 'Current Account'
         SAVINGS = 'SAVINGS', 'Savings Account'
         FIXED = 'FIXED', 'Fixed Deposit'
 
-    name = models.CharField(max_length=100)
-    account_number = models.CharField(max_length=50)
-    bank_name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, help_text='e.g. Bank 1, Bank 2, Petty cash')
+    account_type = models.CharField(max_length=10, choices=AccountType.choices, default=AccountType.BANK)
+    bank_name = models.CharField(max_length=100, blank=True)
+    account_number = models.CharField(max_length=50, blank=True)
     branch = models.CharField(max_length=100, blank=True)
-    account_type = models.CharField(max_length=20, choices=AccountType.choices, default=AccountType.CURRENT)
+    bank_kind = models.CharField('Account kind', max_length=20, choices=BankKind.choices, blank=True)
     opening_balance = models.DecimalField(max_digits=14, decimal_places=2, default=0)
-    current_balance = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     is_active = models.BooleanField(default=True)
     notes = models.TextField(blank=True)
 
     class Meta:
-        ordering = ['bank_name', 'name']
+        ordering = ['account_type', 'name']
+        permissions = [('confirm_entries', 'Can confirm book entries')]
 
     def __str__(self):
-        return f'{self.bank_name} - {self.name} ({self.account_number})'
+        return self.name
 
-    def update_balance(self):
-        totals = self.transactions.aggregate(
-            credit=Sum('amount', filter=models.Q(transaction_type='CREDIT')),
-            debit=Sum('amount', filter=models.Q(transaction_type='DEBIT')),
-        )
-        self.current_balance = self.opening_balance + (totals['credit'] or 0) - (totals['debit'] or 0)
-        self.save(update_fields=['current_balance'])
+    def get_absolute_url(self):
+        return reverse('books:ledger', kwargs={'pk': self.pk})
+
+    @property
+    def is_cash(self):
+        return self.account_type == self.AccountType.CASH
+
+    @property
+    def detail(self):
+        if self.is_cash:
+            return 'Cash'
+        parts = [self.bank_name, self.account_number]
+        return ' · '.join(part for part in parts if part) or 'Bank'
 
 
-class LedgerEntryBase(models.Model):
-    TRANSACTION_TYPES = (
-        ('CREDIT', 'Credit'),
-        ('DEBIT', 'Debit'),
-    )
+class Transfer(ConfirmableModel):
+    """Money moved from one of our accounts to another (e.g. bank to petty cash)."""
 
     date = models.DateField()
-    transaction_type = models.CharField(max_length=10, choices=TRANSACTION_TYPES)
+    from_account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name='transfers_out')
+    to_account = models.ForeignKey(Account, on_delete=models.PROTECT, related_name='transfers_in')
     amount = models.DecimalField(max_digits=14, decimal_places=2, validators=[MinValueValidator(0.01)])
-    particulars = models.CharField(max_length=300)
-    current_balance = models.DecimalField(max_digits=14, decimal_places=2, default=0, editable=False)
+    notes = models.CharField(max_length=300, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        abstract = True
         ordering = ['-date', '-id']
 
     def __str__(self):
-        return f'{self.amount} ({self.date})'
+        return f'{self.reference_no}: {self.from_account} → {self.to_account} ({self.amount})'
 
+    @property
+    def reference_no(self):
+        return f'TR-{self.pk:05d}'
 
-class CashBook(LedgerEntryBase):
-    class Meta(LedgerEntryBase.Meta):
-        verbose_name = 'Cash Book Entry'
-        verbose_name_plural = 'Cash Book Entries'
-
-    def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
-        CashBook.recompute_balances()
-
-    def delete(self, *args, **kwargs):
-        super().delete(*args, **kwargs)
-        CashBook.recompute_balances()
-
-    @classmethod
-    def recompute_balances(cls):
-        """Iteratively walk every entry in date order and fix its running balance.
-
-        Replaces inspcta's recursive cascade (which risked hitting Python's
-        recursion limit on a long-running book and re-saved every later row
-        one at a time). This does one query, one bulk_update, no recursion.
-        """
-        balance = 0
-        updates = []
-        for entry in cls.objects.order_by('date', 'id'):
-            balance += entry.amount if entry.transaction_type == 'CREDIT' else -entry.amount
-            if entry.current_balance != balance:
-                entry.current_balance = balance
-                updates.append(entry)
-        if updates:
-            cls.objects.bulk_update(updates, ['current_balance'])
-
-
-class BankBook(LedgerEntryBase):
-    bank_account = models.ForeignKey(BankAccount, on_delete=models.PROTECT, related_name='transactions')
-    cheque_no = models.CharField(max_length=100, blank=True)
-    cheque_date = models.DateField(null=True, blank=True)
-
-    class Meta(LedgerEntryBase.Meta):
-        verbose_name = 'Bank Book Entry'
-        verbose_name_plural = 'Bank Book Entries'
-
-    def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
-        BankBook.recompute_balances(self.bank_account_id)
-
-    def delete(self, *args, **kwargs):
-        account_id = self.bank_account_id
-        super().delete(*args, **kwargs)
-        BankBook.recompute_balances(account_id)
-
-    @classmethod
-    def recompute_balances(cls, bank_account_id):
-        account = BankAccount.objects.get(pk=bank_account_id)
-        balance = account.opening_balance
-        updates = []
-        for entry in cls.objects.filter(bank_account_id=bank_account_id).order_by('date', 'id'):
-            balance += entry.amount if entry.transaction_type == 'CREDIT' else -entry.amount
-            if entry.current_balance != balance:
-                entry.current_balance = balance
-                updates.append(entry)
-        if updates:
-            cls.objects.bulk_update(updates, ['current_balance'])
-        account.update_balance()
+    def clean(self):
+        if self.from_account_id and self.from_account_id == self.to_account_id:
+            raise ValidationError('Choose two different accounts for a transfer.')

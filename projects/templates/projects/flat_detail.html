@@ -19,6 +19,7 @@
             <a href="{% url 'projects:detail' object.project.pk %}">{{ object.project.project_name }}</a>
             &middot; Floor {{ object.floor_no }} &middot; {{ object.get_flat_type_display }}
             {% if object.facing %}&middot; {{ object.facing }} Facing{% endif %}
+            &middot; <i class="fas fa-car-side"></i> {{ object.parking_lot|default:"no parking lot" }}
             {% if object.current_sale %}&middot; <i class="fas fa-user"></i>
             <a href="{% url 'customers:detail' object.current_sale.customer.pk %}">{{ object.current_sale.customer.name }}</a>{% endif %}
         </p>
@@ -27,84 +28,80 @@
         <a href="{% url 'projects:flat-update' object.pk %}" class="btn btn-warning">
             <i class="fas fa-edit"></i> Edit
         </a>
+        {% if can_request_deletion and not pending_request %}
+        <a href="{% url 'projects:flat-request-deletion' object.pk %}" class="btn btn-outline-danger {% if deletion_blockers %}disabled{% endif %}"
+           {% if deletion_blockers %}title="Cannot delete: {{ deletion_blockers|join:' and ' }}"{% endif %}>
+            <i class="fas fa-trash"></i> Request deletion
+        </a>
+        {% endif %}
         <a href="{% url 'projects:detail' object.project.pk %}" class="btn btn-secondary">
             <i class="fas fa-arrow-left"></i> Back to Project
         </a>
     </div>
 </div>
 
+{% if pending_request %}
+<div class="alert alert-warning">
+    <i class="fas fa-hourglass-half"></i> A deletion request for this flat is waiting for a second admin.
+    <a href="{% url 'projects:deletion-requests' %}">Open requests</a>
+</div>
+{% endif %}
+
 <div class="row">
     <div class="col-md-6 mb-3">
         <div class="card h-100">
-            <div class="card-header">Flat Details</div>
+            <div class="card-header">Flat Details <small class="text-muted">(from the project)</small></div>
             <div class="card-body">
                 <table class="table table-bordered mb-0">
                     <tr><th width="40%">Saleable Area</th><td>{{ object.saleable_area }} sqft</td></tr>
                     <tr><th>Facing</th><td>{{ object.facing|default:"-" }}</td></tr>
                     {% if object.bedrooms or object.bathrooms %}<tr><th>Bedrooms / Bathrooms</th><td>{{ object.bedrooms|default:"-" }} / {{ object.bathrooms|default:"-" }}</td></tr>{% endif %}
-                    {% if object.parking_area %}<tr><th>Parking area</th><td>{{ object.parking_area }} sqft</td></tr>{% endif %}
+                    <tr><th>Parking lot</th><td>{{ object.parking_lot|default:"-" }}{% if object.parking_area %} ({{ object.parking_area }} sqft){% endif %}</td></tr>
                     {% if object.features %}<tr><th>Rooms &amp; features</th><td>{{ object.features }}</td></tr>{% endif %}
                     <tr><th>Base Price</th><td>{{ object.base_price|taka }}</td></tr>
-                    <tr><th>Allocated Project Cost</th><td>{{ object.allocated_cost|taka }}</td></tr>
-                    <tr><th>Direct Flat Cost</th><td>{{ object.direct_cost|taka }}</td></tr>
-                    <tr><th>Total Cost</th><td>{{ object.total_cost|taka }}</td></tr>
+                    <tr><th>Quoted Price</th><td>{{ object.quoted_price|taka }}</td></tr>
+                    <tr><th>Parking Price (optional)</th><td>{{ object.parking_price|taka }}</td></tr>
                 </table>
             </div>
         </div>
     </div>
     <div class="col-md-6 mb-3">
         <div class="card h-100">
-            <div class="card-header">Profitability</div>
+            <div class="card-header">Current sale</div>
             <div class="card-body">
                 {% if object.current_sale %}
+                {% with sale=object.current_sale %}
                 <table class="table table-bordered mb-0">
                     <tr><th width="40%">Customer</th><td>
-                        <a href="{% url 'customers:detail' object.current_sale.customer.pk %}">{{ object.current_sale.customer.name }}</a>
-                        <small class="text-muted">{{ object.current_sale.customer.phone }}</small>
+                        <a href="{% url 'customers:detail' sale.customer.pk %}">{{ sale.customer.name }}</a>
+                        <small class="text-muted">{{ sale.customer.phone }}</small>
                     </td></tr>
-                    <tr><th>Net Sale Value</th><td>{{ object.current_sale.net_sale_value|taka }}</td></tr>
-                    <tr><th>Paid</th><td>{{ object.current_sale.received_amount|taka }}</td></tr>
-                    <tr><th>Balance</th><td class="{% if object.current_sale.receivable_amount > 0 %}text-danger{% endif %}">{{ object.current_sale.receivable_amount|taka }}</td></tr>
-                    <tr>
-                        <th>Estimated Profit</th>
-                        <td class="{% if object.profit >= 0 %}text-success{% else %}text-danger{% endif %}">
-                            {{ object.profit|taka }}
-                            {% if object.profit_margin != None %}({{ object.profit_margin|floatformat:2 }}%){% endif %}
-                        </td>
-                    </tr>
+                    <tr><th>Sale Value</th><td>{{ sale.sale_value|taka }}</td></tr>
+                    <tr><th>Reg Value</th><td>{{ sale.reg_value|taka }}</td></tr>
+                    <tr><th>Net Value</th><td>{{ sale.net_value|taka }}</td></tr>
+                    <tr><th>Paid</th><td>{{ sale.received_amount|taka }}</td></tr>
+                    <tr><th>Balance</th><td class="{% if sale.receivable_amount > 0 %}text-danger{% endif %}">{{ sale.receivable_amount|taka }}</td></tr>
+                    {% if sale.customer_balance %}<tr><th>Customer credit</th><td class="text-success">{{ sale.customer_balance|taka }}</td></tr>{% endif %}
                 </table>
+                <a href="{{ sale.get_absolute_url }}" class="btn btn-sm btn-outline-primary mt-2">Open sale {{ sale.sale_no }}</a>
+                {% endwith %}
                 {% else %}
-                <p class="text-muted mb-0">Not sold yet — no sale value to compare against cost.</p>
+                <p class="text-muted mb-0">This flat is free to book.</p>
                 {% endif %}
             </div>
         </div>
     </div>
 </div>
 
+{% if costs_visible %}
 <div class="card mb-3">
-    <div class="card-header">Cost Allocation (Area-Based, Shared Project Costs)</div>
+    <div class="card-header">Cost <small class="text-muted">(post-development costs are shared equally by every flat, sold or not)</small></div>
     <div class="card-body">
-        {% if cost_allocations %}
-        <div class="table-responsive">
-            <table class="table table-sm">
-                <thead class="table-light">
-                    <tr><th>Cost Category</th><th>Project Cost</th><th>Allocation Rate</th><th>Allocated Amount</th></tr>
-                </thead>
-                <tbody>
-                    {% for allocation in cost_allocations %}
-                    <tr>
-                        <td>{{ allocation.project_cost.cost_category }}</td>
-                        <td>{{ allocation.project_cost.amount|taka }}</td>
-                        <td>{{ allocation.allocation_rate|floatformat:6 }}</td>
-                        <td>{{ allocation.allocated_amount|taka }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% else %}
-        <p class="text-muted mb-0">No shared project cost has been allocated to this flat yet.</p>
-        {% endif %}
+        <table class="table table-bordered mb-0">
+            <tr><th width="40%">Equal share of post-development cost</th><td>{{ object.shared_cost_share|taka }}</td></tr>
+            <tr><th>Direct flat cost</th><td>{{ object.direct_cost|taka }}</td></tr>
+            <tr><th>Total</th><td><strong>{{ object.total_cost|taka }}</strong></td></tr>
+        </table>
     </div>
 </div>
 
@@ -140,12 +137,14 @@
     </div>
 </div>
 
+{% endif %}
+
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
         <span>Sales History</span>
         {% if object.status == 'AVAILABLE' %}
         <a href="{% url 'sales:create' %}?flat={{ object.pk }}" class="btn btn-primary btn-sm">
-            <i class="fas fa-plus"></i> Sell this Flat
+            <i class="fas fa-plus"></i> Book this Flat
         </a>
         {% endif %}
     </div>
@@ -154,7 +153,7 @@
         <div class="table-responsive">
             <table class="table table-sm">
                 <thead class="table-light">
-                    <tr><th>Sale No.</th><th>Customer</th><th>Sale Date</th><th>Net Sale Value</th><th>Received</th><th>Status</th></tr>
+                    <tr><th>Sale No.</th><th>Customer</th><th>Date</th><th>Sale Value</th><th>Received</th><th>Status</th></tr>
                 </thead>
                 <tbody>
                     {% for sale in sales %}
@@ -162,7 +161,7 @@
                         <td><a href="{% url 'sales:detail' sale.pk %}">{{ sale.sale_no }}</a></td>
                         <td>{{ sale.customer }}</td>
                         <td>{{ sale.sale_date }}</td>
-                        <td>{{ sale.net_sale_value|taka }}</td>
+                        <td>{{ sale.sale_value|taka }}</td>
                         <td>{{ sale.received_amount|taka }}</td>
                         <td>{{ sale.get_status_display }}</td>
                     </tr>
@@ -171,7 +170,7 @@
             </table>
         </div>
         {% else %}
-        <p class="text-muted mb-0">This flat has not been sold yet.</p>
+        <p class="text-muted mb-0">This flat has not been booked yet.</p>
         {% endif %}
     </div>
 </div>

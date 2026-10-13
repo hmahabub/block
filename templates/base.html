@@ -157,10 +157,17 @@
                 <div class="collapse navbar-collapse" id="navbarNav">
                     <ul class="navbar-nav me-auto">
                         {% if user.is_authenticated %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'projects:list' %}">
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="fas fa-building"></i> Projects
+                                {% if flat_deletions_waiting %}<span class="badge bg-warning text-dark">{{ flat_deletions_waiting }}</span>{% endif %}
                             </a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{% url 'projects:list' %}">Projects</a></li>
+                                <li><a class="dropdown-item" href="{% url 'projects:flat-list' %}">All Flats</a></li>
+                                <li><a class="dropdown-item" href="{% url 'projects:deletion-requests' %}">Flat deletion requests
+                                    {% if flat_deletions_waiting %}<span class="badge bg-warning text-dark">{{ flat_deletions_waiting }}</span>{% endif %}</a></li>
+                            </ul>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'customers:list' %}">
@@ -189,6 +196,10 @@
                             <ul class="dropdown-menu">
                                 <li><a class="dropdown-item" href="{% url 'sales:list' %}">Flat Sales</a></li>
                                 <li><a class="dropdown-item" href="{% url 'sales:payment-list' %}">Customer Payments</a></li>
+                                <li><a class="dropdown-item" href="{% url 'sales:reference-list' %}">References</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{% url 'sms:reminders' %}">Balance reminders (SMS)</a></li>
+                                <li><a class="dropdown-item" href="{% url 'sms:log' %}">SMS log</a></li>
                             </ul>
                         </li>
                         <li class="nav-item dropdown">
@@ -196,10 +207,10 @@
                                 <i class="fas fa-book"></i> Books
                             </a>
                             <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="{% url 'books:cashbook_list' %}">Cash Book</a></li>
-                                <li><a class="dropdown-item" href="{% url 'books:bankbook_list' %}">Bank Book</a></li>
+                                <li><a class="dropdown-item" href="{% url 'books:book' %}">Book (all accounts)</a></li>
+                                <li><a class="dropdown-item" href="{% url 'books:transfers' %}">Internal Transfers</a></li>
                                 <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="{% url 'books:bankaccount_list' %}">Bank Accounts</a></li>
+                                <li><a class="dropdown-item" href="{% url 'books:accounts' %}">Accounts</a></li>
                             </ul>
                         </li>
                         <li class="nav-item dropdown">
@@ -208,9 +219,16 @@
                             </a>
                             <ul class="dropdown-menu">
                                 <li><a class="dropdown-item" href="{% url 'reports:index' %}">Report Center</a></li>
-                                <li><a class="dropdown-item" href="{% url 'reports:project-profitability' %}">Project Profitability</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{% url 'reports:finance' %}">Finance Report</a></li>
                                 <li><a class="dropdown-item" href="{% url 'reports:flat-wise' %}">Flat-Wise Report</a></li>
                                 <li><a class="dropdown-item" href="{% url 'reports:dues' %}">Receivables</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><h6 class="dropdown-header">Pre-development</h6></li>
+                                <li><a class="dropdown-item" href="{% url 'reports:collection' %}">Periodic Payment Collection</a></li>
+                                <li><a class="dropdown-item" href="{% url 'reports:profit-loss' %}">Profit, Loss, Collection &amp; Due</a></li>
+                                <li><h6 class="dropdown-header">Post-development</h6></li>
+                                <li><a class="dropdown-item" href="{% url 'reports:customers' %}">Customer Balance &amp; Cost</a></li>
                             </ul>
                         </li>
                         {% endif %}

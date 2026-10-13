@@ -1,5 +1,7 @@
 from django import forms
 
+from core.phone import normalize_phone
+
 from .models import Customer
 
 
@@ -12,10 +14,11 @@ class CustomerForm(forms.ModelForm):
     class Meta:
         model = Customer
         fields = [
-            'name', 'phone', 'email', 'identification_no', 'date_of_birth', 'nationality', 'occupation',
-            'father_name', 'mother_name', 'spouse_name',
+            'title', 'name', 'phone', 'whatsapp_no', 'email',
+            'identification_no', 'tin', 'date_of_birth', 'nationality', 'occupation',
+            'father_name', 'mother_name', 'spouse_name', 'sms_enabled',
+            'emergency_contact_name', 'emergency_contact_phone', 'nominee_name', 'nominee_relation',
             'present_address', 'permanent_address',
-            'nominee_name', 'nominee_relation',
             'notes',
         ]
         widgets = {
@@ -30,6 +33,21 @@ class CustomerForm(forms.ModelForm):
         instance = self.instance
         if instance.pk and instance.present_address and instance.present_address == instance.permanent_address:
             self.fields['same_as_present'].initial = True
+
+    def _clean_phone(self, name):
+        return normalize_phone(self.cleaned_data.get(name, ''))
+
+    def clean_phone(self):
+        phone = self._clean_phone('phone')
+        if Customer.objects.filter(phone=phone).exclude(pk=self.instance.pk).exists():
+            raise forms.ValidationError('A customer with this phone number already exists.')
+        return phone
+
+    def clean_whatsapp_no(self):
+        return self._clean_phone('whatsapp_no')
+
+    def clean_emergency_contact_phone(self):
+        return self._clean_phone('emergency_contact_phone')
 
     def clean(self):
         cleaned_data = super().clean()

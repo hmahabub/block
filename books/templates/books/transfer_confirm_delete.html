@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}Delete Transfer{% endblock %}
+
+{% block content %}
+<div class="card border-danger">
+    <div class="card-header bg-danger text-white"><h3 class="mb-0">Delete transfer</h3></div>
+    <div class="card-body">
+        <p>Delete <strong>{{ object }}</strong>? Both sides of the transfer disappear from the book.</p>
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger"><i class="fas fa-trash"></i> Delete</button>
+            <a href="{% url 'books:transfers' %}" class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

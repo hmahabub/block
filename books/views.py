@@ -1,120 +1,182 @@
-from datetime import timedelta
+import datetime
 
+from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
-from django.db.models import Case, DecimalField, F, Sum, When
+from django.core.exceptions import PermissionDenied
+from django.shortcuts import redirect
 from django.urls import reverse_lazy
 from django.utils import timezone
-from django.views.generic import CreateView, ListView
+from django.views import View
+from django.views.generic import CreateView, DeleteView, ListView, TemplateView, UpdateView
 
-from core.mixins import CreateAuditMixin
+from core.mixins import CreateAuditMixin, DeleteAuditMixin, UpdateAuditMixin
 
-from .forms import BankAccountForm, BankBookForm, CashBookForm
-from .models import BankAccount, BankBook, CashBook
-
-
-class LedgerListMixin:
-    """Shared 30-day-window + running-total logic for the Cash/Bank Book list views."""
-
-    def get_date_range(self):
-        today = timezone.now().date()
-        default_start = today - timedelta(days=30)
-        start_date = self.request.GET.get('start_date', default_start)
-        end_date = self.request.GET.get('end_date', today)
-        return start_date, end_date
-
-    def annotate_totals(self, queryset):
-        return queryset.annotate(
-            debit_amount=Case(
-                When(transaction_type='DEBIT', then=F('amount')), default=0, output_field=DecimalField()
-            ),
-            credit_amount=Case(
-                When(transaction_type='CREDIT', then=F('amount')), default=0, output_field=DecimalField()
-            ),
-        ).order_by('date', 'id')
+from .forms import AccountForm, TransferForm
+from .ledger import (
+    ZERO,
+    account_summaries,
+    collect_entries,
+    confirmable_model,
+    unassigned_count,
+    with_running_balance,
+)
+from .models import Account, Transfer
 
 
-class CashBookListView(LoginRequiredMixin, LedgerListMixin, ListView):
-    model = CashBook
-    template_name = 'books/cashbook_list.html'
-    context_object_name = 'transactions'
-    paginate_by = 100
+def _parse_date(value):
+    try:
+        return datetime.date.fromisoformat(value) if value else None
+    except ValueError:
+        return None
 
-    def get_queryset(self):
-        start_date, end_date = self.get_date_range()
-        queryset = CashBook.objects.filter(date__gte=start_date, date__lte=end_date)
-        return self.annotate_totals(queryset)
+
+class AccountListView(LoginRequiredMixin, TemplateView):
+    template_name = 'books/account_list.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        start_date, end_date = self.get_date_range()
-        context['start_date'] = start_date
-        context['end_date'] = end_date
-        queryset = self.get_queryset()
-        context['total_debit'] = queryset.aggregate(total=Sum('debit_amount'))['total'] or 0
-        context['total_credit'] = queryset.aggregate(total=Sum('credit_amount'))['total'] or 0
-        last_entry = queryset.last()
-        context['last_balance'] = last_entry.current_balance if last_entry else 0
+        rows = account_summaries(Account.objects.all())
+        context['rows'] = rows
+        context['total_confirmed'] = sum((r['confirmed_balance'] for r in rows if r['account'].is_active), ZERO)
+        context['total_book'] = sum((r['book_balance'] for r in rows if r['account'].is_active), ZERO)
+        context['unassigned'] = unassigned_count()
         return context
 
 
-class CashBookCreateView(PermissionRequiredMixin, CreateAuditMixin, CreateView):
-    model = CashBook
-    form_class = CashBookForm
-    template_name = 'books/cashbook_form.html'
-    success_url = reverse_lazy('books:cashbook_list')
-    permission_required = 'books.add_cashbook'
+class AccountCreateView(PermissionRequiredMixin, CreateAuditMixin, CreateView):
+    model = Account
+    form_class = AccountForm
+    template_name = 'books/account_form.html'
+    success_url = reverse_lazy('books:accounts')
+    permission_required = 'books.add_account'
 
 
-class BankBookListView(LoginRequiredMixin, LedgerListMixin, ListView):
-    model = BankBook
-    template_name = 'books/bankbook_list.html'
-    context_object_name = 'transactions'
-    paginate_by = 100
+class AccountUpdateView(PermissionRequiredMixin, UpdateAuditMixin, UpdateView):
+    model = Account
+    form_class = AccountForm
+    template_name = 'books/account_form.html'
+    success_url = reverse_lazy('books:accounts')
+    permission_required = 'books.change_account'
 
-    def get_queryset(self):
-        account_id = self.request.GET.get('account')
-        if not account_id:
-            first_account = BankAccount.objects.first()
-            account_id = first_account.pk if first_account else None
-        self.account_id = account_id
-        if not account_id:
-            return BankBook.objects.none()
-        start_date, end_date = self.get_date_range()
-        queryset = BankBook.objects.filter(bank_account_id=account_id, date__gte=start_date, date__lte=end_date)
-        return self.annotate_totals(queryset)
+
+class BookView(LoginRequiredMixin, TemplateView):
+    """The one book: every account together, or a single account with a running balance."""
+
+    template_name = 'books/book.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        start_date, end_date = self.get_date_range()
-        context['start_date'] = start_date
-        context['end_date'] = end_date
-        context['bank_accounts'] = BankAccount.objects.all()
-        context['bank_account'] = BankAccount.objects.filter(pk=self.account_id).first()
-        queryset = self.get_queryset()
-        context['total_debit'] = queryset.aggregate(total=Sum('debit_amount'))['total'] or 0
-        context['total_credit'] = queryset.aggregate(total=Sum('credit_amount'))['total'] or 0
-        last_entry = queryset.last()
-        context['last_balance'] = last_entry.current_balance if last_entry else 0
+        params = self.request.GET
+        today = timezone.localdate()
+        accounts = list(Account.objects.all())
+
+        account_id = self.kwargs.get('pk') or params.get('account')
+        account = next((a for a in accounts if str(a.pk) == str(account_id)), None)
+        only_unassigned = params.get('account') == 'none'
+
+        date_from = _parse_date(params.get('date_from')) or today.replace(day=1)
+        date_to = _parse_date(params.get('date_to')) or today
+        status = params.get('status') if params.get('status') in ('confirmed', 'unconfirmed') else ''
+
+        if only_unassigned:
+            all_entries = collect_entries(unassigned=True)
+            opening = ZERO
+        else:
+            selected = [account] if account else accounts
+            all_entries = collect_entries(selected)
+            opening = account.opening_balance if account else sum((a.opening_balance for a in accounts), ZERO)
+
+        # Running balance is computed over the whole history so the opening line of a period is right.
+        before = [e for e in all_entries if e.date < date_from]
+        period = [e for e in all_entries if date_from <= e.date <= date_to]
+        period_opening = opening + sum((e.money_in - e.money_out for e in before), ZERO)
+        closing = with_running_balance(period, period_opening)
+        if status:
+            period = [e for e in period if e.confirmed == (status == 'confirmed')]
+
+        context.update({
+            'accounts': accounts,
+            'account': account,
+            'only_unassigned': only_unassigned,
+            'entries': period,
+            'opening_balance': period_opening,
+            'closing_balance': closing,
+            'total_in': sum((e.money_in for e in period), ZERO),
+            'total_out': sum((e.money_out for e in period), ZERO),
+            'unconfirmed_count': sum(1 for e in period if not e.confirmed),
+            'date_from': date_from,
+            'date_to': date_to,
+            'status': status,
+            'can_confirm': self.request.user.has_perm('books.confirm_entries'),
+            'unassigned': 0 if only_unassigned else unassigned_count(),
+        })
         return context
 
 
-class BankBookCreateView(PermissionRequiredMixin, CreateAuditMixin, CreateView):
-    model = BankBook
-    form_class = BankBookForm
-    template_name = 'books/bankbook_form.html'
-    success_url = reverse_lazy('books:bankbook_list')
-    permission_required = 'books.add_bankbook'
+class ConfirmEntriesView(LoginRequiredMixin, View):
+    """Confirm (or un-confirm) the ticked book lines. Needs the books.confirm_entries permission."""
+
+    http_method_names = ['post']
+
+    def post(self, request):
+        if not request.user.has_perm('books.confirm_entries'):
+            raise PermissionDenied
+        undo = request.POST.get('action') == 'unconfirm'
+        done = 0
+        seen = set()
+        for key in request.POST.getlist('entries'):
+            if key in seen:
+                continue
+            seen.add(key)
+            kind, _, pk = key.partition(':')
+            model = confirmable_model(kind)
+            if model is None or not pk.isdigit():
+                continue
+            item = model.objects.filter(pk=pk).first()
+            if item is None:
+                continue
+            item.unconfirm() if undo else item.confirm(request.user)
+            done += 1
+        if done:
+            messages.success(request, f'{done} entr{"y" if done == 1 else "ies"} {"un-confirmed" if undo else "confirmed"}.')
+        else:
+            messages.warning(request, 'Tick at least one entry first.')
+        target = request.POST.get('next') or ''
+        if not target.startswith('/') or target.startswith('//'):
+            target = reverse_lazy('books:book')
+        return redirect(target)
 
 
-class BankAccountListView(LoginRequiredMixin, ListView):
-    model = BankAccount
-    template_name = 'books/bankaccount_list.html'
-    context_object_name = 'accounts'
+class TransferListView(LoginRequiredMixin, ListView):
+    model = Transfer
+    template_name = 'books/transfer_list.html'
+    context_object_name = 'object_list'
+    paginate_by = 50
+
+    def get_queryset(self):
+        return super().get_queryset().select_related('from_account', 'to_account')
 
 
-class BankAccountCreateView(PermissionRequiredMixin, CreateAuditMixin, CreateView):
-    model = BankAccount
-    form_class = BankAccountForm
-    template_name = 'books/bankaccount_form.html'
-    success_url = reverse_lazy('books:bankaccount_list')
-    permission_required = 'books.add_bankaccount'
+class TransferCreateView(PermissionRequiredMixin, CreateAuditMixin, CreateView):
+    model = Transfer
+    form_class = TransferForm
+    template_name = 'books/transfer_form.html'
+    success_url = reverse_lazy('books:transfers')
+    permission_required = 'books.add_transfer'
+
+
+class TransferDeleteView(PermissionRequiredMixin, DeleteAuditMixin, DeleteView):
+    model = Transfer
+    template_name = 'books/transfer_confirm_delete.html'
+    success_url = reverse_lazy('books:transfers')
+    permission_required = 'books.delete_transfer'
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.has_perm(self.permission_required) and self.get_object_or_none(kwargs['pk']):
+            messages.error(request, 'A confirmed transfer cannot be deleted. Un-confirm it in the book first.')
+            return redirect('books:transfers')
+        return super().dispatch(request, *args, **kwargs)
+
+    @staticmethod
+    def get_object_or_none(pk):
+        return Transfer.objects.filter(pk=pk, confirmed_at__isnull=False).first()

@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% load core_tags %}
+
+{% block title %}Balance Reminders{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="fas fa-comment-sms"></i> Balance reminders</h2>
+    <a href="{% url 'sms:log' %}" class="btn btn-outline-secondary"><i class="fas fa-clock-rotate-left"></i> SMS log</a>
+</div>
+<div class="alert alert-info">
+    A payment SMS goes out automatically on every payment. Balance reminders are different: nothing is sent until
+    you tick customers below and press <strong>Send</strong>. Customers excluded from SMS cannot be ticked.
+    <br><small><strong>Gateway:</strong> {{ backend }}</small>
+</div>
+
+<form method="post" action="{% url 'sms:send-reminders' %}">
+    {% csrf_token %}
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>{{ customers|length }} customer{{ customers|length|pluralize }} with a balance due</span>
+            <button type="submit" class="btn btn-primary btn-sm"
+                    onclick="return confirm('Send the reminder SMS to the ticked customers?')">
+                <i class="fas fa-paper-plane"></i> Send to ticked
+            </button>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th><input type="checkbox" id="tick-all"></th>
+                            <th>Customer</th><th>Phone</th><th class="text-end">Balance due</th><th>Last reminder</th><th>Message</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for customer in customers %}
+                        <tr {% if not customer.sms_enabled %}class="text-muted"{% endif %}>
+                            <td><input type="checkbox" class="tick" name="customers" value="{{ customer.pk }}" {% if not customer.sms_enabled %}disabled{% endif %}></td>
+                            <td><a href="{% url 'customers:detail' customer.pk %}">{{ customer.name }}</a>
+                                {% if not customer.sms_enabled %}<span class="badge bg-secondary">Excluded from SMS</span>{% endif %}</td>
+                            <td>{{ customer.phone }}</td>
+                            <td class="text-end text-danger">{{ customer.total_due|taka }}</td>
+                            <td>{{ customer.last_reminder|date:"j M Y"|default:"never" }}</td>
+                            <td><small class="text-muted">{{ customer.preview }}</small></td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="6" class="text-center py-4">Nobody has a balance due</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.getElementById('tick-all').addEventListener('change', function (event) {
+        document.querySelectorAll('.tick:not(:disabled)').forEach(function (box) { box.checked = event.target.checked; });
+    });
+</script>
+{% endblock %}

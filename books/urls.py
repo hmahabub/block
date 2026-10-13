@@ -1,21 +1,28 @@
 from django.urls import path
 
 from .views import (
-    BankAccountCreateView,
-    BankAccountListView,
-    BankBookCreateView,
-    BankBookListView,
-    CashBookCreateView,
-    CashBookListView,
+    AccountCreateView,
+    AccountListView,
+    AccountUpdateView,
+    BookView,
+    ConfirmEntriesView,
+    TransferCreateView,
+    TransferDeleteView,
+    TransferListView,
 )
 
 app_name = 'books'
 
 urlpatterns = [
-    path('cashbook/', CashBookListView.as_view(), name='cashbook_list'),
-    path('cashbook/new/', CashBookCreateView.as_view(), name='cashbook_create'),
-    path('bankbook/', BankBookListView.as_view(), name='bankbook_list'),
-    path('bankbook/new/', BankBookCreateView.as_view(), name='bankbook_create'),
-    path('bankaccounts/', BankAccountListView.as_view(), name='bankaccount_list'),
-    path('bankaccounts/new/', BankAccountCreateView.as_view(), name='bankaccount_create'),
+    path('', BookView.as_view(), name='book'),
+    path('account/<int:pk>/', BookView.as_view(), name='ledger'),
+    path('confirm/', ConfirmEntriesView.as_view(), name='confirm'),
+
+    path('accounts/', AccountListView.as_view(), name='accounts'),
+    path('accounts/new/', AccountCreateView.as_view(), name='account-create'),
+    path('accounts/<int:pk>/update/', AccountUpdateView.as_view(), name='account-update'),
+
+    path('transfers/', TransferListView.as_view(), name='transfers'),
+    path('transfers/new/', TransferCreateView.as_view(), name='transfer-create'),
+    path('transfers/<int:pk>/delete/', TransferDeleteView.as_view(), name='transfer-delete'),
 ]

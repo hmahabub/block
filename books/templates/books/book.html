@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% load core_tags %}
+
+{% block title %}Book{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 d-print-none">
+    <h2><i class="fas fa-book"></i> Book
+        {% if account %}<small class="text-muted">{{ account.name }}</small>
+        {% elif only_unassigned %}<small class="text-muted">entries without an account</small>
+        {% else %}<small class="text-muted">all accounts</small>{% endif %}</h2>
+    <div>
+        <a href="{% url 'books:transfer-create' %}" class="btn btn-outline-primary"><i class="fas fa-right-left"></i> Internal transfer</a>
+        <a href="{% url 'books:accounts' %}" class="btn btn-outline-secondary"><i class="fas fa-university"></i> Accounts</a>
+        <button class="btn btn-info" onclick="window.print()"><i class="fas fa-print"></i> Print</button>
+    </div>
+</div>
+
+<p class="text-muted small d-print-none">The book is collected automatically from customer payments, refunds, honorarium,
+    cost payments and transfers. Nothing is typed here, so nothing is entered twice.</p>
+
+{% if unassigned %}
+<div class="alert alert-warning d-print-none">
+    {{ unassigned }} older record{{ unassigned|pluralize }} have no bank/cash account yet and are not shown.
+    <a href="?account=none">Show them</a>.
+</div>
+{% endif %}
+
+<div class="card mb-3 d-print-none">
+    <div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small text-muted mb-1">Account</label>
+                <select name="account" class="form-select">
+                    <option value="">All accounts</option>
+                    {% for item in accounts %}
+                    <option value="{{ item.pk }}" {% if account and account.pk == item.pk %}selected{% endif %}>{{ item.name }}</option>
+                    {% endfor %}
+                    <option value="none" {% if only_unassigned %}selected{% endif %}>No account yet</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-muted mb-1">From</label>
+                <input type="date" name="date_from" class="form-control" value="{{ date_from|date:'Y-m-d' }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-muted mb-1">To</label>
+                <input type="date" name="date_to" class="form-control" value="{{ date_to|date:'Y-m-d' }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-muted mb-1">Show</label>
+                <select name="status" class="form-select">
+                    <option value="">All</option>
+                    <option value="unconfirmed" {% if status == 'unconfirmed' %}selected{% endif %}>Unconfirmed</option>
+                    <option value="confirmed" {% if status == 'confirmed' %}selected{% endif %}>Confirmed</option>
+                </select>
+            </div>
+            <div class="col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-filter"></i> Filter</button>
+                <a href="{% url 'books:book' %}" class="btn btn-outline-secondary">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row mb-3 text-center">
+    <div class="col-md-3"><div class="card"><div class="card-body py-2"><strong>{{ opening_balance|taka }}</strong><br><small class="text-muted">Opening</small></div></div></div>
+    <div class="col-md-3"><div class="card"><div class="card-body py-2"><strong class="text-success">{{ total_in|taka }}</strong><br><small class="text-muted">Money in</small></div></div></div>
+    <div class="col-md-3"><div class="card"><div class="card-body py-2"><strong class="text-danger">{{ total_out|taka }}</strong><br><small class="text-muted">Money out</small></div></div></div>
+    <div class="col-md-3"><div class="card"><div class="card-body py-2"><strong>{{ closing_balance|taka }}</strong><br><small class="text-muted">Closing</small></div></div></div>
+</div>
+
+<form method="post" action="{% url 'books:confirm' %}">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center d-print-none">
+            <span>{{ entries|length }} entr{{ entries|length|pluralize:"y,ies" }}
+                {% if unconfirmed_count %}<span class="badge bg-warning text-dark">{{ unconfirmed_count }} to confirm</span>{% endif %}</span>
+            {% if can_confirm %}
+            <div class="btn-group btn-group-sm">
+                <button type="submit" name="action" value="confirm" class="btn btn-success"><i class="fas fa-check"></i> Confirm ticked</button>
+                <button type="submit" name="action" value="unconfirm" class="btn btn-outline-secondary">Un-confirm ticked</button>
+            </div>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover table-sm align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            {% if can_confirm %}<th class="d-print-none"><input type="checkbox" id="tick-all" title="Tick all unconfirmed"></th>{% endif %}
+                            <th>Date</th>
+                            <th>Ref.</th>
+                            <th>Source</th>
+                            <th>Particulars</th>
+                            {% if not account %}<th>Account</th>{% endif %}
+                            <th class="text-end">In</th>
+                            <th class="text-end">Out</th>
+                            {% if account or only_unassigned %}<th class="text-end">Balance</th>{% endif %}
+                            <th class="text-center">Checked</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entry in entries %}
+                        <tr>
+                            {% if can_confirm %}<td class="d-print-none"><input type="checkbox" class="tick" name="entries" value="{{ entry.key }}" {% if entry.confirmed %}data-confirmed="1"{% endif %}></td>{% endif %}
+                            <td>{{ entry.date|date:"j M Y" }}</td>
+                            <td><a href="{{ entry.url }}">{{ entry.reference }}</a></td>
+                            <td>{{ entry.source }}</td>
+                            <td>{{ entry.description }}</td>
+                            {% if not account %}<td>{{ entry.account.name }}</td>{% endif %}
+                            <td class="text-end text-success">{% if entry.money_in %}{{ entry.money_in|taka }}{% endif %}</td>
+                            <td class="text-end text-danger">{% if entry.money_out %}{{ entry.money_out|taka }}{% endif %}</td>
+                            {% if account or only_unassigned %}<td class="text-end">{{ entry.balance|taka }}</td>{% endif %}
+                            <td class="text-center">{% if entry.confirmed %}<i class="fas fa-check-circle text-success" title="Confirmed"></i>{% else %}<i class="far fa-circle text-muted" title="Not confirmed yet"></i>{% endif %}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="10" class="text-center py-4">No entries in this period</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    (function () {
+        var all = document.getElementById('tick-all');
+        if (!all) { return; }
+        all.addEventListener('change', function () {
+            document.querySelectorAll('.tick').forEach(function (box) {
+                if (!box.dataset.confirmed) { box.checked = all.checked; }
+            });
+        });
+    })();
+</script>
+{% endblock %}

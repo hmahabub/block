@@ -19,11 +19,11 @@
 <div class="card mb-4">
     <div class="card-body">
         <form method="get" id="filter-form" class="row g-2 align-items-end">
-            <div class="col-md-5">
+            <div class="col-md-4">
                 <label class="form-label small text-muted mb-1">Search</label>
                 <input type="text" name="q" class="form-control" placeholder="Description / reference / supplier..." value="{{ request.GET.q }}">
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label class="form-label small text-muted mb-1">Project</label>
                 <select name="project" class="form-select">
                     <option value="">All Projects</option>
@@ -38,6 +38,14 @@
                     <option value="">Shared &amp; Direct</option>
                     <option value="shared" {% if request.GET.type == 'shared' %}selected{% endif %}>Shared only</option>
                     <option value="direct" {% if request.GET.type == 'direct' %}selected{% endif %}>Direct only</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-muted mb-1">Phase</label>
+                <select name="phase" class="form-select">
+                    <option value="">Pre &amp; Post</option>
+                    <option value="PRE" {% if request.GET.phase == 'PRE' %}selected{% endif %}>Pre-development</option>
+                    <option value="POST" {% if request.GET.phase == 'POST' %}selected{% endif %}>Post-development</option>
                 </select>
             </div>
 
@@ -84,8 +92,9 @@
                         <th>Project</th>
                         <th>Category</th>
                         <th>Supplier</th>
-                        <th>Type</th>
-                        <th>Flat</th>
+                        <th>Phase</th>
+                        <th>Charged to</th>
+                        <th>Paid from</th>
                         <th class="text-end">Amount</th>
                         <th>Actions</th>
                     </tr>
@@ -97,11 +106,9 @@
                         <td><a href="{% url 'projects:detail' cost.project.pk %}">{{ cost.project.project_code }}</a></td>
                         <td>{{ cost.cost_category }}</td>
                         <td>{{ cost.supplier|default:"-" }}</td>
-                        <td>
-                            {% if cost.flat %}<span class="badge bg-info text-dark">Direct</span>
-                            {% else %}<span class="badge bg-secondary">Shared</span>{% endif %}
-                        </td>
+                        <td><span class="badge {% if cost.phase == 'PRE' %}bg-warning text-dark{% else %}bg-info text-dark{% endif %}">{{ cost.get_phase_display }}</span></td>
                         <td>{{ cost.flat|default:"All flats" }}</td>
+                        <td>{{ cost.account|default:"-" }}{% if cost.is_confirmed %} <i class="fas fa-check-circle text-success" title="Confirmed in books"></i>{% endif %}</td>
                         <td class="text-end">{{ cost.amount|taka }}</td>
                         <td>
                             <div class="btn-group btn-group-sm">
@@ -112,7 +119,7 @@
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="8" class="text-center py-4">No cost entries found</td></tr>
+                    <tr><td colspan="9" class="text-center py-4">No cost entries found</td></tr>
                     {% endfor %}
                 </tbody>
             </table>

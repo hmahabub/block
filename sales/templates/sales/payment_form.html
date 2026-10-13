@@ -9,9 +9,14 @@
         <h3 class="mb-0">Record Customer Payment</h3>
     </div>
     <div class="card-body">
-        <form method="post">
+        <form method="post" class="col-lg-6 px-0">
             {% csrf_token %}
             {{ form|crispy }}
+            <div class="alert alert-info small">
+                The money goes into the bank or cash account you pick and appears in the books automatically.
+                If the customer pays more than the net value, the extra is kept as the customer's balance.
+                An SMS confirming the payment is sent to the customer unless they are excluded from SMS.
+            </div>
             <div class="mt-3">
                 <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Payment</button>
                 <a href="{% url 'sales:payment-list' %}" class="btn btn-secondary"><i class="fas fa-times"></i> Cancel</a>

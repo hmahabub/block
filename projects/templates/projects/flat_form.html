@@ -13,32 +13,19 @@
     <div class="card-body">
         <form method="post">
             {% csrf_token %}
+            {{ form.non_field_errors }}
             <div class="row">
-                <div class="col-md-6">
-                    {{ form.flat_no|as_crispy_field }}
-                    {{ form.floor_no|as_crispy_field }}
-                    {{ form.flat_type|as_crispy_field }}
-                    {{ form.facing|as_crispy_field }}
-                </div>
-                <div class="col-md-6">
-                    {{ form.saleable_area|as_crispy_field }}
-                    {{ form.base_price|as_crispy_field }}
-                    {{ form.parking_area|as_crispy_field }}
-                </div>
+                <div class="col-md-3">{{ form.unit|as_crispy_field }}</div>
+                <div class="col-md-3">{{ form.floor_no|as_crispy_field }}</div>
+                <div class="col-md-3">{{ form.facing|as_crispy_field }}</div>
+                <div class="col-md-3">{{ form.parking_lot|as_crispy_field }}</div>
             </div>
-            <div class="row">
-                <div class="col-md-3">{{ form.bedrooms|as_crispy_field }}</div>
-                <div class="col-md-3">{{ form.bathrooms|as_crispy_field }}</div>
-                <div class="col-md-6">{{ form.features|as_crispy_field }}</div>
-            </div>
-            <div class="row">
-                <div class="col-12">
-                    {{ form.notes|as_crispy_field }}
-                </div>
-            </div>
+            {{ form.notes|as_crispy_field }}
             <div class="alert alert-info mt-3 mb-0">
-                <i class="fas fa-info-circle"></i> Status is automatic: <strong>Available</strong> until a customer books
-                the flat, <strong>Booked</strong> while payment is pending, <strong>Sold</strong> once fully paid.
+                <i class="fas fa-info-circle"></i>
+                Type, size, rooms and prices are set once on the <a href="{% url 'projects:update' project.pk %}">project</a>.
+                Status is automatic: <strong>Available</strong> until a customer books the flat,
+                <strong>Booked</strong> while payment is pending, <strong>Sold</strong> once the sale value is fully paid.
             </div>
             <div class="mt-3">
                 <button type="submit" class="btn btn-primary">

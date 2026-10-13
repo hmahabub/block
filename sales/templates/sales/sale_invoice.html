@@ -31,6 +31,7 @@
             {% if sale.flat.facing %}&middot; {{ sale.flat.facing }} facing{% endif %}
             &middot; {{ sale.flat.saleable_area }} sqft
         </div>
+        {% if sale.with_parking %}<div class="text-muted small">Includes parking lot {{ sale.flat.parking_lot }}</div>{% endif %}
         {% if sale.flat.bedrooms or sale.flat.bathrooms or sale.flat.parking_area %}
         <div class="text-muted small">
             {% if sale.flat.bedrooms %}{{ sale.flat.bedrooms }} bed{% endif %}
@@ -45,23 +46,22 @@
 <table class="doc mb-3">
     <thead><tr><th>Description</th><th class="text-end" style="width:32%">Amount</th></tr></thead>
     <tbody>
-        <tr><td>Flat {{ sale.flat.flat_no }} &mdash; base price</td><td class="text-end">{{ sale.base_price|taka }}</td></tr>
-        {% if sale.other_charges %}<tr><td>Parking / other charges</td><td class="text-end">{{ sale.other_charges|taka }}</td></tr>{% endif %}
-        {% if sale.discount %}<tr><td>Discount</td><td class="text-end">&minus;{{ sale.discount|taka }}</td></tr>{% endif %}
-        <tr><th>Net sale value</th><th class="text-end">{{ sale.net_sale_value|taka }}</th></tr>
+        <tr><td>Flat {{ sale.flat.flat_no }}{% if sale.with_parking %} with parking lot {{ sale.flat.parking_lot }}{% endif %} &mdash; sale value</td><td class="text-end">{{ sale.sale_value|taka }}</td></tr>
+        {% if sale.reg_value %}<tr><td>Registration cost</td><td class="text-end">{{ sale.reg_value|taka }}</td></tr>{% endif %}
+        <tr><th>Net value</th><th class="text-end">{{ sale.net_value|taka }}</th></tr>
     </tbody>
 </table>
-<div class="in-words mb-4"><span class="section-label">Net sale value in words</span><br><strong>{{ sale.net_sale_value|taka_words }}</strong></div>
+<div class="in-words mb-4"><span class="section-label">Net value in words</span><br><strong>{{ sale.net_value|taka_words }}</strong></div>
 
 <div class="section-label">Payments received</div>
 <table class="doc mb-3">
-    <thead><tr><th>Receipt</th><th>Date</th><th>Method</th><th>Reference</th><th class="text-end">Amount</th></tr></thead>
+    <thead><tr><th>Receipt</th><th>Date</th><th>Paid into</th><th>Reference</th><th class="text-end">Amount</th></tr></thead>
     <tbody>
         {% for payment in payments %}
         <tr>
             <td>{{ payment.receipt_no }}</td>
             <td>{{ payment.payment_date|date:"j M Y" }}</td>
-            <td>{{ payment.get_payment_method_display }}</td>
+            <td>{{ payment.account|default:payment.get_payment_method_display }}</td>
             <td>{{ payment.reference_no|default:"—" }}</td>
             <td class="text-end">{{ payment.amount|taka }}</td>
         </tr>
@@ -70,6 +70,7 @@
         {% endfor %}
         <tr><th colspan="4" class="text-end">Total received</th><th class="text-end">{{ sale.received_amount|taka }}</th></tr>
         <tr><th colspan="4" class="text-end">Balance due</th><th class="text-end {% if sale.receivable_amount > 0 %}text-danger{% endif %}">{{ sale.receivable_amount|taka }}</th></tr>
+        {% if sale.customer_balance > 0 %}<tr><th colspan="4" class="text-end">Credit balance (paid in excess)</th><th class="text-end">{{ sale.customer_balance|taka }}</th></tr>{% endif %}
     </tbody>
 </table>
 

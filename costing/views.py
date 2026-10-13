@@ -9,6 +9,7 @@ from django.views import View
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
 
 from core.mixins import CreateAuditMixin, DeleteAuditMixin, UpdateAuditMixin
+from core.utils import int_or_none
 from projects.models import Flat, Project
 
 from .filters import filter_project_costs
@@ -50,7 +51,7 @@ class ProjectBudgetListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         queryset = super().get_queryset().select_related('project', 'cost_category')
-        project_id = self.request.GET.get('project')
+        project_id = int_or_none(self.request.GET.get('project'))
         if project_id:
             queryset = queryset.filter(project_id=project_id)
         return queryset
@@ -91,7 +92,7 @@ class ProjectCostListView(LoginRequiredMixin, ListView):
     paginate_by = 30
 
     def get_queryset(self):
-        queryset = super().get_queryset().select_related('project', 'cost_category', 'supplier', 'flat')
+        queryset = super().get_queryset().select_related('project', 'cost_category', 'supplier', 'flat', 'account')
         queryset, self.applied = filter_project_costs(queryset, self.request.GET)
         return queryset
 
@@ -118,7 +119,7 @@ class ProjectCostDetailView(LoginRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['allocations'] = self.object.cost_allocations.select_related('flat')
+        context['flat_count'] = self.object.project.flat_count
         return context
 
 
@@ -131,6 +132,7 @@ class _ProjectCostCreateView(PermissionRequiredMixin, CreateAuditMixin, CreateVi
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['cost_type'] = self.cost_type
+        context['phase_map'] = context['form'].phase_map()
         return context
 
     def get_success_url(self):
@@ -143,7 +145,7 @@ class SharedCostCreateView(_ProjectCostCreateView):
 
     def get_initial(self):
         initial = super().get_initial()
-        project = Project.objects.filter(pk=self.request.GET.get('project')).first()
+        project = Project.objects.filter(pk=int_or_none(self.request.GET.get('project'))).first()
         if project:
             initial['project'] = project
         return initial
@@ -155,7 +157,7 @@ class DirectCostCreateView(_ProjectCostCreateView):
 
     def get_initial(self):
         initial = super().get_initial()
-        flat = Flat.objects.filter(pk=self.request.GET.get('flat')).first()
+        flat = Flat.objects.filter(pk=int_or_none(self.request.GET.get('flat'))).first()
         if flat:
             initial['flat'] = flat
         return initial
@@ -173,6 +175,7 @@ class ProjectCostUpdateView(PermissionRequiredMixin, UpdateAuditMixin, UpdateVie
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['cost_type'] = 'direct' if self.object.flat_id else 'shared'
+        context['phase_map'] = context['form'].phase_map()
         return context
 
     def get_success_url(self):

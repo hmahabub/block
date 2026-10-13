@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Flat Deletion Requests{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="fas fa-user-shield"></i> Flat deletion requests</h2>
+</div>
+<p class="text-muted">A flat can only be removed when one admin requests it and a different admin approves it.
+    Flats with sales or direct costs can never be removed.</p>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr><th>Flat</th><th>Reason</th><th>Requested by</th><th>Status</th><th>Decided by</th><th>Actions</th></tr>
+                </thead>
+                <tbody>
+                    {% for item in object_list %}
+                    <tr>
+                        <td>{% if item.flat %}<a href="{{ item.flat.get_absolute_url }}">{{ item.flat_label }}</a>{% else %}{{ item.flat_label }}{% endif %}</td>
+                        <td>{{ item.reason|default:"-" }}</td>
+                        <td>{{ item.requested_by.get_full_name|default:item.requested_by.username }}<br>
+                            <small class="text-muted">{{ item.requested_at|date:"j M Y H:i" }}</small></td>
+                        <td>
+                            <span class="badge {% if item.status == 'PENDING' %}bg-warning text-dark{% elif item.status == 'APPROVED' %}bg-danger{% else %}bg-secondary{% endif %}">
+                                {{ item.get_status_display }}
+                            </span>
+                        </td>
+                        <td>{% if item.decided_by %}{{ item.decided_by.get_full_name|default:item.decided_by.username }}<br>
+                            <small class="text-muted">{{ item.decided_at|date:"j M Y H:i" }}</small>{% else %}-{% endif %}
+                            {% if item.decision_note %}<br><small>{{ item.decision_note }}</small>{% endif %}</td>
+                        <td>
+                            {% if item.status == 'PENDING' %}
+                            <form method="post" class="d-flex gap-1 flex-wrap">
+                                {% csrf_token %}
+                                {% if is_admin and item.requested_by_id != request.user.pk %}
+                                <button formaction="{% url 'projects:deletion-approve' item.pk %}" class="btn btn-sm btn-danger"
+                                        onclick="return confirm('Delete {{ item.flat_label }} permanently?')">
+                                    <i class="fas fa-check"></i> Approve &amp; delete</button>
+                                <input type="text" name="note" class="form-control form-control-sm" style="width:130px" placeholder="Note">
+                                <button formaction="{% url 'projects:deletion-reject' item.pk %}" class="btn btn-sm btn-outline-secondary">
+                                    <i class="fas fa-times"></i> Reject</button>
+                                {% elif item.requested_by_id == request.user.pk %}
+                                <button formaction="{% url 'projects:deletion-withdraw' item.pk %}" class="btn btn-sm btn-outline-secondary">
+                                    Withdraw</button>
+                                <small class="text-muted align-self-center">Waiting for a second admin</small>
+                                {% endif %}
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" class="text-center py-4">No deletion requests</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% include "includes/pagination.html" %}
+    </div>
+</div>
+{% endblock %}

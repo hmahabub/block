@@ -49,9 +49,7 @@
                         <th>Flat</th>
                         <th>Project</th>
                         <th>Floor</th>
-                        <th>Type</th>
-                        <th>Area (sqft)</th>
-                        <th>Base Price</th>
+                        <th>Parking</th>
                         <th>Status</th>
                         <th>Customer</th>
                         <th class="text-end">Paid</th>
@@ -65,9 +63,7 @@
                         <td><a href="{% url 'projects:flat-detail' flat.pk %}">{{ flat.flat_no }}</a></td>
                         <td><a href="{% url 'projects:detail' flat.project.pk %}">{{ flat.project.project_name }}</a></td>
                         <td>{{ flat.floor_no }}</td>
-                        <td>{{ flat.get_flat_type_display }}</td>
-                        <td>{{ flat.saleable_area }}</td>
-                        <td>{{ flat.base_price|taka }}</td>
+                        <td>{{ flat.parking_lot|default:"-" }}</td>
                         <td>
                             <span class="badge
                                 {% if flat.status == 'AVAILABLE' %}bg-success
@@ -94,7 +90,7 @@
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="11" class="text-center py-4">No flats found</td></tr>
+                    <tr><td colspan="9" class="text-center py-4">No flats found</td></tr>
                     {% endfor %}
                 </tbody>
             </table>

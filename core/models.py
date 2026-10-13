@@ -2,6 +2,7 @@ import os
 
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 
 
 class Sequence(models.Model):
@@ -68,3 +69,30 @@ class CompanyProfile(models.Model):
     @property
     def letterhead_url(self):
         return self.letterhead.url if self.letterhead_path else None
+
+
+class ConfirmableModel(models.Model):
+    """Adds the "verified by" layer used by the books: every entry collected from a source
+    module can be confirmed by a user before it counts as verified."""
+
+    confirmed_at = models.DateTimeField(null=True, blank=True, editable=False)
+    confirmed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, editable=False,
+        on_delete=models.SET_NULL, related_name='+',
+    )
+
+    class Meta:
+        abstract = True
+
+    @property
+    def is_confirmed(self):
+        return self.confirmed_at is not None
+
+    def confirm(self, user):
+        # Queryset update on purpose: models like CustomerPayment recalculate sale totals in save().
+        self.confirmed_at, self.confirmed_by = timezone.now(), user
+        type(self).objects.filter(pk=self.pk).update(confirmed_at=self.confirmed_at, confirmed_by=user)
+
+    def unconfirm(self):
+        self.confirmed_at = self.confirmed_by = None
+        type(self).objects.filter(pk=self.pk).update(confirmed_at=None, confirmed_by=None)

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}{% if object %}Update{% else %}Add{% endif %} Account{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h3 class="mb-0">{% if object %}Update{% else %}Add{% endif %} Account</h3>
+    </div>
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            {{ form.non_field_errors }}
+            <div class="row">
+                <div class="col-md-4">{{ form.name|as_crispy_field }}</div>
+                <div class="col-md-4">{{ form.account_type|as_crispy_field }}</div>
+                <div class="col-md-4">{{ form.opening_balance|as_crispy_field }}</div>
+            </div>
+            <div id="bank-fields" class="row">
+                <div class="col-md-3">{{ form.bank_name|as_crispy_field }}</div>
+                <div class="col-md-3">{{ form.account_number|as_crispy_field }}</div>
+                <div class="col-md-3">{{ form.branch|as_crispy_field }}</div>
+                <div class="col-md-3">{{ form.bank_kind|as_crispy_field }}</div>
+            </div>
+            <div class="row">
+                <div class="col-md-9">{{ form.notes|as_crispy_field }}</div>
+                <div class="col-md-3 pt-4">{{ form.is_active|as_crispy_field }}</div>
+            </div>
+            <div class="mt-3">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save</button>
+                <a href="{% url 'books:accounts' %}" class="btn btn-secondary"><i class="fas fa-times"></i> Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    (function () {
+        var type = document.getElementById('id_account_type');
+        var bank = document.getElementById('bank-fields');
+        function sync() { bank.style.display = type.value === 'BANK' ? '' : 'none'; }
+        type.addEventListener('change', sync);
+        sync();
+    })();
+</script>
+{% endblock %}

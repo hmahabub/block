@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Generate Flats{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h3 class="mb-0"><i class="fas fa-magic"></i> Generate flats
+            <small class="text-muted">{{ project.project_name }}</small></h3>
+    </div>
+    <div class="card-body">
+        <p>Creates every flat of the building at once. Flats are numbered <strong>unit letter + floor</strong>:
+            with 4 units on 12 floors you get A1, B1, C1, D1 ... A12, B12, C12, D12. Each flat gets a parking lot
+            <code>P-&lt;flat no.&gt;</code>. Flats that already exist are skipped, so it is safe to run again.</p>
+        <form method="post" class="col-md-5 px-0">
+            {% csrf_token %}
+            {{ form|crispy }}
+            <button type="submit" class="btn btn-primary"><i class="fas fa-magic"></i> Generate</button>
+            <a href="{{ project.get_absolute_url }}" class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

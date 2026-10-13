@@ -37,26 +37,54 @@
                         <div class="col-4 border"><h3>{{ supplier_count }}</h3><p class="mb-0">Suppliers</p></div>
                     </div>
                     <div class="row text-center stat-tile mb-2">
-                        <div class="col-4 border"><h3>{{ flat_count }}</h3><p class="mb-0">Flats</p></div>
-                        <div class="col-4 border"><h3>{{ sold_count }}</h3><p class="mb-0">Sold</p></div>
-                        <div class="col-4 border"><h3>{{ available_count }}</h3><p class="mb-0">Available</p></div>
+                        <div class="col-3 border"><h3>{{ flat_count }}</h3><p class="mb-0">Flats</p></div>
+                        <div class="col-3 border"><h3>{{ sold_count }}</h3><p class="mb-0">Sold</p></div>
+                        <div class="col-3 border"><h3>{{ booked_count }}</h3><p class="mb-0">Booked</p></div>
+                        <div class="col-3 border"><h3>{{ available_count }}</h3><p class="mb-0">Available</p></div>
                     </div>
                     <div class="row text-center stat-tile mb-2">
-                        <div class="col-4 border"><h5>{{ total_cost|taka }}</h5><p class="mb-0">Total Cost</p></div>
-                        <div class="col-4 border"><h5>{{ total_sales|taka }}</h5><p class="mb-0">Total Sales</p></div>
+                        <div class="col-4 border"><h5>{{ total_sales|taka }}</h5><p class="mb-0">Sale value</p></div>
                         <div class="col-4 border"><h5>{{ total_received|taka }}</h5><p class="mb-0">Received</p></div>
-                    </div>
-                    <div class="row text-center stat-tile">
-                        <div class="col-6 border"><h5>{{ total_receivable|taka }}</h5><p class="mb-0">Receivable</p></div>
-                        <div class="col-6 border"><h5 class="{% if profit >= 0 %}text-success{% else %}text-danger{% endif %}">{{ profit|taka }}</h5><p class="mb-0">Profit</p></div>
+                        <div class="col-4 border"><h5>{{ total_receivable|taka }}</h5><p class="mb-0">Receivable</p></div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <hr>
-    
+    <div class="row">
+        <div class="col-12 mb-4">
+            <div class="card">
+                <div class="card-header"><h5 class="mb-0"><i class="fas fa-coins"></i> Cost at a glance</h5></div>
+                {% if not costs_unlocked %}
+                <div class="card-body text-center">
+                    <p class="text-muted mb-2"><i class="fas fa-lock"></i> Cost figures are hidden until you confirm your password.</p>
+                    <a href="{% url 'costing:cost-list' %}" class="btn btn-outline-primary">Unlock cost statistics</a>
+                </div>
+                {% else %}
+                <div class="card-body">
+                    <div class="row text-center stat-tile mb-3">
+                        <div class="col-md-2 col-6 border"><h5>{{ total_cost|taka }}</h5><p class="mb-0">Total cost</p></div>
+                        <div class="col-md-2 col-6 border"><h5>{{ pre_cost|taka }}</h5><p class="mb-0">Pre-development</p></div>
+                        <div class="col-md-2 col-6 border"><h5>{{ post_cost|taka }}</h5><p class="mb-0">Post-development</p></div>
+                        <div class="col-md-3 col-6 border"><h5>{{ cost_per_flat|taka }}</h5><p class="mb-0">Post cost per flat</p></div>
+                        <div class="col-md-3 col-12 border"><h5>{{ month_cost|taka }}</h5><p class="mb-0">Spent this month</p></div>
+                    </div>
+                    {% if top_cost_heads %}
+                    <h6 class="text-muted">Biggest cost heads</h6>
+                    <ul class="list-unstyled mb-0">
+                        {% for name, amount in top_cost_heads %}
+                        <li class="d-flex justify-content-between border-bottom py-1"><span>{{ name }}</span><strong>{{ amount|taka }}</strong></li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                    <a href="{% url 'costing:cost-list' %}" class="d-inline-block mt-2">All project costs &raquo;</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
     {% else %}
     <p>Please log in to access the system</p>
     <a class="btn btn-primary btn-lg" href="{% url 'login' %}" role="button">

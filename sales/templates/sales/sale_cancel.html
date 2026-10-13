@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% load core_tags crispy_forms_tags %}
+
+{% block title %}Cancel Sale{% endblock %}
+
+{% block content %}
+<div class="card border-danger">
+    <div class="card-header bg-danger text-white">
+        <h3 class="mb-0"><i class="fas fa-ban"></i> Cancel {{ sale.sale_no }}</h3>
+    </div>
+    <div class="card-body">
+        <p>Flat <strong>{{ sale.flat.flat_no }}</strong> for <strong>{{ sale.customer.name }}</strong> becomes available again.
+            The customer has paid <strong>{{ sale.received_amount|taka }}</strong>; choose how much of it is returned.</p>
+        <form method="post" class="col-lg-5 px-0" id="cancel-form">
+            {% csrf_token %}
+            {{ form|crispy }}
+            <p>Refund: <strong id="refund-preview">-</strong> &middot; kept by the company: <strong id="kept-preview">-</strong></p>
+            <button type="submit" class="btn btn-danger" onclick="return confirm('Cancel this sale? This cannot be undone.')">
+                <i class="fas fa-ban"></i> Cancel sale</button>
+            <a href="{% url 'sales:detail' sale.pk %}" class="btn btn-secondary">Back</a>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    (function () {
+        var received = {{ sale.received_amount|stringformat:"s" }};
+        var percent = document.getElementById('id_refund_percent');
+        function money(n) { return 'Tk ' + n.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}); }
+        function refresh() {
+            var p = parseFloat(percent.value); if (isNaN(p)) { p = 0; }
+            var refund = Math.round(received * p) / 100;
+            document.getElementById('refund-preview').textContent = money(refund);
+            document.getElementById('kept-preview').textContent = money(received - refund);
+        }
+        percent.addEventListener('input', refresh);
+        refresh();
+    })();
+</script>
+{% endblock %}

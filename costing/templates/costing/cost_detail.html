@@ -26,11 +26,26 @@
             <div class="card-header">Details</div>
             <div class="card-body">
                 <table class="table table-bordered mb-0">
-                    <tr><th width="35%">Type</th><td>
-                        {% if object.flat %}<span class="badge bg-info text-dark">Direct</span> {{ object.flat }}
-                        {% else %}<span class="badge bg-secondary">Shared</span> allocated across all flats{% endif %}
+                    <tr><th width="35%">Phase</th><td>
+                        <span class="badge {% if object.phase == 'PRE' %}bg-warning text-dark{% else %}bg-info text-dark{% endif %}">{{ object.get_phase_display }}</span>
+                        {% if object.phase == 'PRE' %}<small class="text-muted">the company's cost, set against share-sale profit</small>
+                        {% else %}<small class="text-muted">borne by flat owners</small>{% endif %}
                     </td></tr>
+                    <tr><th>Type</th><td>
+                        {% if object.flat %}<span class="badge bg-info text-dark">Direct</span> {{ object.flat }}
+                        {% else %}<span class="badge bg-secondary">Shared</span>
+                            {% if object.phase == 'POST' %}split equally over {{ flat_count }} flat{{ flat_count|pluralize }}
+                            {% else %}not charged to flat owners{% endif %}{% endif %}
+                    </td></tr>
+                    {% if object.share_per_flat is not None %}
+                    <tr><th>Share per flat</th><td>{{ object.share_per_flat|taka }}</td></tr>
+                    {% endif %}
                     <tr><th>Supplier</th><td>{{ object.supplier|default:"-" }}</td></tr>
+                    <tr><th>Paid from</th><td>{{ object.account|default:"- (no account chosen)" }}</td></tr>
+                    <tr><th>Books</th><td>
+                        {% if object.is_confirmed %}<span class="badge bg-success"><i class="fas fa-check"></i> Confirmed</span>
+                        {% else %}<span class="badge bg-secondary">Not yet confirmed</span>{% endif %}
+                    </td></tr>
                     <tr><th>Reference / Bill No.</th><td>{{ object.reference_no|default:"-" }}</td></tr>
                     <tr><th>Description</th><td>{{ object.description|default:"-" }}</td></tr>
                     <tr><th>Amount</th><td><strong>{{ object.amount|taka }}</strong></td></tr>
@@ -40,31 +55,4 @@
         </div>
     </div>
 </div>
-
-{% if object.allocation_required %}
-<div class="card">
-    <div class="card-header">Area-Based Allocation Across Flats</div>
-    <div class="card-body">
-        {% if allocations %}
-        <div class="table-responsive">
-            <table class="table table-sm">
-                <thead class="table-light"><tr><th>Flat</th><th>Area (sqft)</th><th>Allocation Rate</th><th>Allocated Amount</th></tr></thead>
-                <tbody>
-                    {% for allocation in allocations %}
-                    <tr>
-                        <td><a href="{% url 'projects:flat-detail' allocation.flat.pk %}">{{ allocation.flat }}</a></td>
-                        <td>{{ allocation.flat_area }}</td>
-                        <td>{{ allocation.allocation_rate|floatformat:6 }}</td>
-                        <td>{{ allocation.allocated_amount|taka }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% else %}
-        <p class="text-muted mb-0">No allocation yet — the project has no flats or no saleable area defined.</p>
-        {% endif %}
-    </div>
-</div>
-{% endif %}
 {% endblock %}

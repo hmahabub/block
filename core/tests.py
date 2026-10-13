@@ -144,10 +144,10 @@ class CompanyProfileTests(TestCase):
         from costing.models import CostCategory, ProjectCost
         from costing.views import ProjectCostReportPDFView
         from projects.models import Project
-        from reports.views import FlatWisePDFView
+        from reports.views import FinanceReportView
 
         user = User.objects.create_superuser('admin', 'a@example.com', 'pw')
-        project = Project.objects.create(project_name='P', total_saleable_area=100)
+        project = Project.objects.create(project_name='P')
         ProjectCost.objects.create(project=project, cost_category=CostCategory.objects.create(name='C'), date='2026-01-01', amount=5)
 
         def costs_pdf():
@@ -156,9 +156,9 @@ class CompanyProfileTests(TestCase):
             return ProjectCostReportPDFView.as_view()(request).content
 
         def flats_pdf():
-            request = RequestFactory().get('/')
+            request = RequestFactory().get('/', {'format': 'pdf'})
             request.user = user
-            return FlatWisePDFView.as_view()(request, project_pk=project.pk).content
+            return FinanceReportView.as_view()(request).content
 
         self.assertNotIn(b'/Subtype /Image', costs_pdf())
         self.assertNotIn(b'/Subtype /Image', flats_pdf())
@@ -186,14 +186,17 @@ class SeedDemoDataTests(TestCase):
             self.assertEqual(project.total_saleable_area, 48 * 1700)
             for floor in range(1, 13):
                 self.assertEqual(project.flats.filter(floor_no=floor).count(), 4)
+            self.assertEqual(sorted({f.unit for f in project.flats.all()}), ['A', 'B', 'C', 'D'])
         self.assertEqual(Flat.objects.values('flat_no', 'project').distinct().count(), 96)
+        self.assertTrue(Flat.objects.filter(flat_no='A1', parking_lot='P-A1').exists())
 
-    def test_flat_specifications(self):
-        from projects.models import Flat
-        for flat in Flat.objects.all():
-            self.assertEqual((flat.saleable_area, flat.parking_area, flat.bedrooms, flat.bathrooms), (1700, 120, 4, 4))
+    def test_flat_specifications_are_set_once_on_the_project(self):
+        from projects.models import Project
+        for project in Project.objects.all():
+            self.assertEqual((project.flat_area, project.parking_area, project.bedrooms, project.bathrooms), (1700, 120, 4, 4))
+            self.assertGreater(project.quoted_price, project.base_price)
             for room in ('Drawing', 'Dining', 'Balcony'):
-                self.assertIn(room, flat.features)
+                self.assertIn(room, project.features)
 
     def test_four_customers_and_six_bookings_across_both_towers(self):
         from customers.models import Customer
@@ -205,6 +208,15 @@ class SeedDemoDataTests(TestCase):
         self.assertEqual(Flat.objects.filter(status=Flat.Status.BOOKED).count(), 6)
         self.assertEqual(FlatSale.objects.filter(flat__project__project_name='Tower 1').count(), 3)
         self.assertEqual(FlatSale.objects.filter(flat__project__project_name='Tower 2').count(), 3)
+        self.assertEqual(
+            sorted(FlatSale.objects.values_list('flat__flat_no', flat=True)), ['A1', 'B2', 'B4', 'C5', 'C8', 'D12'],
+        )
+
+    def test_customers_have_the_new_profile_fields(self):
+        from customers.models import Customer
+        for customer in Customer.objects.all():
+            self.assertTrue(customer.phone.startswith('+88'))
+            self.assertTrue(customer.title and customer.whatsapp_no and customer.tin and customer.emergency_contact_name)
 
     def test_initial_payments_per_tower(self):
         from sales.models import FlatSale
@@ -212,7 +224,15 @@ class SeedDemoDataTests(TestCase):
             expected = 2_300_000 if sale.flat.project.project_name == 'Tower 1' else 2_100_000
             self.assertEqual(sale.received_amount, expected)
             self.assertEqual(sale.status, FlatSale.Status.BOOKED)
-            self.assertEqual(sale.receivable_amount, sale.net_sale_value - expected)
+            self.assertEqual(sale.receivable_amount, sale.net_value - expected)
+            self.assertGreaterEqual(sale.sale_value, sale.total_base_price)
+
+    def test_money_is_collected_into_accounts(self):
+        from books.ledger import collect_entries, unassigned_count
+        from books.models import Account
+        self.assertEqual(sorted(Account.objects.values_list('name', flat=True)), ['Bank 1', 'Bank 2', 'Petty cash'])
+        self.assertEqual(unassigned_count(), 0)
+        self.assertGreater(len(collect_entries()), 12)
 
     def test_total_cost_is_15_million_and_budget_5_million_each(self):
         from costing.models import ProjectCost
@@ -220,6 +240,8 @@ class SeedDemoDataTests(TestCase):
         self.assertEqual(ProjectCost.objects.aggregate(t=Sum('amount'))['t'], 15_000_000)
         for project in Project.objects.all():
             self.assertEqual(project.total_cost, 7_500_000)
+            self.assertEqual(project.pre_development_cost, 4_000_000)
+            self.assertEqual(project.post_development_cost, 3_500_000)
             self.assertEqual(project.budget_amount, 5_000_000)
 
     def test_refuses_to_run_twice(self):
@@ -295,7 +317,7 @@ class ReauthMiddlewareTests(TestCase):
         self.assertEqual(response['Location'], '/confirm-password/?next=%2Fcosting%2F')
 
     def test_every_default_sensitive_area_is_guarded(self):
-        for path in ('/costing/', '/books/cashbook/', '/reports/'):
+        for path in ('/costing/', '/books/', '/reports/'):
             response, _ = self.check(path)
             self.assertIsNotNone(response, path)
 

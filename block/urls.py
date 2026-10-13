@@ -20,6 +20,7 @@ urlpatterns = [
     path('costing/', include('costing.urls', namespace='costing')),
     path('sales/', include('sales.urls', namespace='sales')),
     path('books/', include('books.urls', namespace='books')),
+    path('sms/', include('sms.urls', namespace='sms')),
     path('reports/', include('reports.urls', namespace='reports')),
     path('activity-log/', include('activity_log.urls', namespace='activity_log')),
 

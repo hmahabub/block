@@ -33,8 +33,9 @@
                 <thead class="table-light">
                     <tr>
                         <th>Code</th>
-                        <th>Name</th>
-                        <th>Contact Person</th>
+                        <th>Company</th>
+                        <th>Type</th>
+                        <th>Owner</th>
                         <th>Phone</th>
                         <th>Actions</th>
                     </tr>
@@ -44,7 +45,8 @@
                     <tr>
                         <td>{{ supplier.supplier_code }}</td>
                         <td>{{ supplier.name }}</td>
-                        <td>{{ supplier.contact_person|default:"-" }}</td>
+                        <td>{{ supplier.cost_category|default:"-" }}</td>
+                        <td>{{ supplier.owner_name|default:"-" }}</td>
                         <td>{{ supplier.phone|default:"-" }}</td>
                         <td>
                             <div class="btn-group btn-group-sm">
@@ -59,7 +61,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="5" class="text-center py-4">No suppliers found</td>
+                        <td colspan="6" class="text-center py-4">No suppliers found</td>
                     </tr>
                     {% endfor %}
                 </tbody>

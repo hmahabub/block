@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Request Flat Deletion{% endblock %}
+
+{% block content %}
+<div class="card border-danger">
+    <div class="card-header bg-danger text-white">
+        <h3 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Request deletion of {{ flat.flat_no }}</h3>
+    </div>
+    <div class="card-body">
+        <p><strong>{{ flat }}</strong> is not deleted right away. Your request goes to the other admins, and a
+            <em>different</em> admin has to approve it before the flat is removed.</p>
+        {% if blockers %}
+        <div class="alert alert-danger">
+            This flat cannot be deleted because {{ blockers|join:" and " }}. Records are never lost to a deletion.
+        </div>
+        <a href="{{ flat.get_absolute_url }}" class="btn btn-secondary">Back</a>
+        {% else %}
+        <form method="post" class="col-md-6 px-0">
+            {% csrf_token %}
+            {{ form|crispy }}
+            <button type="submit" class="btn btn-danger"><i class="fas fa-paper-plane"></i> Send request</button>
+            <a href="{{ flat.get_absolute_url }}" class="btn btn-secondary">Cancel</a>
+        </form>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

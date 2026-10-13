@@ -22,12 +22,13 @@
         {% if cost_type == 'direct' %}
         <div class="alert alert-info">
             <i class="fas fa-info-circle"></i> <strong>Direct cost:</strong> belongs to the one flat you pick and is
-            added to that flat's cost only. It is not spread over other flats.
+            added to that flat's cost only. It is always a post-development cost and is not spread over other flats.
         </div>
         {% else %}
         <div class="alert alert-info">
-            <i class="fas fa-info-circle"></i> <strong>Shared cost:</strong> belongs to the whole building and is
-            automatically allocated across every flat in the project by saleable area.
+            <i class="fas fa-info-circle"></i> <strong>Shared cost:</strong> belongs to the whole building.
+            <em>Pre-development</em> costs (land, marketing) are the company's and are set against the profit on share sales;
+            <em>post-development</em> costs are borne equally by the owners of all flats, sold or not.
         </div>
         {% endif %}
 
@@ -42,9 +43,11 @@
                     {{ form.project|as_crispy_field }}
                     {% endif %}
                     {{ form.cost_category|as_crispy_field }}
+                    {% if form.phase %}<div id="phase-wrap">{{ form.phase|as_crispy_field }}</div>{% endif %}
                     {{ form.supplier|as_crispy_field }}
                 </div>
                 <div class="col-md-6">
+                    {{ form.account|as_crispy_field }}
                     {{ form.date|as_crispy_field }}
                     {{ form.reference_no|as_crispy_field }}
                     {{ form.description|as_crispy_field }}
@@ -56,6 +59,11 @@
                     {{ form.notes|as_crispy_field }}
                 </div>
             </div>
+            {% if object and object.is_confirmed %}
+            <div class="alert alert-warning">
+                This cost was already confirmed in the books. Saving a change clears the confirmation so it is checked again.
+            </div>
+            {% endif %}
             <div class="mt-3">
                 <button type="submit" class="btn btn-primary">
                     <i class="fas fa-save"></i> {% if object %}Update{% else %}Create{% endif %}
@@ -68,4 +76,27 @@
         </form>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+{% if form.phase %}
+{{ phase_map|json_script:"phase-map" }}
+<script>
+    // The phase is fixed by the cost category, except for administrative costs, where it is chosen here.
+    (function () {
+        var phases = JSON.parse(document.getElementById('phase-map').textContent);
+        var category = document.getElementById('id_cost_category');
+        var wrap = document.getElementById('phase-wrap');
+        var phase = document.getElementById('id_phase');
+        function sync() {
+            var chosen = phases[category.value];
+            var either = chosen === 'EITHER';
+            wrap.style.display = either ? '' : 'none';
+            if (!either) { phase.value = chosen || ''; }
+        }
+        category.addEventListener('change', sync);
+        sync();
+    })();
+</script>
+{% endif %}
 {% endblock %}

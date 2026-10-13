@@ -47,7 +47,7 @@
                 <span class="badge bg-secondary mb-2">{{ project.get_status_display }}</span>
                 <ul class="list-unstyled small mb-3">
                     <li><i class="fas fa-door-open"></i> {{ project.flat_count }} flats &middot; {{ project.sold_flat_count }} sold</li>
-                    <li><i class="fas fa-ruler-combined"></i> {{ project.total_saleable_area }} sqft</li>
+                    <li><i class="fas fa-ruler-combined"></i> {{ project.get_flat_type_display }} &middot; {{ project.flat_area }} sqft each</li>
                     <li><i class="fas fa-coins"></i> Budget {{ project.budget_amount|taka }}</li>
                 </ul>
                 <a href="{% url 'projects:detail' project.pk %}" class="btn btn-outline-primary btn-sm">View Details</a>

@@ -15,7 +15,8 @@
     <div class="col-md-6 col-lg-4 mb-4">
         <div class="card h-100">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <strong>{{ category.name }}</strong>
+                <span><strong>{{ category.name }}</strong>
+                    <span class="badge {% if category.phase == 'PRE' %}bg-warning text-dark{% elif category.phase == 'EITHER' %}bg-secondary{% else %}bg-info text-dark{% endif %}">{{ category.get_phase_display }}</span></span>
                 <a href="{% url 'costing:category-update' category.pk %}" class="btn btn-sm btn-outline-warning">
                     <i class="fas fa-edit"></i>
                 </a>

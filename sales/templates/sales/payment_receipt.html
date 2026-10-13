@@ -26,7 +26,7 @@
 </div>
 
 <table class="doc mb-3">
-    <tr><th class="label">Payment method</th><td>{{ payment.get_payment_method_display }}</td></tr>
+    <tr><th class="label">Payment method</th><td>{{ payment.get_payment_method_display }}{% if payment.account and not payment.account.is_cash %} &middot; {{ payment.account.bank_name|default:payment.account.name }}{% endif %}</td></tr>
     <tr><th class="label">Reference / cheque no.</th><td>{{ payment.reference_no|default:"—" }}</td></tr>
     {% if payment.notes %}<tr><th class="label">Notes</th><td>{{ payment.notes|linebreaksbr }}</td></tr>{% endif %}
 </table>
@@ -36,9 +36,10 @@
 
 <div class="section-label">Account position after this payment &mdash; {{ payment.sale.sale_no }}</div>
 <table class="doc" style="max-width: 380px;">
-    <tr><th class="label">Net sale value</th><td class="text-end">{{ payment.sale.net_sale_value|taka }}</td></tr>
+    <tr><th class="label">Net value</th><td class="text-end">{{ payment.sale.net_value|taka }}</td></tr>
     <tr><th class="label">Total received (incl. this payment)</th><td class="text-end">{{ received_to_date|taka }}</td></tr>
     <tr><th class="label">Balance due</th><td class="text-end {% if balance_after > 0 %}text-danger{% endif %}"><strong>{{ balance_after|taka }}</strong></td></tr>
+    {% if credit_after > 0 %}<tr><th class="label">Credit balance (paid in excess)</th><td class="text-end"><strong>{{ credit_after|taka }}</strong></td></tr>{% endif %}
 </table>
 
 <div class="signatures">

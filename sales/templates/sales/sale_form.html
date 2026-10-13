@@ -6,33 +6,53 @@
 {% block content %}
 <div class="card">
     <div class="card-header">
-        <h3 class="mb-0">{% if object %}Update Sale {{ object.sale_no }}{% else %}New Flat Sale{% endif %}</h3>
+        <h3 class="mb-0">{% if object %}Update Sale {{ object.sale_no }}{% else %}Book a Flat{% endif %}</h3>
     </div>
     <div class="card-body">
-        <form method="post">
+        <form method="post" id="sale-form">
             {% csrf_token %}
+            {{ form.non_field_errors }}
             <div class="row">
                 <div class="col-md-6">
                     {{ form.flat|as_crispy_field }}
                     {{ form.customer|as_crispy_field }}
+                    {{ form.ref|as_crispy_field }}
                     {{ form.sale_date|as_crispy_field }}
-                    {% if object %}{{ form.cancel_sale|as_crispy_field }}{% endif %}
+                    {{ form.with_parking|as_crispy_field }}
                 </div>
                 <div class="col-md-6">
-                    {{ form.base_price|as_crispy_field }}
-                    {{ form.other_charges|as_crispy_field }}
-                    {{ form.discount|as_crispy_field }}
+                    <div class="card bg-light mb-3">
+                        <div class="card-body py-2">
+                            <table class="table table-sm table-borderless mb-0">
+                                <tr><td>Base price</td><td class="text-end" id="pv-base">-</td></tr>
+                                <tr><td>Parking price</td><td class="text-end" id="pv-parking">-</td></tr>
+                                <tr><td><strong>Total base price</strong></td><td class="text-end"><strong id="pv-total">-</strong></td></tr>
+                            </table>
+                        </div>
+                    </div>
+                    {{ form.sale_value|as_crispy_field }}
+                    {{ form.reg_value|as_crispy_field }}
+                    <div class="card bg-light">
+                        <div class="card-body py-2">
+                            <table class="table table-sm table-borderless mb-0">
+                                <tr><td>Honorarium <small class="text-muted">(sale value &minus; total base price)</small></td><td class="text-end" id="pv-honorarium">-</td></tr>
+                                <tr><td><strong>Net value</strong> <small class="text-muted">(sale value + reg value)</small></td><td class="text-end"><strong id="pv-net">-</strong></td></tr>
+                            </table>
+                            <div id="pv-warning" class="text-danger small d-none">The sale value is below the total base price.</div>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="row">
+            <div class="row mt-2">
                 <div class="col-12">
                     {{ form.notes|as_crispy_field }}
                 </div>
             </div>
             <div class="alert alert-info">
-                <i class="fas fa-info-circle"></i> Net Sale Value and Receivable are calculated automatically.
-                The sale is <strong>Booked</strong> when created and becomes <strong>Sold</strong> automatically once the
-                full amount is received through <a href="{% url 'sales:payment-create' %}">Customer Payments</a>.
+                <i class="fas fa-info-circle"></i> The sale is <strong>Booked</strong> when created and becomes <strong>Sold</strong>
+                automatically once the sale value has been received through
+                <a href="{% url 'sales:payment-create' %}">Customer Payments</a>. Anything paid beyond the net value is kept
+                as the customer's balance. The reg value is the registration cost, paid by the customer.
             </div>
             <div class="mt-3">
                 <button type="submit" class="btn btn-primary">
@@ -46,4 +66,44 @@
         </form>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+{{ price_map|json_script:"price-map" }}
+<script>
+    (function () {
+        var prices = JSON.parse(document.getElementById('price-map').textContent);
+        var flat = document.getElementById('id_flat');
+        var parking = document.getElementById('id_with_parking');
+        var saleValue = document.getElementById('id_sale_value');
+        var regValue = document.getElementById('id_reg_value');
+        var touched = saleValue.value !== '' && Number(saleValue.value) > 0;
+        var isEdit = {{ object|yesno:"true,false" }};
+
+        function money(n) { return 'Tk ' + n.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}); }
+        function num(el) { var v = parseFloat(el.value); return isNaN(v) ? 0 : v; }
+
+        function quotedWithParking(p) { return Number(p.quoted) + (parking.checked ? Number(p.parking) : 0); }
+
+        function refresh(resetValue) {
+            var p = prices[flat.value];
+            if (!p) { ['pv-base', 'pv-parking', 'pv-total', 'pv-honorarium', 'pv-net'].forEach(function (id) { document.getElementById(id).textContent = '-'; }); return; }
+            var base = Number(p.base), park = parking.checked ? Number(p.parking) : 0, total = base + park;
+            if (resetValue && !touched) { saleValue.value = quotedWithParking(p).toFixed(2); }
+            var sale = num(saleValue), reg = num(regValue);
+            document.getElementById('pv-base').textContent = money(base);
+            document.getElementById('pv-parking').textContent = parking.checked ? money(park) : 'not taken';
+            document.getElementById('pv-total').textContent = money(total);
+            document.getElementById('pv-honorarium').textContent = money(Math.max(sale - total, 0));
+            document.getElementById('pv-net').textContent = money(sale + reg);
+            document.getElementById('pv-warning').classList.toggle('d-none', sale >= total);
+        }
+
+        flat.addEventListener('change', function () { touched = false; refresh(true); });
+        parking.addEventListener('change', function () { refresh(true); });
+        saleValue.addEventListener('input', function () { touched = true; refresh(false); });
+        regValue.addEventListener('input', function () { refresh(false); });
+        refresh(!isEdit);
+    })();
+</script>
 {% endblock %}

@@ -1,12 +1,12 @@
 from django.contrib import admin
 
-from .models import CostAllocation, CostCategory, ProjectBudget, ProjectCost
+from .models import CostCategory, ProjectBudget, ProjectCost
 
 
 @admin.register(CostCategory)
 class CostCategoryAdmin(admin.ModelAdmin):
-    list_display = ('name', 'parent_category', 'code', 'active')
-    list_filter = ('active', 'parent_category')
+    list_display = ('name', 'parent_category', 'phase', 'code', 'active')
+    list_filter = ('active', 'phase', 'parent_category')
     search_fields = ('name', 'code')
 
 
@@ -18,13 +18,8 @@ class ProjectBudgetAdmin(admin.ModelAdmin):
 
 @admin.register(ProjectCost)
 class ProjectCostAdmin(admin.ModelAdmin):
-    list_display = ('project', 'cost_category', 'flat', 'amount', 'date')
-    list_filter = ('project', 'cost_category')
+    list_display = ('project', 'cost_category', 'phase', 'flat', 'account', 'amount', 'date')
+    list_filter = ('project', 'phase', 'cost_category')
     search_fields = ('description', 'reference_no')
 
-
-@admin.register(CostAllocation)
-class CostAllocationAdmin(admin.ModelAdmin):
-    list_display = ('project_cost', 'flat', 'allocated_amount')
-    list_filter = ('project',)
 
