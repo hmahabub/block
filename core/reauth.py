@@ -4,7 +4,11 @@ The software is shown to buyers on the same logins that record money entries, so
 such as Costing and the books ask the signed-in user to type their password again before
 opening. Access then stays unlocked while the user keeps working, and locks again after
 `REAUTH_MINUTES` of inactivity on sensitive screens (or when the user presses "Lock").
+
+The unlock is also tied to a cookie with no expiry date, which the browser throws away when it is closed. So
+closing the browser locks the sensitive screens again straight away, even though the login itself may last longer.
 """
+import secrets
 import time
 from urllib.parse import urlencode
 
@@ -13,18 +17,31 @@ from django.shortcuts import redirect
 from django.urls import reverse
 
 SESSION_KEY = 'reauth_until'
+TOKEN_KEY = 'reauth_token'
+COOKIE_NAME = 'daj_unlocked'
 
 
 def is_unlocked(request):
-    return request.session.get(SESSION_KEY, 0) > time.time()
+    """Unlocked only while the time window is open AND the browser still has this session's unlock cookie."""
+    if request.session.get(SESSION_KEY, 0) <= time.time():
+        return False
+    token = request.session.get(TOKEN_KEY, '')
+    return bool(token) and secrets.compare_digest(token, request.COOKIES.get(COOKIE_NAME, ''))
 
 
 def unlock(request):
     request.session[SESSION_KEY] = time.time() + settings.REAUTH_MINUTES * 60
+    token = request.session.get(TOKEN_KEY) or secrets.token_urlsafe(32)
+    request.session[TOKEN_KEY] = token
+    request.COOKIES[COOKIE_NAME] = token          # so checks later in this same request agree
+    request._reauth_cookie = token                # the middleware sends it to the browser
 
 
 def lock(request):
     request.session.pop(SESSION_KEY, None)
+    request.session.pop(TOKEN_KEY, None)
+    request.COOKIES.pop(COOKIE_NAME, None)
+    request._reauth_cookie = None                 # the middleware removes it from the browser
 
 
 class ReauthMiddleware:
@@ -34,7 +51,15 @@ class ReauthMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        return self.get_response(request)
+        response = self.get_response(request)
+        if response is not None and hasattr(request, '_reauth_cookie'):
+            token = request._reauth_cookie
+            if token:
+                # No max_age/expires: a browser-session cookie, gone when the browser is closed.
+                response.set_cookie(COOKIE_NAME, token, httponly=True, samesite='Lax', secure=request.is_secure())
+            else:
+                response.delete_cookie(COOKIE_NAME)
+        return response
 
     def process_view(self, request, view_func, view_args, view_kwargs):
         match = request.resolver_match

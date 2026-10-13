@@ -294,6 +294,7 @@ class EnvExampleTests(SimpleTestCase):
 import time
 
 from django.contrib.auth.models import AnonymousUser
+from django.http import HttpResponse
 from django.urls import resolve
 
 from core import reauth
@@ -301,13 +302,16 @@ from core.testing import make_request, unlock_client
 from core.views import ConfirmPasswordView
 
 
+UNLOCK_COOKIE = {'daj_unlocked': 'tok'}
+
+
 class ReauthMiddlewareTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user('clerk', password='right-pass')
         self.middleware = reauth.ReauthMiddleware(lambda request: None)
 
-    def check(self, path, session=None, user='default'):
-        request = make_request(self.user if user == 'default' else user, path, session=session)
+    def check(self, path, session=None, user='default', cookies=None):
+        request = make_request(self.user if user == 'default' else user, path, session=session, cookies=cookies)
         request.resolver_match = resolve(path)
         return self.middleware.process_view(request, None, (), {}), request
 
@@ -330,16 +334,46 @@ class ReauthMiddlewareTests(TestCase):
 
     def test_unlocked_session_passes_and_the_window_slides(self):
         soon = time.time() + 30
-        response, request = self.check('/costing/', session={'reauth_until': soon})
+        response, request = self.check('/costing/', session={'reauth_until': soon, 'reauth_token': 'tok'}, cookies=UNLOCK_COOKIE)
         self.assertIsNone(response)
         self.assertGreater(request.session['reauth_until'], soon + 60)
 
     def test_expired_unlock_asks_again(self):
-        response, _ = self.check('/costing/', session={'reauth_until': time.time() - 1})
+        response, _ = self.check('/costing/', session={'reauth_until': time.time() - 1, 'reauth_token': 'tok'}, cookies=UNLOCK_COOKIE)
         self.assertEqual(response.status_code, 302)
 
+    def test_closing_the_browser_locks_again_even_inside_the_time_window(self):
+        # The session (and its unlock time) survives, but the browser dropped the unlock cookie on close.
+        session = {'reauth_until': time.time() + 600, 'reauth_token': 'tok'}
+        response, _ = self.check('/costing/', session=session, cookies={})
+        self.assertEqual(response.status_code, 302)
+
+    def test_a_cookie_from_another_session_does_not_unlock(self):
+        session = {'reauth_until': time.time() + 600, 'reauth_token': 'tok'}
+        response, _ = self.check('/costing/', session=session, cookies={'daj_unlocked': 'someone-elses'})
+        self.assertEqual(response.status_code, 302)
+
+    def test_the_unlock_cookie_lasts_only_for_the_browser_session(self):
+        request = make_request(self.user, '/costing/', session={'reauth_until': time.time() + 600, 'reauth_token': 'tok'},
+                               cookies=UNLOCK_COOKIE)
+        middleware = reauth.ReauthMiddleware(lambda req: HttpResponse('ok'))
+        reauth.unlock(request)
+        cookie = middleware(request).cookies['daj_unlocked']
+        self.assertEqual((cookie['max-age'], cookie['expires']), ('', ''))   # no expiry: removed when the browser closes
+        self.assertTrue(cookie['httponly'])
+        self.assertEqual(cookie.value, request.session['reauth_token'])
+
+    def test_locking_removes_the_cookie(self):
+        request = make_request(self.user, '/lock/', session={'reauth_until': time.time() + 600, 'reauth_token': 'tok'},
+                               cookies=UNLOCK_COOKIE)
+        middleware = reauth.ReauthMiddleware(lambda req: HttpResponse('ok'))
+        reauth.lock(request)
+        cookie = middleware(request).cookies['daj_unlocked']
+        self.assertEqual((cookie.value, cookie['max-age']), ('', 0))
+
     def test_lock_clears_the_unlock(self):
-        request = make_request(self.user, session={'reauth_until': time.time() + 600})
+        request = make_request(self.user, session={'reauth_until': time.time() + 600, 'reauth_token': 'tok'}, cookies=UNLOCK_COOKIE)
+        self.assertTrue(reauth.is_unlocked(request))
         reauth.lock(request)
         self.assertFalse(reauth.is_unlocked(request))
 

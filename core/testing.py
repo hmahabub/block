@@ -10,13 +10,16 @@ def unlock_client(client, minutes=60):
     """Mark a logged-in test client as having re-entered its password (see core.reauth)."""
     session = client.session
     session['reauth_until'] = time.time() + minutes * 60
+    session['reauth_token'] = 'test-token'
     session.save()
+    client.cookies['daj_unlocked'] = 'test-token'
 
 
-def make_request(user=None, path='/', method='get', data=None, session=None):
+def make_request(user=None, path='/', method='get', data=None, session=None, cookies=None):
     """A request with session and messages attached, for calling views/middleware directly."""
     factory = RequestFactory()
     request = getattr(factory, method)(path, data or {})
+    request.COOKIES.update(cookies or {})
     request.session = SessionStore()
     request.session.update(session or {})
     request._messages = FallbackStorage(request)
