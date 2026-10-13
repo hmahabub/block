@@ -2,6 +2,7 @@ from django.contrib.auth.models import User
 from django.test import RequestFactory, TestCase
 from django.urls import reverse
 
+from core.testing import unlock_client
 from projects.models import Flat, Project
 
 from .forms import DirectCostForm, SharedCostForm
@@ -13,6 +14,7 @@ from .views import ProjectCostListView, ProjectCostReportPDFView, ProjectCostUpd
 class SeparateCostEntryTests(TestCase):
     def setUp(self):
         self.client.force_login(User.objects.create_superuser('admin', 'a@example.com', 'pw'))
+        unlock_client(self.client)
         self.project = Project.objects.create(project_name='P', total_saleable_area=2000)
         self.flat1 = Flat.objects.create(project=self.project, flat_no='A1', floor_no=1, saleable_area=1000, base_price=1)
         self.flat2 = Flat.objects.create(project=self.project, flat_no='A2', floor_no=1, saleable_area=500, base_price=1)

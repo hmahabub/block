@@ -4,6 +4,7 @@ from django.contrib import admin
 from django.contrib.auth import views as auth_views
 from django.urls import include, path
 
+from core import views as core_views
 from dashboard.views import HomeView
 
 urlpatterns = [
@@ -11,6 +12,8 @@ urlpatterns = [
     path('', HomeView.as_view(), name='home'),
 
     path('company/', include('core.urls', namespace='core')),
+    path('confirm-password/', core_views.ConfirmPasswordView.as_view(), name='confirm-password'),
+    path('lock/', core_views.lock_screens, name='lock-screens'),
     path('customers/', include('customers.urls', namespace='customers')),
     path('suppliers/', include('suppliers.urls', namespace='suppliers')),
     path('projects/', include('projects.urls', namespace='projects')),

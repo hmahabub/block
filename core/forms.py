@@ -30,3 +30,19 @@ class CompanyProfileForm(forms.ModelForm):
         if commit and old_name and old_name != (instance.letterhead.name if instance.letterhead else None):
             old_file.letterhead.storage.delete(old_name)
         return instance
+
+
+class ConfirmPasswordForm(forms.Form):
+    password = forms.CharField(
+        label='Your password', widget=forms.PasswordInput(attrs={'autofocus': True, 'autocomplete': 'current-password'}),
+    )
+
+    def __init__(self, *args, user, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = user
+
+    def clean_password(self):
+        password = self.cleaned_data['password']
+        if not self.user.check_password(password):
+            raise forms.ValidationError('That password is not correct.')
+        return password

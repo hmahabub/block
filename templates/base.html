@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BLOCK ERP - {% block title %}{% endblock %}</title>
+    <title>DAR AL JANNAH - {% block title %}{% endblock %}</title>
 
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -11,7 +11,7 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
-    <!-- Custom CSS: BLOCK brand theme (deep teal + amber) — deliberately distinct from inspcta's black/blue -->
+    <!-- Custom CSS: brand theme (deep teal + amber) — deliberately distinct from inspcta's black/blue -->
     <style>
         :root {
             --block-navbar: #0b3d3a;
@@ -53,7 +53,7 @@
             margin-bottom: 0.1rem;
         }
 
-        /* Brand overrides: BLOCK uses a deep teal navbar with an amber accent,
+        /* Brand overrides: this app uses a deep teal navbar with an amber accent,
            instead of inspcta's neutral black navbar with default Bootstrap blue. */
         #base.navbar.bg-dark {
             background-color: var(--block-navbar) !important;
@@ -147,7 +147,7 @@
         <nav class="navbar navbar-expand-lg navbar-dark bg-dark rounded mb-4" id="base">
             <div class="container-fluid">
                 <a class="navbar-brand" href="{% url 'home' %}">
-                    <i class="fas fa-city"></i> BLOCK ERP
+                    <i class="fas fa-city"></i> DAR AL JANNAH
                     <small>powered by NOORSYS</small>
                 </a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
@@ -225,6 +225,14 @@
                                 <li><a class="dropdown-item" href="{% url 'activity_log:list' %}">
                                     <i class="fas fa-history"></i> Activity Log
                                 </a></li>
+                                <li>
+                                    <form method="post" action="{% url 'lock-screens' %}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="dropdown-item">
+                                            <i class="fas fa-lock"></i> Lock sensitive screens
+                                        </button>
+                                    </form>
+                                </li>
                                 {% if perms.core.change_companyprofile %}
                                 <li><a class="dropdown-item" href="{% url 'core:company-settings' %}">
                                     <i class="fas fa-file-image"></i> Company Letterhead

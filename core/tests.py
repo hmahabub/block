@@ -267,3 +267,100 @@ class EnvExampleTests(SimpleTestCase):
         self.assertIn('ALLOWED_HOSTS', names)  # guards the regex itself
         for name in sorted(names):
             self.assertRegex(example, rf'(?m)^#?\s*{name}=', f'{name} is missing from .env.example')
+
+
+import time
+
+from django.contrib.auth.models import AnonymousUser
+from django.urls import resolve
+
+from core import reauth
+from core.testing import make_request, unlock_client
+from core.views import ConfirmPasswordView
+
+
+class ReauthMiddlewareTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user('clerk', password='right-pass')
+        self.middleware = reauth.ReauthMiddleware(lambda request: None)
+
+    def check(self, path, session=None, user='default'):
+        request = make_request(self.user if user == 'default' else user, path, session=session)
+        request.resolver_match = resolve(path)
+        return self.middleware.process_view(request, None, (), {}), request
+
+    def test_sensitive_screens_redirect_to_confirm_page_with_next(self):
+        response, _ = self.check('/costing/')
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response['Location'], '/confirm-password/?next=%2Fcosting%2F')
+
+    def test_every_default_sensitive_area_is_guarded(self):
+        for path in ('/costing/', '/books/cashbook/', '/reports/'):
+            response, _ = self.check(path)
+            self.assertIsNotNone(response, path)
+
+    def test_other_screens_are_not_guarded(self):
+        for path in ('/', '/customers/', '/projects/', '/sales/'):
+            self.assertIsNone(self.check(path)[0], path)
+
+    def test_anonymous_users_are_left_to_the_login_check(self):
+        self.assertIsNone(self.check('/costing/', user=AnonymousUser())[0])
+
+    def test_unlocked_session_passes_and_the_window_slides(self):
+        soon = time.time() + 30
+        response, request = self.check('/costing/', session={'reauth_until': soon})
+        self.assertIsNone(response)
+        self.assertGreater(request.session['reauth_until'], soon + 60)
+
+    def test_expired_unlock_asks_again(self):
+        response, _ = self.check('/costing/', session={'reauth_until': time.time() - 1})
+        self.assertEqual(response.status_code, 302)
+
+    def test_lock_clears_the_unlock(self):
+        request = make_request(self.user, session={'reauth_until': time.time() + 600})
+        reauth.lock(request)
+        self.assertFalse(reauth.is_unlocked(request))
+
+    def test_pdf_endpoint_is_unreachable_until_unlocked(self):
+        self.client.force_login(self.user)
+        self.assertEqual(self.client.get('/costing/report/pdf/').status_code, 302)
+        unlock_client(self.client)
+        # Past the lock: the user still lacks nothing here, the report view itself just needs a login.
+        self.assertEqual(self.client.get('/costing/report/pdf/').status_code, 200)
+
+
+class ConfirmPasswordViewTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user('clerk', password='right-pass')
+
+    def post(self, password, next_url='/costing/', session=None):
+        request = make_request(self.user, '/confirm-password/', 'post',
+                               {'password': password, 'next': next_url}, session=session)
+        return ConfirmPasswordView.as_view()(request), request
+
+    def test_right_password_unlocks_and_goes_to_next(self):
+        response, request = self.post('right-pass')
+        self.assertEqual((response.status_code, response['Location']), (302, '/costing/'))
+        self.assertTrue(reauth.is_unlocked(request))
+
+    def test_wrong_password_stays_locked_and_shows_error(self):
+        response, request = self.post('nope')
+        self.assertEqual(response.status_code, 200)
+        response.render()
+        self.assertIn('not correct', response.content.decode())
+        self.assertFalse(reauth.is_unlocked(request))
+
+    def test_five_wrong_passwords_sign_the_user_out(self):
+        session = {'reauth_failures': 4}
+        response, _ = self.post('nope', session=session)
+        self.assertEqual((response.status_code, response['Location']), (302, '/login/'))
+
+    def test_external_next_urls_are_ignored(self):
+        response, _ = self.post('right-pass', next_url='https://evil.example/steal')
+        self.assertEqual(response['Location'], '/')
+
+    def test_a_successful_confirm_through_the_real_url_works_end_to_end(self):
+        self.client.force_login(self.user)
+        response = self.client.post('/confirm-password/', {'password': 'right-pass', 'next': '/costing/report/pdf/'})
+        self.assertEqual(response['Location'], '/costing/report/pdf/')
+        self.assertEqual(self.client.get('/costing/report/pdf/').status_code, 200)

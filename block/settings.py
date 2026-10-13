@@ -1,5 +1,5 @@
 """
-Django settings for block project (BLOCK ERP powered by NOORSYS).
+Django settings for the block project (DAR AL JANNAH ERP, powered by NOORSYS).
 """
 
 from pathlib import Path
@@ -57,7 +57,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.humanize',
 
-    # Block ERP apps
+    # DAR AL JANNAH apps
     'core',
     'customers',
     'suppliers',
@@ -84,6 +84,7 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
+    'core.reauth.ReauthMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
@@ -165,7 +166,12 @@ MESSAGE_TAGS = {
 }
 
 # Company identity — used across templates, printed documents and auto-numbering.
-COMPANY_NAME = env('COMPANY_NAME', default='Block')
+# Screens (URL namespaces) that ask for the password again before opening, and for how long they
+# then stay unlocked while the user keeps working.
+SENSITIVE_NAMESPACES = env.list('SENSITIVE_NAMESPACES', default=['costing', 'books', 'reports'])
+REAUTH_MINUTES = env.int('REAUTH_MINUTES', default=15)
+
+COMPANY_NAME = env('COMPANY_NAME', default='DAR AL JANNAH')
 COMPANY_CODE_PREFIX = env('COMPANY_CODE_PREFIX', default='AB')
 COMPANY_ADDRESS = env('COMPANY_ADDRESS', default='')
 COMPANY_PHONE = env('COMPANY_PHONE', default='')
@@ -178,4 +184,4 @@ EMAIL_PORT = env.int('EMAIL_PORT', default=587)
 EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=True)
 EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
-DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='Block ERP <noreply@example.com>')
+DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='DAR AL JANNAH <noreply@example.com>')
