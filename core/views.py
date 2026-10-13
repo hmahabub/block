@@ -10,6 +10,7 @@ from django.views.decorators.http import require_POST
 from django.views.generic import FormView, UpdateView
 
 from . import reauth
+from .sessions import end_all_sessions
 from .forms import CompanyProfileForm, ConfirmPasswordForm
 from .mixins import UpdateAuditMixin
 from .models import CompanyProfile
@@ -68,6 +69,16 @@ class ConfirmPasswordView(LoginRequiredMixin, FormView):
             return redirect('login')
         self.request.session[self.failures_key] = failures
         return super().form_invalid(form)
+
+
+@login_required
+@require_POST
+def logout_everywhere(request):
+    """Sign this user out on every device, including this one."""
+    end_all_sessions(request.user)
+    logout(request)  # clears the current request's session cookie as well
+    messages.info(request, 'You have been signed out on all devices.')
+    return redirect('login')
 
 
 @login_required

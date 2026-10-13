@@ -258,6 +258,15 @@
                                 {% endif %}
                                 <li><hr class="dropdown-divider"></li>
                                 <li>
+                                    <form method="post" action="{% url 'logout-all' %}"
+                                          onsubmit="return confirm('Sign out of this account on every device?');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="dropdown-item">
+                                            <i class="fas fa-power-off"></i> Log out from all devices
+                                        </button>
+                                    </form>
+                                </li>
+                                <li>
                                     <form method="post" action="{% url 'logout' %}">
                                         {% csrf_token %}
                                         <button type="submit" class="dropdown-item">

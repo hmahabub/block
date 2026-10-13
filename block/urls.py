@@ -14,6 +14,7 @@ urlpatterns = [
     path('company/', include('core.urls', namespace='core')),
     path('confirm-password/', core_views.ConfirmPasswordView.as_view(), name='confirm-password'),
     path('lock/', core_views.lock_screens, name='lock-screens'),
+    path('logout-all/', core_views.logout_everywhere, name='logout-all'),
     path('customers/', include('customers.urls', namespace='customers')),
     path('suppliers/', include('suppliers.urls', namespace='suppliers')),
     path('projects/', include('projects.urls', namespace='projects')),

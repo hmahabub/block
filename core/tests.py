@@ -420,3 +420,42 @@ class ConfirmPasswordViewTests(TestCase):
         response = self.client.post('/confirm-password/', {'password': 'right-pass', 'next': '/costing/report/pdf/'})
         self.assertEqual(response['Location'], '/costing/report/pdf/')
         self.assertEqual(self.client.get('/costing/report/pdf/').status_code, 200)
+
+
+class LogoutEverywhereTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user('clerk', password='pw-123456')
+        self.other = User.objects.create_user('other', password='pw-123456')
+
+    def login_device(self, user):
+        from django.test import Client
+        client = Client()
+        self.assertTrue(client.login(username=user.username, password='pw-123456'))
+        return client
+
+    def test_every_session_of_the_user_is_ended_and_nobody_elses(self):
+        from django.contrib.sessions.models import Session
+        from core.sessions import end_all_sessions
+        phone, laptop = self.login_device(self.user), self.login_device(self.user)
+        colleague = self.login_device(self.other)
+        self.assertEqual(Session.objects.count(), 3)
+        self.assertEqual(end_all_sessions(self.user), 2)
+        self.assertEqual(Session.objects.count(), 1)
+        self.assertEqual(colleague.session['_auth_user_id'], str(self.other.pk))
+        self.assertNotIn('_auth_user_id', phone.session)
+        self.assertNotIn('_auth_user_id', laptop.session)
+
+    def test_the_button_signs_out_this_device_and_the_others(self):
+        from django.contrib.sessions.models import Session
+        phone, laptop = self.login_device(self.user), self.login_device(self.user)
+        response = laptop.post('/logout-all/')
+        self.assertEqual((response.status_code, response['Location']), (302, '/login/'))
+        self.assertEqual(Session.objects.filter(session_key=phone.session.session_key).count(), 0)
+        self.assertEqual(phone.get('/customers/').status_code, 302)  # sent to the login page
+        self.assertEqual(laptop.get('/customers/').status_code, 302)
+
+    def test_it_needs_a_post_and_a_login(self):
+        client = self.login_device(self.user)
+        self.assertEqual(client.get('/logout-all/').status_code, 405)
+        from django.test import Client
+        self.assertEqual(Client().post('/logout-all/').status_code, 302)
