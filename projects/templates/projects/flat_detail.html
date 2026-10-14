@@ -56,7 +56,8 @@
                     <tr><th width="40%">Saleable Area</th><td>{{ object.saleable_area }} sqft</td></tr>
                     <tr><th>Facing</th><td>{{ object.facing|default:"-" }}</td></tr>
                     {% if object.bedrooms or object.bathrooms %}<tr><th>Bedrooms / Bathrooms</th><td>{{ object.bedrooms|default:"-" }} / {{ object.bathrooms|default:"-" }}</td></tr>{% endif %}
-                    <tr><th>Parking lot</th><td>{{ object.parking_lot|default:"-" }}{% if object.parking_area %} ({{ object.parking_area }} sqft){% endif %}</td></tr>
+                    <tr><th>Parking lot</th><td>{{ object.parking_lot|default:"-" }}{% if object.parking_area %} ({{ object.parking_area }} sqft){% endif %}
+                        {% if object.current_sale.with_parking %}<span class="badge bg-dark">Booked</span>{% else %}<span class="badge bg-light text-dark border">Free</span>{% endif %}</td></tr>
                     {% if object.features %}<tr><th>Rooms &amp; features</th><td>{{ object.features }}</td></tr>{% endif %}
                     {% if money_visible %}<tr><th>Base Price</th><td>{{ object.base_price|taka }}</td></tr>{% endif %}
                     <tr><th>Quoted Price</th><td>{{ object.quoted_price|taka }}</td></tr>

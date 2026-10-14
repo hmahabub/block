@@ -343,3 +343,45 @@ class FlatListOneProjectTests(TestCase):
         self.assertEqual([f.flat_no for f in flats], ['A1'])
         _, flats = self.listed(project=self.alpha.pk, status='SOLD')
         self.assertEqual(flats, [])
+
+
+class BookingMapParkingTests(TestCase):
+    """Each seat says whether its parking lot is taken (BOOKED) or not (FREE)."""
+
+    def setUp(self):
+        self.user = User.objects.create_superuser('boss', 'b@example.com', 'pw')
+        self.project, self.flats = make_project(floors=1, units=3)
+        customer = Customer.objects.create(name='Rahim', phone='01711111111')
+        FlatSale.objects.create(flat=self.flats[0], customer=customer, sale_date='2026-01-01', sale_value=1300, with_parking=True)
+        FlatSale.objects.create(flat=self.flats[1], customer=customer, sale_date='2026-01-01', sale_value=1200, with_parking=False)
+
+    def seats(self):
+        import re
+        from .views import ProjectDetailView
+        response = ProjectDetailView.as_view()(make_request(self.user, '/'), pk=self.project.pk)
+        response.render()
+        html = response.content.decode()
+        seats = re.findall(r'<a class="seat seat-\w+".*?</a>', html, re.S)
+        return {re.search(r'seat-no">(\w+)<', seat).group(1): seat for seat in seats}
+
+    def test_a_flat_that_took_the_parking_lot_shows_booked(self):
+        seat = self.seats()['A1']
+        self.assertIn('parking-booked', seat)
+        self.assertIn('P-A1', seat)
+        self.assertIn('parking P-A1 booked', seat)
+
+    def test_a_booked_flat_without_parking_shows_free(self):
+        seat = self.seats()['B1']
+        self.assertIn('parking-free', seat)
+        self.assertNotIn('parking-booked', seat)
+
+    def test_an_available_flat_shows_free(self):
+        seat = self.seats()['C1']
+        self.assertIn('parking-free', seat)
+        self.assertIn('parking P-C1 free', seat)
+
+    def test_cancelling_frees_the_parking_lot_again(self):
+        sale = FlatSale.objects.get(flat=self.flats[0])
+        sale.cancel(100)
+        sale.save()
+        self.assertIn('parking-free', self.seats()['A1'])

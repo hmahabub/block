@@ -48,6 +48,7 @@
                         <th>Flat</th>
                         <th>Project</th>
                         <th>Floor</th>
+                        <th>Parking lot</th>
                         <th>Parking</th>
                         <th>Status</th>
                         <th>Customer</th>
@@ -63,6 +64,7 @@
                         <td><a href="{% url 'projects:detail' flat.project.pk %}">{{ flat.project.project_name }}</a></td>
                         <td>{{ flat.floor_no }}</td>
                         <td>{{ flat.parking_lot|default:"-" }}</td>
+                        <td>{% if flat.active_sale %}{% if flat.active_sale.with_parking %}<span class="badge bg-dark">Booked</span>{% else %}<span class="badge bg-light text-dark border">Not taken</span>{% endif %}{% else %}<span class="badge bg-light text-dark border">Free</span>{% endif %}</td>
                         <td>
                             <span class="badge
                                 {% if flat.status == 'AVAILABLE' %}bg-success
@@ -88,7 +90,7 @@
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="9" class="text-center py-4">No flats found</td></tr>
+                    <tr><td colspan="10" class="text-center py-4">No flats found</td></tr>
                     {% endfor %}
                 </tbody>
             </table>

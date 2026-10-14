@@ -15,7 +15,10 @@
     }
     .seat:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,.18); }
     .seat .seat-no { font-size: 1rem; font-weight: 700; }
-    .seat .seat-parking { opacity: .9; font-size: .7rem; }
+    .seat .seat-parking { font-size: .7rem; }
+    .seat .parking-state { display: inline-block; padding: 0 5px; margin-left: 2px; border-radius: 4px; font-size: .62rem; font-weight: 700; letter-spacing: .02em; }
+    .seat .parking-booked { background: #fff; color: #111; }
+    .seat .parking-free { border: 1px solid currentColor; opacity: .85; }
     .seat .seat-customer { font-size: .72rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .seat-available { background: #2f9e6b; }
     .seat-booked { background: #e0a100; color: #2b2100 !important; }
@@ -147,6 +150,7 @@
                 <span class="me-3"><span class="legend-dot" style="background:#2f9e6b"></span>Free</span>
                 <span class="me-3"><span class="legend-dot" style="background:#e0a100"></span>Booked</span>
                 <span class="me-3"><span class="legend-dot" style="background:#0b3d3a"></span>Sold</span>
+                <span class="me-3"><i class="fas fa-car-side"></i> <strong>BOOKED</strong> / <strong>FREE</strong> = parking lot taken or not</span>
                 <span class="text-muted">Each flat shows its linked parking lot. Click a free flat to book it.</span>
             </div>
             {% if map_rows %}
@@ -164,9 +168,10 @@
                                 {% if flat %}
                                 <a class="seat seat-{{ flat.status|lower }}"
                                    href="{% if flat.status == 'AVAILABLE' and perms.sales.add_flatsale %}{% url 'sales:create' %}?flat={{ flat.pk }}{% else %}{% url 'projects:flat-detail' flat.pk %}{% endif %}"
-                                   title="{{ flat.flat_no }} &middot; {{ flat.get_status_display }}{% if flat.active_sale %} &middot; {{ flat.active_sale.customer.display_name }}{% endif %}">
+                                   title="{{ flat.flat_no }} &middot; {{ flat.get_status_display }}{% if flat.active_sale %} &middot; {{ flat.active_sale.customer.display_name }}{% endif %} &middot; parking {{ flat.parking_lot }} {% if flat.active_sale.with_parking %}booked{% else %}free{% endif %}">
                                     <span class="seat-no">{{ flat.flat_no }}</span>
-                                    <span class="seat-parking d-block"><i class="fas fa-car-side"></i> {{ flat.parking_lot|default:"-" }}</span>
+                                    <span class="seat-parking d-block"><i class="fas fa-car-side"></i> {{ flat.parking_lot|default:"-" }}
+                                        {% if flat.active_sale.with_parking %}<span class="parking-state parking-booked">BOOKED</span>{% else %}<span class="parking-state parking-free">FREE</span>{% endif %}</span>
                                     {% if flat.active_sale %}
                                     <span class="seat-customer d-block">{{ flat.active_sale.customer.name }}</span>
                                     {% else %}
@@ -196,6 +201,7 @@
                         <tr>
                             <th>No.</th>
                             <th>Floor</th>
+                            <th>Parking lot</th>
                             <th>Parking</th>
                             <th>Facing</th>
                             <th>Status</th>
@@ -211,6 +217,7 @@
                             <td><a href="{% url 'projects:flat-detail' flat.pk %}">{{ flat.flat_no }}</a></td>
                             <td>{{ flat.floor_no }}</td>
                             <td>{{ flat.parking_lot|default:"-" }}</td>
+                            <td>{% if flat.active_sale %}{% if flat.active_sale.with_parking %}<span class="badge bg-dark">Booked</span>{% else %}<span class="badge bg-light text-dark border">Not taken</span>{% endif %}{% else %}<span class="badge bg-light text-dark border">Free</span>{% endif %}</td>
                             <td>{{ flat.facing|default:"-" }}</td>
                             <td>
                                 <span class="badge
@@ -237,7 +244,7 @@
                             </td>
                         </tr>
                         {% empty %}
-                        <tr><td colspan="9" class="text-center py-4">No flats added yet</td></tr>
+                        <tr><td colspan="10" class="text-center py-4">No flats added yet</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
