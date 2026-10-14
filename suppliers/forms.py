@@ -8,7 +8,7 @@ from .models import Supplier
 class SupplierForm(forms.ModelForm):
     class Meta:
         model = Supplier
-        fields = ['name', 'owner_name', 'phone', 'email', 'address', 'bank_account', 'cost_category', 'notes']
+        fields = ['name', 'owner_name', 'phone', 'email', 'tin', 'address', 'bank_account', 'cost_category', 'notes']
         widgets = {
             'address': forms.Textarea(attrs={'rows': 2}),
             'notes': forms.Textarea(attrs={'rows': 2}),

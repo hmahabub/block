@@ -13,13 +13,14 @@ class SupplierTests(TestCase):
     def test_company_profile_fields_are_saved(self):
         civil = CostCategory.objects.create(name='Civil')
         form = SupplierForm(data=self.data(
-            owner_name='Mr. Rahman', phone='01711222333', email='rahman@example.com',
+            owner_name='Mr. Rahman', phone='01711222333', email='rahman@example.com', tin='123456789012',
             address='Dhaka', bank_account='Demo Bank, 1234567', cost_category=civil.pk, notes='Reliable',
         ))
         self.assertTrue(form.is_valid(), form.errors)
         supplier = form.save()
         self.assertEqual((supplier.name, supplier.owner_name, supplier.email), ('Rahman Traders Ltd', 'Mr. Rahman', 'rahman@example.com'))
         self.assertEqual((supplier.bank_account, supplier.cost_category), ('Demo Bank, 1234567', civil))
+        self.assertEqual(supplier.tin, '123456789012')
 
     def test_only_the_company_name_is_required(self):
         self.assertTrue(SupplierForm(data=self.data()).is_valid())

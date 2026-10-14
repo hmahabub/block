@@ -20,7 +20,7 @@ class SupplierListView(LoginRequiredMixin, ListView):
         q = self.request.GET.get('q')
         if q:
             queryset = queryset.filter(
-                Q(name__icontains=q) | Q(supplier_code__icontains=q) | Q(phone__icontains=q)
+                Q(name__icontains=q) | Q(supplier_code__icontains=q) | Q(phone__icontains=q) | Q(tin__icontains=q)
             )
         return queryset
 

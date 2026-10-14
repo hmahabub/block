@@ -18,6 +18,7 @@ class Supplier(models.Model):
     phone = models.CharField(validators=[phone_regex], max_length=17, blank=True,
                              help_text='+88 is added automatically to local numbers.')
     email = models.EmailField(blank=True)
+    tin = models.CharField('TIN', max_length=30, blank=True)
     address = models.TextField(blank=True)
     bank_account = models.CharField(max_length=150, blank=True, help_text='Bank, account name and number.')
     cost_category = models.ForeignKey(
