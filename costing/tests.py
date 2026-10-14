@@ -100,28 +100,20 @@ class SharedCostFormTests(CostTestCase):
         self.assertEqual(phases[self.admin.pk], 'EITHER')
         self.assertEqual(phases[self.land.pk], 'PRE')
 
-    def test_changing_a_confirmed_cost_clears_its_confirmation(self):
-        cost = self.cost(self.civil)
-        user = User.objects.create_user('checker')
-        cost.confirm(user)
-        cost.refresh_from_db()
-        self.assertTrue(cost.is_confirmed)
-
-        form = SharedCostForm(data=self.data(self.civil, amount='900'), instance=cost)
-        self.assertTrue(form.is_valid(), form.errors)
-        form.save()
-        cost.refresh_from_db()
-        self.assertFalse(cost.is_confirmed)
-
-    def test_saving_without_changes_keeps_the_confirmation(self):
+    def test_a_confirmed_cost_can_no_longer_be_changed(self):
         cost = self.cost(self.civil, amount=500)
         cost.confirm(User.objects.create_user('checker'))
         cost.refresh_from_db()
-        form = SharedCostForm(data=self.data(self.civil), instance=cost)
-        self.assertTrue(form.is_valid(), form.errors)
-        form.save()
+        form = SharedCostForm(data=self.data(self.civil, amount='900'), instance=cost)
+        self.assertFalse(form.is_valid())
         cost.refresh_from_db()
-        self.assertTrue(cost.is_confirmed)
+        self.assertEqual((cost.amount, cost.is_confirmed), (500, True))
+
+    def test_an_unconfirmed_cost_can_be_changed(self):
+        cost = self.cost(self.civil, amount=500)
+        form = SharedCostForm(data=self.data(self.civil, amount='900'), instance=cost)
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.save().amount, 900)
 
 
 class DirectCostFormTests(CostTestCase):

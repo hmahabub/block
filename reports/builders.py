@@ -95,14 +95,15 @@ def finance_report(project=None):
     summaries = account_summaries(Account.objects.filter(is_active=True))
     if summaries:
         account_rows = [[r['account'].name, r['account'].get_account_type_display(), r['money_in'], r['money_out'],
-                         r['confirmed_balance'], r['book_balance']] for r in summaries]
+                         r['balance'], r['pending_count']] for r in summaries]
         tables.append(ReportTable(
             'Money in hand (accounts)',
             [Column('Account'), Column('Type'), Column('Money in', MONEY), Column('Money out', MONEY),
-             Column('Confirmed balance', MONEY), Column('Book balance', MONEY)],
+             Column('Balance', MONEY), Column('Waiting for confirmation', INT)],
             account_rows,
             ['Total', '', _sum(r[2] for r in account_rows), _sum(r[3] for r in account_rows),
-             _sum(r[4] for r in account_rows), _sum(r[5] for r in account_rows)],
+             _sum(r[4] for r in account_rows), sum(r[5] for r in account_rows)],
+            note='Only confirmed entries are in the book, so only they count towards the balance.',
         ))
     return [project_line(project), 'Position as of today'], tables
 

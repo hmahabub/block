@@ -207,7 +207,11 @@
                                 <i class="fas fa-book"></i> Books
                             </a>
                             <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="{% url 'books:book' %}">Book (all accounts)</a></li>
+                                <li><a class="dropdown-item" href="{% url 'books:book' %}">Book</a></li>
+                                {% if perms.books.confirm_entries %}
+                                <li><a class="dropdown-item" href="{% url 'books:to-confirm' %}">Confirm entries
+                                    {% if entries_to_confirm %}<span class="badge bg-warning text-dark">{{ entries_to_confirm }}</span>{% endif %}</a></li>
+                                {% endif %}
                                 <li><a class="dropdown-item" href="{% url 'books:transfers' %}">Internal Transfers</a></li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item" href="{% url 'books:accounts' %}">Accounts</a></li>

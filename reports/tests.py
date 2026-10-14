@@ -98,11 +98,18 @@ class FinanceReportTests(ReportData):
         self.assertEqual(len(table.rows), 2)
         self.assertEqual(table.totals[1], 8)  # flats
 
-    def test_money_in_hand_lists_the_accounts(self):
+    def test_money_in_hand_counts_only_confirmed_entries(self):
+        from django.contrib.auth.models import User
         _, tables = builders.finance_report(self.project)
         row = self.rows(tables, 'Money in hand (accounts)')[0]
-        self.assertEqual((row[0], row[2], row[3]), ('Bank 1', 2400, 1100))
-        self.assertEqual(row[5], 5000 + 2400 - 1100)
+        self.assertEqual((row[0], row[2], row[3], row[4], row[5]), ('Bank 1', 0, 0, 5000, 6))   # nothing confirmed yet
+        user = User.objects.create_superuser('boss', 'b@example.com', 'pw')
+        from books.ledger import confirm_entries
+        keys = [f'cp:{p.pk}' for p in CustomerPayment.objects.all()] + [f'pc:{c.pk}' for c in ProjectCost.objects.all()]
+        confirm_entries(keys, user)
+        _, tables = builders.finance_report(self.project)
+        row = self.rows(tables, 'Money in hand (accounts)')[0]
+        self.assertEqual((row[2], row[3], row[4], row[5]), (2400, 1100, 5000 + 2400 - 1100, 0))
 
 
 class ProfitLossReportTests(ReportData):
@@ -240,6 +247,47 @@ class ReportOutputTests(ReportData):
         response = self.get(PeriodicCollectionReportView, project='x', date_from='nope', date_to='31/12/2026')
         response.render()
         self.assertEqual(response.status_code, 200)
+
+    def test_every_report_downloads_as_excel_with_real_numbers(self):
+        import io
+        from openpyxl import load_workbook
+        for view in self.views:
+            response = self.get(view, format='xlsx')
+            self.assertEqual(response.status_code, 200, view)
+            self.assertIn('spreadsheetml', response['Content-Type'])
+            self.assertIn('.xlsx', response['Content-Disposition'])
+            sheet = load_workbook(io.BytesIO(response.content)).active
+            cells = [c.value for row in sheet.iter_rows() for c in row]
+            self.assertTrue(any(isinstance(v, (int, float)) for v in cells), view)
+
+    def test_the_excel_file_holds_the_same_figures_as_the_screen(self):
+        import io
+        from openpyxl import load_workbook
+        sheet = load_workbook(io.BytesIO(self.get(FinanceReportView, format='xlsx', project=self.project.pk).content)).active
+        cells = [c.value for row in sheet.iter_rows() for c in row]
+        for expected in (2500.0, 400.0, 2400.0, 750.0, 1100.0):   # sale value, honorarium, received, receivable, total cost
+            self.assertIn(expected, cells)
+        self.assertIn('Finance Report', cells)
+
+    def test_percent_cells_are_real_percentages_in_excel(self):
+        import io
+        from openpyxl import load_workbook
+        sheet = load_workbook(io.BytesIO(self.get(ProfitLossReportView, format='xlsx').content)).active
+        percents = [c for row in sheet.iter_rows() for c in row if c.number_format == '0.0%' and c.value is not None]
+        self.assertTrue(percents)
+        self.assertAlmostEqual(percents[0].value, 1800 / 2550, places=4)
+
+    def test_the_cost_list_downloads_as_excel_too(self):
+        import io
+        from openpyxl import load_workbook
+        from costing.views import ProjectCostReportExcelView
+        request = RequestFactory().get('/', {'phase': 'PRE'})
+        request.user = User.objects.create_superuser('u9', 'u@example.com', 'pw')
+        response = ProjectCostReportExcelView.as_view()(request)
+        self.assertIn('spreadsheetml', response['Content-Type'])
+        cells = [c.value for row in load_workbook(io.BytesIO(response.content)).active.iter_rows() for c in row]
+        self.assertIn(700.0, cells)
+        self.assertNotIn(400.0, [v for v in cells if v == 400.0])    # the post-development cost is filtered out
 
     def test_login_is_required(self):
         request = RequestFactory().get('/')

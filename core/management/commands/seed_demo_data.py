@@ -109,7 +109,17 @@ class Command(BaseCommand):
             date='2026-09-25', from_account=accounts['Bank 1'], to_account=accounts['Petty cash'],
             amount=100_000, notes='Cash for site expenses',
         )
+        self.confirm_first_tower(accounts)
         self.report()
+
+    def confirm_first_tower(self, accounts):
+        """Tower 1's money (through Bank 1) is already confirmed in the book; Tower 2's still waits on the
+        Confirm entries page, so the demo shows both states."""
+        from books.ledger import collect_entries, confirm_entries
+
+        keys = [e.key for e in collect_entries([accounts['Bank 1']], confirmed=False)]
+        done, problems = confirm_entries(keys, None)
+        assert not problems, problems
 
     def create_accounts(self):
         accounts = {data['name']: Account.objects.create(**data) for data in ACCOUNTS}

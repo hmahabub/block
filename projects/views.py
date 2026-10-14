@@ -157,22 +157,31 @@ class FlatListView(LoginRequiredMixin, ListView):
     context_object_name = 'object_list'
     paginate_by = 30
 
+    def get_project(self):
+        """Flats are listed one project at a time: the one asked for, else the first project."""
+        if not hasattr(self, '_project'):
+            projects = Project.objects.order_by('project_name')
+            self._project = projects.filter(pk=int_or_none(self.request.GET.get('project'))).first() or projects.first()
+        return self._project
+
     def get_queryset(self):
         queryset = super().get_queryset().select_related('project')
+        project = self.get_project()
+        if project is None:
+            return queryset.none()
+        queryset = queryset.filter(project=project)
         q = self.request.GET.get('q')
-        project_id = int_or_none(self.request.GET.get('project'))
         status = self.request.GET.get('status')
         if q:
-            queryset = queryset.filter(Q(flat_no__icontains=q) | Q(project__project_name__icontains=q))
-        if project_id:
-            queryset = queryset.filter(project_id=project_id)
+            queryset = queryset.filter(Q(flat_no__icontains=q) | Q(parking_lot__icontains=q))
         if status:
             queryset = queryset.filter(status=status)
         return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['projects'] = Project.objects.all()
+        context['projects'] = Project.objects.order_by('project_name')
+        context['project'] = self.get_project()
         context['status_choices'] = Flat.Status.choices
         attach_active_sales(context['object_list'])
         return context

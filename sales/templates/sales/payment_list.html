@@ -22,7 +22,7 @@
                         <th>Sale</th>
                         <th>Received into</th>
                         <th>Reference</th>
-                        <th>Amount</th>
+                        {% if money_visible %}<th>Amount</th>{% endif %}
                         <th>Checked</th>
                         <th></th>
                     </tr>
@@ -35,7 +35,7 @@
                         <td><a href="{% url 'sales:detail' payment.sale.pk %}">{{ payment.sale.sale_no }}</a></td>
                         <td>{{ payment.account|default:payment.get_payment_method_display }}</td>
                         <td>{{ payment.reference_no|default:"-" }}</td>
-                        <td>{{ payment.amount|taka }}</td>
+                        {% if money_visible %}<td>{{ payment.amount|taka }}</td>{% endif %}
                         <td>{% if payment.is_confirmed %}<i class="fas fa-check-circle text-success"></i>{% else %}<i class="far fa-circle text-muted"></i>{% endif %}</td>
                         <td><a href="{% url 'sales:payment-receipt' payment.pk %}" target="_blank" class="btn btn-sm btn-success" title="Print receipt"><i class="fas fa-print"></i></a></td>
                     </tr>

@@ -1,9 +1,11 @@
 import calendar
 import datetime
 
+from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.db.models import Sum
 from django.http import HttpResponse
+from django.shortcuts import redirect
 from django.urls import reverse_lazy
 from django.views import View
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
@@ -11,11 +13,12 @@ from django.views.generic import CreateView, DeleteView, DetailView, ListView, U
 from core.mixins import CreateAuditMixin, DeleteAuditMixin, UpdateAuditMixin
 from core.utils import int_or_none
 from projects.models import Flat, Project
+from reports.excel import XLSX_CONTENT_TYPE, build_xlsx
 
 from .filters import filter_project_costs
 from .forms import CostCategoryForm, DirectCostForm, ProjectBudgetForm, SharedCostForm
 from .models import CostCategory, ProjectBudget, ProjectCost
-from .reports import build_cost_report_pdf
+from .reports import build_cost_report_pdf, cost_report_table, describe_filters
 
 
 class CostCategoryListView(LoginRequiredMixin, ListView):
@@ -163,7 +166,19 @@ class DirectCostCreateView(_ProjectCostCreateView):
         return initial
 
 
-class ProjectCostUpdateView(PermissionRequiredMixin, UpdateAuditMixin, UpdateView):
+class _ConfirmedCostLock:
+    """A cost confirmed in the books is part of the book: it can be viewed and printed, never changed or deleted."""
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.has_perm(self.permission_required):
+            cost = ProjectCost.objects.filter(pk=kwargs['pk'], confirmed_at__isnull=False).first()
+            if cost:
+                messages.error(request, f'{cost.voucher_no} is confirmed in the books and cannot be changed or deleted.')
+                return redirect(cost)
+        return super().dispatch(request, *args, **kwargs)
+
+
+class ProjectCostUpdateView(_ConfirmedCostLock, PermissionRequiredMixin, UpdateAuditMixin, UpdateView):
     model = ProjectCost
     template_name = 'costing/cost_form.html'
     permission_required = 'costing.change_projectcost'
@@ -182,7 +197,7 @@ class ProjectCostUpdateView(PermissionRequiredMixin, UpdateAuditMixin, UpdateVie
         return reverse_lazy('costing:cost-detail', kwargs={'pk': self.object.pk})
 
 
-class ProjectCostDeleteView(PermissionRequiredMixin, DeleteAuditMixin, DeleteView):
+class ProjectCostDeleteView(_ConfirmedCostLock, PermissionRequiredMixin, DeleteAuditMixin, DeleteView):
     model = ProjectCost
     template_name = 'costing/cost_confirm_delete.html'
     success_url = reverse_lazy('costing:cost-list')
@@ -194,6 +209,18 @@ class ProjectCostVoucherView(LoginRequiredMixin, DetailView):
     model = ProjectCost
     template_name = 'costing/cost_voucher.html'
     context_object_name = 'cost'
+
+
+class ProjectCostReportExcelView(LoginRequiredMixin, View):
+    """Excel file of the project cost list, honouring the same filters as the on-screen list."""
+
+    def get(self, request):
+        costs, applied = filter_project_costs(ProjectCost.objects.all(), request.GET)
+        stamp = f'{applied["date_from"] or "start"}_to_{applied["date_to"] or "end"}' if (applied['date_from'] or applied['date_to']) else 'all'
+        response = HttpResponse(content_type=XLSX_CONTENT_TYPE)
+        response['Content-Disposition'] = f'attachment; filename="project_costs_{stamp}.xlsx"'
+        build_xlsx(response, 'Project Cost Report', describe_filters(applied), [cost_report_table(costs)], request.user)
+        return response
 
 
 class ProjectCostReportPDFView(LoginRequiredMixin, View):

@@ -15,24 +15,24 @@
     </div>
 </div>
 <div class="row mb-3 text-center">
-    <div class="col-md-4"><div class="card"><div class="card-body py-2"><strong>{{ honorarium_total|taka }}</strong><br><small class="text-muted">Honorarium earned</small></div></div></div>
-    <div class="col-md-4"><div class="card"><div class="card-body py-2"><strong>{{ honorarium_paid|taka }}</strong><br><small class="text-muted">Paid</small></div></div></div>
-    <div class="col-md-4"><div class="card"><div class="card-body py-2"><strong class="text-danger">{{ honorarium_total|subtract:honorarium_paid|taka }}</strong><br><small class="text-muted">Still due</small></div></div></div>
+    {% if money_visible %}<div class="col-md-4"><div class="card"><div class="card-body py-2"><strong>{{ honorarium_total|taka }}</strong><br><small class="text-muted">Honorarium earned</small></div></div></div>{% endif %}
+    {% if money_visible %}<div class="col-md-4"><div class="card"><div class="card-body py-2"><strong>{{ honorarium_paid|taka }}</strong><br><small class="text-muted">Paid</small></div></div></div>{% endif %}
+    {% if money_visible %}<div class="col-md-4"><div class="card"><div class="card-body py-2"><strong class="text-danger">{{ honorarium_total|subtract:honorarium_paid|taka }}</strong><br><small class="text-muted">Still due</small></div></div></div>{% endif %}
 </div>
 <div class="card">
     <div class="card-header">Sales through this reference</div>
     <div class="card-body">
         <table class="table table-sm">
-            <thead class="table-light"><tr><th>Sale</th><th>Flat</th><th>Customer</th><th class="text-end">Honorarium</th><th class="text-end">Paid</th><th class="text-end">Due</th></tr></thead>
+            <thead class="table-light"><tr><th>Sale</th><th>Flat</th><th>Customer</th>{% if money_visible %}<th class="text-end">Honorarium</th><th class="text-end">Paid</th><th class="text-end">Due</th>{% endif %}</tr></thead>
             <tbody>
                 {% for sale in sales %}
                 <tr>
                     <td><a href="{{ sale.get_absolute_url }}">{{ sale.sale_no }}</a></td>
                     <td>{{ sale.flat }}</td>
                     <td>{{ sale.customer.name }}</td>
-                    <td class="text-end">{{ sale.honorarium|taka }}</td>
-                    <td class="text-end">{{ sale.honorarium_paid|taka }}</td>
-                    <td class="text-end">{{ sale.honorarium_due|taka }}</td>
+                    {% if money_visible %}<td class="text-end">{{ sale.honorarium|taka }}</td>{% endif %}
+                    {% if money_visible %}<td class="text-end">{{ sale.honorarium_paid|taka }}</td>{% endif %}
+                    {% if money_visible %}<td class="text-end">{{ sale.honorarium_due|taka }}</td>{% endif %}
                 </tr>
                 {% empty %}
                 <tr><td colspan="6" class="text-center py-3">No sales yet</td></tr>

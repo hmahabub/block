@@ -17,15 +17,19 @@ def flat_deletion_pending(request):
 
 
 def reauth_state(request):
-    """`costs_visible` is False while Costing is locked, so cost figures stay off the pages shown to buyers."""
-    from django.conf import settings
+    """`money_visible` is False while the sensitive screens are locked, so costs and sale/receipt figures stay off
+    the pages shown to buyers. `entries_to_confirm` feeds the menu badge for people who can confirm book entries."""
+    from .reauth import money_visible
 
-    from .reauth import is_unlocked
+    def pending():
+        user = request.user
+        if not (user.is_authenticated and user.has_perm('books.confirm_entries')):
+            return 0
+        from books.ledger import pending_count
 
-    def visible():
-        return 'costing' not in settings.SENSITIVE_NAMESPACES or is_unlocked(request)
+        return pending_count()
 
-    return {'costs_visible': visible}
+    return {'money_visible': lambda: money_visible(request), 'entries_to_confirm': pending}
 
 
 def company(request):

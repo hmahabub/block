@@ -1,0 +1,4 @@
+<div class="text-center text-muted small border rounded py-2 mb-2">
+    <i class="fas fa-lock"></i> Amounts are hidden while the screens are locked.
+    <a href="{% url 'confirm-password' %}?next={{ request.get_full_path|urlencode }}">Enter your password to show them</a>
+</div>

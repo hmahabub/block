@@ -45,8 +45,7 @@ class _CostFormBase(forms.ModelForm):
     * the money must say which bank/cash account it was paid from (it feeds the books);
     * the phase follows the category, except for "either" categories (administration) where the
       person entering the cost chooses it;
-    * changing a cost that was already confirmed in the books clears the confirmation, so it is
-      checked again.
+    * a cost that has been confirmed in the books is part of the book and can no longer be changed.
     """
 
     phase = forms.ChoiceField(
@@ -77,6 +76,8 @@ class _CostFormBase(forms.ModelForm):
 
     def clean(self):
         cleaned = super().clean()
+        if self.instance.pk and self.instance.is_confirmed:
+            raise forms.ValidationError('This cost is confirmed in the books and can no longer be changed.')
         category = cleaned.get('cost_category')
         if category:
             fixed = category.effective_phase
@@ -86,20 +87,10 @@ class _CostFormBase(forms.ModelForm):
                 self.add_error('phase', 'Choose whether this administrative cost is pre- or post-development.')
         return cleaned
 
-    def _really_changed(self):
-        """Whether anything that matters changed. The phase only counts for "either" categories, where
-        the person chooses it; elsewhere it follows the category and is not part of the form."""
-        category = self.cleaned_data.get('cost_category')
-        either = category is not None and category.effective_phase == CostCategory.CategoryPhase.EITHER
-        return any(name != 'phase' or either for name in self.changed_data)
-
     def save(self, commit=True):
         instance = super().save(commit=False)
         if self.cleaned_data.get('phase'):
             instance.phase = self.cleaned_data['phase']
-        if instance.pk and instance.is_confirmed and self._really_changed():
-            instance.confirmed_at = None
-            instance.confirmed_by = None
         if commit:
             instance.save()
         return instance

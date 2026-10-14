@@ -135,6 +135,30 @@ def build_cost_report_pdf(target, costs, applied, user):
     doc.build(elements, onFirstPage=_draw_page_footer, onLaterPages=_draw_page_footer)
 
 
+def cost_report_table(costs):
+    """The filtered project costs as a ReportTable (used for the Excel export)."""
+    from core.formatting import DATE, MONEY
+    from reports.tables import Column, ReportTable
+
+    costs = list(costs.select_related('project', 'cost_category', 'cost_category__parent_category', 'supplier', 'flat', 'account'))
+    rows = []
+    for cost in costs:
+        detail = cost.description or ''
+        if cost.reference_no:
+            detail = f'{detail} (Ref: {cost.reference_no})'.strip()
+        rows.append([
+            cost.date, cost.voucher_no, cost.project.project_code, str(cost.cost_category), cost.get_phase_display(),
+            cost.supplier.name if cost.supplier else None,
+            f'Flat {cost.flat.flat_no}' if cost.flat else ('Company' if cost.phase == 'PRE' else 'All flats'),
+            str(cost.account) if cost.account else None, detail or None, cost.amount,
+        ])
+    columns = [Column('Date', DATE), Column('Voucher'), Column('Project'), Column('Cost head'), Column('Phase'),
+               Column('Supplier'), Column('Charged to'), Column('Paid from'), Column('Description / Ref'),
+               Column('Amount', MONEY)]
+    totals = ['Total'] + [''] * 8 + [sum((c.amount for c in costs), 0)]
+    return ReportTable('Project costs', columns, rows, totals)
+
+
 def _group_by_category(costs):
     grouped = {}
     for cost in costs:

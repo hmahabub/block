@@ -42,11 +42,15 @@
                         <div class="col-3 border"><h3>{{ booked_count }}</h3><p class="mb-0">Booked</p></div>
                         <div class="col-3 border"><h3>{{ available_count }}</h3><p class="mb-0">Available</p></div>
                     </div>
+                    {% if money_unlocked %}
                     <div class="row text-center stat-tile mb-2">
                         <div class="col-4 border"><h5>{{ total_sales|taka }}</h5><p class="mb-0">Sale value</p></div>
                         <div class="col-4 border"><h5>{{ total_received|taka }}</h5><p class="mb-0">Received</p></div>
                         <div class="col-4 border"><h5>{{ total_receivable|taka }}</h5><p class="mb-0">Receivable</p></div>
                     </div>
+                    {% else %}
+                    {% include "includes/locked_note.html" %}
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -56,7 +60,7 @@
         <div class="col-12 mb-4">
             <div class="card">
                 <div class="card-header"><h5 class="mb-0"><i class="fas fa-coins"></i> Cost at a glance</h5></div>
-                {% if not costs_unlocked %}
+                {% if not money_unlocked %}
                 <div class="card-body text-center">
                     <p class="text-muted mb-2"><i class="fas fa-lock"></i> Cost figures are hidden until you confirm your password.</p>
                     <a href="{% url 'costing:cost-list' %}" class="btn btn-outline-primary">Unlock cost statistics</a>

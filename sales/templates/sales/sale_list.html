@@ -50,11 +50,11 @@
                         <th>Project / Flat</th>
                         <th>Customer</th>
                         <th>Ref</th>
-                        <th class="text-end">Sale Value</th>
+                        {% if money_visible %}<th class="text-end">Sale Value</th>
                         <th class="text-end">Honorarium</th>
                         <th class="text-end">Net Value</th>
                         <th class="text-end">Received</th>
-                        <th class="text-end">Receivable</th>
+                        <th class="text-end">Receivable</th>{% endif %}
                         <th>Status</th>
                         <th>Actions</th>
                     </tr>
@@ -66,11 +66,11 @@
                         <td><a href="{% url 'projects:flat-detail' sale.flat.pk %}">{{ sale.flat }}</a></td>
                         <td><a href="{% url 'customers:detail' sale.customer.pk %}">{{ sale.customer }}</a></td>
                         <td>{{ sale.ref.name|default:"-" }}</td>
-                        <td class="text-end">{{ sale.sale_value|taka }}</td>
+                        {% if money_visible %}<td class="text-end">{{ sale.sale_value|taka }}</td>
                         <td class="text-end">{{ sale.honorarium|taka }}</td>
                         <td class="text-end">{{ sale.net_value|taka }}</td>
                         <td class="text-end">{{ sale.received_amount|taka }}</td>
-                        <td class="text-end">{{ sale.receivable_amount|taka }}</td>
+                        <td class="text-end">{{ sale.receivable_amount|taka }}</td>{% endif %}
                         <td>
                             <span class="badge {% if sale.status == 'SOLD' %}bg-primary{% elif sale.status == 'BOOKED' %}bg-warning text-dark{% else %}bg-danger{% endif %}">
                                 {{ sale.get_status_display }}

@@ -15,7 +15,7 @@
     </div>
     <div>
         <a href="{% url 'costing:cost-voucher' object.pk %}" target="_blank" class="btn btn-success"><i class="fas fa-print"></i> Print Voucher</a>
-        <a href="{% url 'costing:cost-update' object.pk %}" class="btn btn-warning"><i class="fas fa-edit"></i> Edit</a>
+        {% if not object.is_confirmed %}<a href="{% url 'costing:cost-update' object.pk %}" class="btn btn-warning"><i class="fas fa-edit"></i> Edit</a>{% endif %}
         <a href="{% url 'costing:cost-list' %}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Back to List</a>
     </div>
 </div>
@@ -45,6 +45,7 @@
                     <tr><th>Books</th><td>
                         {% if object.is_confirmed %}<span class="badge bg-success"><i class="fas fa-check"></i> Confirmed</span>
                         {% else %}<span class="badge bg-secondary">Not yet confirmed</span>{% endif %}
+                        {% if object.is_confirmed %}<small class="text-muted">in the book, so it can no longer be changed</small>{% endif %}
                     </td></tr>
                     <tr><th>Reference / Bill No.</th><td>{{ object.reference_no|default:"-" }}</td></tr>
                     <tr><th>Description</th><td>{{ object.description|default:"-" }}</td></tr>

@@ -72,8 +72,8 @@ class CompanyProfile(models.Model):
 
 
 class ConfirmableModel(models.Model):
-    """Adds the "verified by" layer used by the books: every entry collected from a source
-    module can be confirmed by a user before it counts as verified."""
+    """Adds the "verified by" layer used by the books: an entry collected from a source module only
+    enters the book once a user confirms it. A confirmation can never be taken back."""
 
     confirmed_at = models.DateTimeField(null=True, blank=True, editable=False)
     confirmed_by = models.ForeignKey(
@@ -93,6 +93,3 @@ class ConfirmableModel(models.Model):
         self.confirmed_at, self.confirmed_by = timezone.now(), user
         type(self).objects.filter(pk=self.pk).update(confirmed_at=self.confirmed_at, confirmed_by=user)
 
-    def unconfirm(self):
-        self.confirmed_at = self.confirmed_by = None
-        type(self).objects.filter(pk=self.pk).update(confirmed_at=None, confirmed_by=None)

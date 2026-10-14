@@ -18,24 +18,14 @@
 
 {% if unassigned %}
 <div class="alert alert-warning">
-    <i class="fas fa-triangle-exclamation"></i> {{ unassigned }} older payment{{ unassigned|pluralize }} have no bank/cash account yet,
-    so they are not in any balance. <a href="{% url 'books:book' %}?account=none">Show them</a>; open each record and choose its account.
+    <i class="fas fa-triangle-exclamation"></i> {{ unassigned }} older record{{ unassigned|pluralize }} have no bank/cash account yet,
+    so they are in no book. {% if perms.books.confirm_entries %}<a href="{% url 'books:to-confirm' %}">Give them an account</a>.{% endif %}
 </div>
 {% endif %}
 
-<div class="row mb-3">
-    <div class="col-md-6">
-        <div class="card text-center"><div class="card-body">
-            <h4>{{ total_confirmed|taka }}</h4><small class="text-muted">Confirmed balance (all active accounts)</small></div></div>
-    </div>
-    <div class="col-md-6">
-        <div class="card text-center"><div class="card-body">
-            <h4>{{ total_book|taka }}</h4><small class="text-muted">Book balance (including unconfirmed entries)</small></div></div>
-    </div>
-</div>
-
 <div class="card">
     <div class="card-body">
+        <p class="text-muted small">The balance counts confirmed entries only. Open an account to see its book.</p>
         <div class="table-responsive">
             <table class="table table-hover align-middle">
                 <thead class="table-light">
@@ -44,8 +34,7 @@
                         <th>Type</th>
                         <th>Details</th>
                         <th class="text-end">Opening</th>
-                        <th class="text-end">Confirmed balance</th>
-                        <th class="text-end">Book balance</th>
+                        <th class="text-end">Balance</th>
                         <th class="text-center">To confirm</th>
                         <th></th>
                     </tr>
@@ -58,10 +47,11 @@
                         <td>{{ row.account.get_account_type_display }}</td>
                         <td>{{ row.account.detail }}</td>
                         <td class="text-end">{{ row.opening|taka }}</td>
-                        <td class="text-end">{{ row.confirmed_balance|taka }}</td>
-                        <td class="text-end"><strong>{{ row.book_balance|taka }}</strong></td>
+                        <td class="text-end"><strong>{{ row.balance|taka }}</strong></td>
                         <td class="text-center">
-                            {% if row.unconfirmed_count %}<span class="badge bg-warning text-dark">{{ row.unconfirmed_count }}</span>
+                            {% if row.pending_count %}
+                            {% if perms.books.confirm_entries %}<a href="{% url 'books:to-confirm' %}?account={{ row.account.pk }}" class="badge bg-warning text-dark text-decoration-none">{{ row.pending_count }}</a>
+                            {% else %}<span class="badge bg-warning text-dark">{{ row.pending_count }}</span>{% endif %}
                             {% else %}<i class="fas fa-check text-success"></i>{% endif %}
                         </td>
                         <td class="text-nowrap">
@@ -70,7 +60,7 @@
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="8" class="text-center py-4">No accounts yet. Add Bank 1, Bank 2, Petty cash ...</td></tr>
+                    <tr><td colspan="7" class="text-center py-4">No accounts yet. Add Bank 1, Bank 2, Petty cash ...</td></tr>
                     {% endfor %}
                 </tbody>
             </table>

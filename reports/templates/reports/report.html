@@ -12,6 +12,9 @@
         <a href="?{{ request.GET.urlencode }}{% if request.GET %}&amp;{% endif %}format=pdf" target="_blank" class="btn btn-danger">
             <i class="fas fa-file-pdf"></i> PDF
         </a>
+        <a href="?{{ request.GET.urlencode }}{% if request.GET %}&amp;{% endif %}format=xlsx" class="btn btn-success">
+            <i class="fas fa-file-excel"></i> Excel
+        </a>
         <button class="btn btn-info" onclick="window.print()"><i class="fas fa-print"></i> Print</button>
         <a href="{% url 'reports:index' %}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Reports</a>
     </div>

@@ -21,6 +21,7 @@
                     {{ form.with_parking|as_crispy_field }}
                 </div>
                 <div class="col-md-6">
+                    {% if money_visible %}
                     <div class="card bg-light mb-3">
                         <div class="card-body py-2">
                             <table class="table table-sm table-borderless mb-0">
@@ -30,8 +31,10 @@
                             </table>
                         </div>
                     </div>
+                    {% endif %}
                     {{ form.sale_value|as_crispy_field }}
                     {{ form.reg_value|as_crispy_field }}
+                    {% if money_visible %}
                     <div class="card bg-light">
                         <div class="card-body py-2">
                             <table class="table table-sm table-borderless mb-0">
@@ -41,6 +44,7 @@
                             <div id="pv-warning" class="text-danger small d-none">The sale value is below the total base price.</div>
                         </div>
                     </div>
+                    {% endif %}
                 </div>
             </div>
             <div class="row mt-2">
@@ -81,22 +85,24 @@
         var isEdit = {{ object|yesno:"true,false" }};
 
         function money(n) { return 'Tk ' + n.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}); }
+        function setText(id, text) { var el = document.getElementById(id); if (el) { el.textContent = text; } }
         function num(el) { var v = parseFloat(el.value); return isNaN(v) ? 0 : v; }
 
         function quotedWithParking(p) { return Number(p.quoted) + (parking.checked ? Number(p.parking) : 0); }
 
         function refresh(resetValue) {
             var p = prices[flat.value];
-            if (!p) { ['pv-base', 'pv-parking', 'pv-total', 'pv-honorarium', 'pv-net'].forEach(function (id) { document.getElementById(id).textContent = '-'; }); return; }
+            if (!p) { ['pv-base', 'pv-parking', 'pv-total', 'pv-honorarium', 'pv-net'].forEach(function (id) { setText(id, '-'); }); return; }
             var base = Number(p.base), park = parking.checked ? Number(p.parking) : 0, total = base + park;
             if (resetValue && !touched) { saleValue.value = quotedWithParking(p).toFixed(2); }
             var sale = num(saleValue), reg = num(regValue);
-            document.getElementById('pv-base').textContent = money(base);
-            document.getElementById('pv-parking').textContent = parking.checked ? money(park) : 'not taken';
-            document.getElementById('pv-total').textContent = money(total);
-            document.getElementById('pv-honorarium').textContent = money(Math.max(sale - total, 0));
-            document.getElementById('pv-net').textContent = money(sale + reg);
-            document.getElementById('pv-warning').classList.toggle('d-none', sale >= total);
+            setText('pv-base', money(base));
+            setText('pv-parking', parking.checked ? money(park) : 'not taken');
+            setText('pv-total', money(total));
+            setText('pv-honorarium', money(Math.max(sale - total, 0)));
+            setText('pv-net', money(sale + reg));
+            var warning = document.getElementById('pv-warning');
+            if (warning) { warning.classList.toggle('d-none', sale >= total); }
         }
 
         flat.addEventListener('change', function () { touched = false; refresh(true); });

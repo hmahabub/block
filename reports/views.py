@@ -8,6 +8,7 @@ from core.utils import int_or_none
 from projects.models import Project
 
 from . import builders
+from .excel import XLSX_CONTENT_TYPE, build_xlsx
 from .tables import build_pdf
 
 
@@ -23,7 +24,7 @@ class ReportIndexView(LoginRequiredMixin, TemplateView):
 
 
 class ReportView(LoginRequiredMixin, TemplateView):
-    """One report, shown as tables on screen; add ?format=pdf for the letterhead PDF of the same tables."""
+    """One report, shown as tables on screen; ?format=pdf gives the letterhead PDF and ?format=xlsx an Excel file."""
 
     template_name = 'reports/report.html'
     title = ''
@@ -48,6 +49,11 @@ class ReportView(LoginRequiredMixin, TemplateView):
             response = HttpResponse(content_type='application/pdf')
             response['Content-Disposition'] = f'inline; filename="{self.pdf_name}.pdf"'
             build_pdf(response, self.title, lines, tables, request.user)
+            return response
+        if request.GET.get('format') == 'xlsx':
+            response = HttpResponse(content_type=XLSX_CONTENT_TYPE)
+            response['Content-Disposition'] = f'attachment; filename="{self.pdf_name}.xlsx"'
+            build_xlsx(response, self.title, lines, tables, request.user)
             return response
         context = self.get_context_data(filters=filters, filter_lines=lines, tables=tables, **kwargs)
         return self.render_to_response(context)

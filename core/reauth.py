@@ -29,6 +29,14 @@ def is_unlocked(request):
     return bool(token) and secrets.compare_digest(token, request.COOKIES.get(COOKIE_NAME, ''))
 
 
+def money_visible(request):
+    """Whether money figures (costs, sale value, received, receivable ...) may be shown on the open screen.
+
+    They are hidden while the sensitive screens are locked, because the software is shown to buyers.
+    Nothing is hidden when no screens are configured as sensitive."""
+    return not settings.SENSITIVE_NAMESPACES or is_unlocked(request)
+
+
 def unlock(request):
     request.session[SESSION_KEY] = time.time() + settings.REAUTH_MINUTES * 60
     token = request.session.get(TOKEN_KEY) or secrets.token_urlsafe(32)

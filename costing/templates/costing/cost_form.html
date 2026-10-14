@@ -59,11 +59,6 @@
                     {{ form.notes|as_crispy_field }}
                 </div>
             </div>
-            {% if object and object.is_confirmed %}
-            <div class="alert alert-warning">
-                This cost was already confirmed in the books. Saving a change clears the confirmation so it is checked again.
-            </div>
-            {% endif %}
             <div class="mt-3">
                 <button type="submit" class="btn btn-primary">
                     <i class="fas fa-save"></i> {% if object %}Update{% else %}Create{% endif %}

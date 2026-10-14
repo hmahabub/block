@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% load core_tags %}
+
+{% block title %}Confirm Entries{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="fas fa-check-double"></i> Confirm entries {% if account %}<small class="text-muted">{{ account.name }}</small>{% endif %}</h2>
+    {% if account %}<a href="{% url 'books:ledger' account.pk %}" class="btn btn-outline-secondary"><i class="fas fa-book"></i> Open the book</a>{% endif %}
+</div>
+
+<div class="alert alert-info">
+    Check each entry against the paper record, tick it and confirm. Only confirmed entries appear in the book.
+    <strong>A confirmation is final: it cannot be undone.</strong> An entry that would take the account's balance
+    below zero is refused.
+</div>
+
+{% if not account %}
+<div class="alert alert-warning">There are no accounts yet. <a href="{% url 'books:account-create' %}">Add one</a> first.</div>
+{% else %}
+<ul class="nav nav-tabs mb-3">
+    {% for item in accounts %}
+    <li class="nav-item">
+        <a class="nav-link {% if item.pk == account.pk %}active{% endif %}" href="?account={{ item.pk }}">
+            {{ item.name }}
+            {% for pk, count in pending.items %}{% if pk == item.pk and count %}<span class="badge bg-warning text-dark">{{ count }}</span>{% endif %}{% endfor %}
+        </a>
+    </li>
+    {% endfor %}
+</ul>
+
+<p>Balance in the book now: <strong>{{ balance|taka }}</strong></p>
+
+<form method="post" action="{% url 'books:confirm' %}">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>{{ entries|length }} waiting for confirmation</span>
+            {% if entries %}
+            <button type="submit" class="btn btn-success btn-sm"
+                    onclick="return confirm('Confirm the ticked entries? This cannot be undone.')">
+                <i class="fas fa-check"></i> Confirm ticked
+            </button>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover table-sm align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th><input type="checkbox" class="tick-all" data-group="main"></th>
+                            <th>Date</th><th>Ref.</th><th>Source</th><th>Particulars</th>
+                            <th class="text-end">In</th><th class="text-end">Out</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entry in entries %}
+                        <tr>
+                            <td><input type="checkbox" class="tick" data-group="main" name="entries" value="{{ entry.key }}"></td>
+                            <td>{{ entry.date|date:"j M Y" }}</td>
+                            <td><a href="{{ entry.url }}">{{ entry.reference }}</a></td>
+                            <td>{{ entry.source }}</td>
+                            <td>{{ entry.description }}</td>
+                            <td class="text-end text-success">{% if entry.money_in %}{{ entry.money_in|taka }}{% endif %}</td>
+                            <td class="text-end text-danger">{% if entry.money_out %}{{ entry.money_out|taka }}{% endif %}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="7" class="text-center py-4 text-muted"><i class="fas fa-check-circle text-success"></i> Everything on this account is confirmed</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</form>
+{% endif %}
+
+{% if unassigned_entries %}
+<form method="post" action="{% url 'books:assign-account' %}">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+    <div class="card border-warning">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <span><i class="fas fa-triangle-exclamation text-warning"></i>
+                {{ unassigned_entries|length }} older record{{ unassigned_entries|length|pluralize }} without an account
+                <small class="text-muted">(made before accounts existed; they cannot be confirmed yet)</small></span>
+            <span class="d-flex gap-2">
+                <select name="account" class="form-select form-select-sm" style="width:auto" required>
+                    <option value="">Account...</option>
+                    {% for item in active_accounts %}<option value="{{ item.pk }}">{{ item.name }}</option>{% endfor %}
+                </select>
+                <button type="submit" class="btn btn-warning btn-sm">Give ticked records this account</button>
+            </span>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead class="table-light">
+                        <tr><th><input type="checkbox" class="tick-all" data-group="old"></th>
+                            <th>Date</th><th>Ref.</th><th>Source</th><th>Particulars</th><th class="text-end">In</th><th class="text-end">Out</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for entry in unassigned_entries %}
+                        <tr>
+                            <td><input type="checkbox" class="tick" data-group="old" name="entries" value="{{ entry.key }}"></td>
+                            <td>{{ entry.date|date:"j M Y" }}</td>
+                            <td><a href="{{ entry.url }}">{{ entry.reference }}</a></td>
+                            <td>{{ entry.source }}</td>
+                            <td>{{ entry.description }}</td>
+                            <td class="text-end">{% if entry.money_in %}{{ entry.money_in|taka }}{% endif %}</td>
+                            <td class="text-end">{% if entry.money_out %}{{ entry.money_out|taka }}{% endif %}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</form>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.querySelectorAll('.tick-all').forEach(function (all) {
+        all.addEventListener('change', function () {
+            document.querySelectorAll('.tick[data-group="' + all.dataset.group + '"]').forEach(function (box) { box.checked = all.checked; });
+        });
+    });
+</script>
+{% endblock %}

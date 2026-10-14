@@ -58,7 +58,7 @@
                     {% if object.bedrooms or object.bathrooms %}<tr><th>Bedrooms / Bathrooms</th><td>{{ object.bedrooms|default:"-" }} / {{ object.bathrooms|default:"-" }}</td></tr>{% endif %}
                     <tr><th>Parking lot</th><td>{{ object.parking_lot|default:"-" }}{% if object.parking_area %} ({{ object.parking_area }} sqft){% endif %}</td></tr>
                     {% if object.features %}<tr><th>Rooms &amp; features</th><td>{{ object.features }}</td></tr>{% endif %}
-                    <tr><th>Base Price</th><td>{{ object.base_price|taka }}</td></tr>
+                    {% if money_visible %}<tr><th>Base Price</th><td>{{ object.base_price|taka }}</td></tr>{% endif %}
                     <tr><th>Quoted Price</th><td>{{ object.quoted_price|taka }}</td></tr>
                     <tr><th>Parking Price (optional)</th><td>{{ object.parking_price|taka }}</td></tr>
                 </table>
@@ -76,12 +76,12 @@
                         <a href="{% url 'customers:detail' sale.customer.pk %}">{{ sale.customer.name }}</a>
                         <small class="text-muted">{{ sale.customer.phone }}</small>
                     </td></tr>
-                    <tr><th>Sale Value</th><td>{{ sale.sale_value|taka }}</td></tr>
-                    <tr><th>Reg Value</th><td>{{ sale.reg_value|taka }}</td></tr>
-                    <tr><th>Net Value</th><td>{{ sale.net_value|taka }}</td></tr>
-                    <tr><th>Paid</th><td>{{ sale.received_amount|taka }}</td></tr>
-                    <tr><th>Balance</th><td class="{% if sale.receivable_amount > 0 %}text-danger{% endif %}">{{ sale.receivable_amount|taka }}</td></tr>
-                    {% if sale.customer_balance %}<tr><th>Customer credit</th><td class="text-success">{{ sale.customer_balance|taka }}</td></tr>{% endif %}
+                    {% if money_visible %}<tr><th>Sale Value</th><td>{{ sale.sale_value|taka }}</td></tr>{% endif %}
+                    {% if money_visible %}<tr><th>Reg Value</th><td>{{ sale.reg_value|taka }}</td></tr>{% endif %}
+                    {% if money_visible %}<tr><th>Net Value</th><td>{{ sale.net_value|taka }}</td></tr>{% endif %}
+                    {% if money_visible %}<tr><th>Paid</th><td>{{ sale.received_amount|taka }}</td></tr>{% endif %}
+                    {% if money_visible %}<tr><th>Balance</th><td class="{% if sale.receivable_amount > 0 %}text-danger{% endif %}">{{ sale.receivable_amount|taka }}</td></tr>{% endif %}
+                    {% if money_visible %}{% if sale.customer_balance %}<tr><th>Customer credit</th><td class="text-success">{{ sale.customer_balance|taka }}</td></tr>{% endif %}{% endif %}
                 </table>
                 <a href="{{ sale.get_absolute_url }}" class="btn btn-sm btn-outline-primary mt-2">Open sale {{ sale.sale_no }}</a>
                 {% endwith %}
@@ -93,7 +93,7 @@
     </div>
 </div>
 
-{% if costs_visible %}
+{% if money_visible %}
 <div class="card mb-3">
     <div class="card-header">Cost <small class="text-muted">(post-development costs are shared equally by every flat, sold or not)</small></div>
     <div class="card-body">
@@ -153,7 +153,7 @@
         <div class="table-responsive">
             <table class="table table-sm">
                 <thead class="table-light">
-                    <tr><th>Sale No.</th><th>Customer</th><th>Date</th><th>Sale Value</th><th>Received</th><th>Status</th></tr>
+                    <tr><th>Sale No.</th><th>Customer</th><th>Date</th>{% if money_visible %}<th>Sale Value</th><th>Received</th>{% endif %}<th>Status</th></tr>
                 </thead>
                 <tbody>
                     {% for sale in sales %}
@@ -161,8 +161,8 @@
                         <td><a href="{% url 'sales:detail' sale.pk %}">{{ sale.sale_no }}</a></td>
                         <td>{{ sale.customer }}</td>
                         <td>{{ sale.sale_date }}</td>
-                        <td>{{ sale.sale_value|taka }}</td>
-                        <td>{{ sale.received_amount|taka }}</td>
+                        {% if money_visible %}<td>{{ sale.sale_value|taka }}</td>{% endif %}
+                        {% if money_visible %}<td>{{ sale.received_amount|taka }}</td>{% endif %}
                         <td>{{ sale.get_status_display }}</td>
                     </tr>
                     {% endfor %}

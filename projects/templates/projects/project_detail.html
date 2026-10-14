@@ -59,7 +59,7 @@
             </div>
         </div>
     </div>
-    {% if costs_visible %}
+    {% if money_visible %}
     <div class="col-lg-3 col-md-6 mb-3">
         <div class="card h-100">
             <div class="card-header">Cost</div>
@@ -75,6 +75,7 @@
         </div>
     </div>
     {% endif %}
+    {% if money_visible %}
     <div class="col-lg-3 col-md-6 mb-3">
         <div class="card h-100">
             <div class="card-header">Sales</div>
@@ -87,7 +88,8 @@
             </div>
         </div>
     </div>
-    {% if costs_visible %}
+    {% endif %}
+    {% if money_visible %}
     <div class="col-lg-3 col-md-6 mb-3">
         <div class="card h-100">
             <div class="card-header">Pre-development result</div>
@@ -109,7 +111,7 @@
         <div class="row small">
             <div class="col-md-3"><strong>Type</strong><br>{{ object.get_flat_type_display }}{% if object.bedrooms or object.bathrooms %} &middot; {{ object.bedrooms|default:"-" }} bed / {{ object.bathrooms|default:"-" }} bath{% endif %}</div>
             <div class="col-md-3"><strong>Saleable area</strong><br>{{ object.flat_area }} sqft{% if object.parking_area %} &middot; parking {{ object.parking_area }} sqft{% endif %}</div>
-            <div class="col-md-3"><strong>Base / Quoted price</strong><br>{{ object.base_price|taka }} / {{ object.quoted_price|taka }}</div>
+            <div class="col-md-3">{% if money_visible %}<strong>Base / Quoted price</strong><br>{{ object.base_price|taka }} / {{ object.quoted_price|taka }}{% else %}<strong>Price</strong><br>{{ object.quoted_price|taka }}{% endif %}</div>
             <div class="col-md-3"><strong>Parking price (optional)</strong><br>{{ object.parking_price|taka }}</div>
             {% if object.features %}<div class="col-12 mt-1"><strong>Rooms &amp; features:</strong> {{ object.features }}</div>{% endif %}
         </div>
@@ -198,8 +200,8 @@
                             <th>Facing</th>
                             <th>Status</th>
                             <th>Customer</th>
-                            <th class="text-end">Paid</th>
-                            <th class="text-end">Balance</th>
+                            {% if money_visible %}<th class="text-end">Paid</th>{% endif %}
+                            {% if money_visible %}<th class="text-end">Balance</th>{% endif %}
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -221,12 +223,11 @@
                             </td>
                             {% if flat.active_sale %}
                             <td><a href="{% url 'customers:detail' flat.active_sale.customer.pk %}">{{ flat.active_sale.customer.name }}</a></td>
-                            <td class="text-end">{{ flat.active_sale.received_amount|taka }}</td>
-                            <td class="text-end {% if flat.active_sale.receivable_amount > 0 %}text-danger{% endif %}">{{ flat.active_sale.receivable_amount|taka }}</td>
+                            {% if money_visible %}<td class="text-end">{{ flat.active_sale.received_amount|taka }}</td>{% endif %}
+                            {% if money_visible %}<td class="text-end {% if flat.active_sale.receivable_amount > 0 %}text-danger{% endif %}">{{ flat.active_sale.receivable_amount|taka }}</td>{% endif %}
                             {% else %}
                             <td class="text-muted">-</td>
-                            <td class="text-end text-muted">-</td>
-                            <td class="text-end text-muted">-</td>
+                            {% if money_visible %}<td class="text-end text-muted">-</td><td class="text-end text-muted">-</td>{% endif %}
                             {% endif %}
                             <td>
                                 <div class="btn-group btn-group-sm">

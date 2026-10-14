@@ -1,12 +1,11 @@
 from decimal import Decimal
 
-from django.conf import settings
 from django.db.models import Sum
 from django.utils import timezone
 from django.views.generic import TemplateView
 
 from activity_log.models import ActivityLog
-from core.reauth import is_unlocked
+from core.reauth import money_visible
 from costing.models import Phase, ProjectCost
 from customers.models import Customer
 from projects.models import Flat, Project
@@ -37,16 +36,15 @@ class HomeView(TemplateView):
         context['booked_count'] = Flat.objects.filter(status=Flat.Status.BOOKED).count()
         context['available_count'] = Flat.objects.filter(status=Flat.Status.AVAILABLE).count()
 
-        active_sales = FlatSale.objects.exclude(status=FlatSale.Status.CANCELLED)
-        context.update({
-            'total_sales': _total(active_sales, 'sale_value'),
-            'total_received': _total(active_sales, 'received_amount'),
-            'total_receivable': _total(active_sales, 'receivable_amount'),
-        })
-
-        # Cost figures stay hidden while Costing is locked, since this page is shown to buyers.
-        context['costs_unlocked'] = 'costing' not in settings.SENSITIVE_NAMESPACES or is_unlocked(self.request)
-        if context['costs_unlocked']:
+        # Money figures stay hidden while the sensitive screens are locked, since this page is shown to buyers.
+        context['money_unlocked'] = money_visible(self.request)
+        if context['money_unlocked']:
+            active_sales = FlatSale.objects.exclude(status=FlatSale.Status.CANCELLED)
+            context.update({
+                'total_sales': _total(active_sales, 'sale_value'),
+                'total_received': _total(active_sales, 'received_amount'),
+                'total_receivable': _total(active_sales, 'receivable_amount'),
+            })
             context.update(self.cost_stats(timezone.localdate(), context['flat_count']))
         return context
 

@@ -309,3 +309,37 @@ class ProjectDeleteViewTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertTrue(Project.objects.filter(pk=project.pk).exists())
         self.assertFalse(ActivityLog.objects.filter(action='deleted').exists())
+
+
+class FlatListOneProjectTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_superuser('boss', 'b@example.com', 'pw')
+        self.alpha, self.alpha_flats = make_project('Alpha', floors=1, units=2)
+        self.beta, self.beta_flats = make_project('Beta', floors=1, units=3)
+
+    def listed(self, **params):
+        from .views import FlatListView
+        view = FlatListView()
+        view.setup(make_request(self.user, '/projects/flats/', data=params))
+        return view, list(view.get_queryset())
+
+    def test_only_one_projects_flats_are_listed(self):
+        view, flats = self.listed(project=self.beta.pk)
+        self.assertEqual({f.project for f in flats}, {self.beta})
+        self.assertEqual(len(flats), 3)
+
+    def test_it_opens_on_the_first_project_when_none_is_chosen(self):
+        view, flats = self.listed()
+        self.assertEqual(view.get_project(), self.alpha)   # first by name
+        self.assertEqual({f.project for f in flats}, {self.alpha})
+
+    def test_a_bad_project_id_falls_back_to_the_first_project(self):
+        for bad in ('abc', '9999'):
+            view, flats = self.listed(project=bad)
+            self.assertEqual(view.get_project(), self.alpha)
+
+    def test_search_and_status_stay_inside_the_project(self):
+        _, flats = self.listed(project=self.alpha.pk, q='A1')
+        self.assertEqual([f.flat_no for f in flats], ['A1'])
+        _, flats = self.listed(project=self.alpha.pk, status='SOLD')
+        self.assertEqual(flats, [])

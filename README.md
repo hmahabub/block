@@ -9,7 +9,7 @@ sister "Inspecta ERP" (inspcta) codebase.
 - Django 4.2.20, Python 3
 - SQLite for local dev; another database via `DATABASE_URL` in `.env`
 - Bootstrap 5 + Font Awesome (CDN), django-crispy-forms with crispy-bootstrap5
-- reportlab for PDF export
+- reportlab for PDF export, openpyxl for Excel export
 
 ## Setup
 
@@ -71,16 +71,24 @@ A cost recorded against a single flat (a *direct* cost) is always post-developme
 
 ## The book
 
-Bank 1, Bank 2, Petty cash ... are **accounts** (Books → Accounts). There is one book for all of them, and **nothing is typed
-into it**: every line is collected from where the money was first recorded, so nothing is entered twice.
+Bank 1, Bank 2, Petty cash ... are **accounts** (Books → Accounts). **Nothing is typed into the book**: every line is
+collected from where the money was first recorded, so nothing is entered twice.
 
 - customer payments (money in), refunds, honorarium payments and cost payments (money out)
 - internal transfers between your own accounts (Books → Internal Transfers)
 
-Each payment/cost screen asks which account the money moved through. Every book line has a **Checked** tick:
-a user with the *Can confirm book entries* permission confirms lines in bulk. The accounts page shows the *confirmed*
-balance (opening + checked lines) next to the *book* balance (everything). Editing a confirmed cost clears its confirmation
-so it is checked again.
+Each payment/cost screen asks which account the money moved through. A new line does **not** appear in the book yet:
+
+1. It waits on **Books → Confirm entries** (one account at a time). Someone with the *Can confirm book entries*
+   permission checks it against the paper record, ticks it and confirms.
+2. Only **confirmed** entries appear in the book. **A confirmation is final: it cannot be undone**, and a confirmed
+   cost can no longer be edited or deleted.
+3. **An account's balance can never go below zero.** A confirmation that would take it below zero, at any date, is
+   refused with a message; confirm the money coming in first.
+
+The book shows **one account at a time** (tabs along the top) for a date range, with opening and closing balance, and
+downloads as **Excel**. Records made before accounts existed have no account: give them one at the bottom of the
+Confirm entries page, then confirm them.
 
 ## Flats and the booking map
 
@@ -89,16 +97,17 @@ All flats in a project are identical, so type, area, rooms and prices are set **
 creates every unit on every floor in one step. The project page has a bus-seat style **booking map** (free / booked / sold,
 parking lot and customer on each seat); click a free flat to book it.
 
-Flats cannot be deleted directly. An admin (superuser, or a user with `projects.delete_flat`) **requests** the deletion with
+The all-flats list shows **one project at a time**. Flats cannot be deleted directly. An admin (superuser, or a user with `projects.delete_flat`) **requests** the deletion with
 a reason and a *different* admin **approves** it (Projects → Flat deletion requests). A flat with sales or direct costs can
 never be deleted.
 
 ## Sensitive screens (password re-entry)
 
 The software is shown to buyers but also records money, so Costing, Books and Reports ask the signed-in user to type
-their password again. It stays unlocked while they keep working and locks after `REAUTH_MINUTES` of inactivity (or via the
-user menu → *Lock sensitive screens*). Cost figures on the home page, project page and flat page stay hidden until then.
-Change which areas are guarded with `SENSITIVE_NAMESPACES` in `.env`.
+their password again. It stays unlocked while they keep working and locks after `REAUTH_MINUTES` of inactivity, when the
+browser is closed, or via the user menu → *Lock sensitive screens*. While locked, the money figures stay hidden everywhere
+else too: costs, sale value, received, receivable, honorarium, the base price and payment amounts on the home, project,
+flat, sales, payment and customer pages. Change which areas are guarded with `SENSITIVE_NAMESPACES` in `.env`.
 
 ## Customer SMS
 
@@ -111,7 +120,7 @@ Change which areas are guarded with `SENSITIVE_NAMESPACES` in `.env`.
 `SMS_API_KEY` and `SMS_SENDER_ID`. **The gateway integration has not been tested against a live provider**; check
 `sms/backends.py` against your provider's API documentation first. A gateway failure never stops a payment from saving.
 
-## Reports (Reports menu, PDF button on each)
+## Reports (Reports menu, PDF and Excel buttons on each)
 
 - **Finance report** (all phases): sales, cost, receivable, payable and money in hand
 - **Periodic payment collection** (pre-development): by month, customer and account, for any period
@@ -119,7 +128,7 @@ Change which areas are guarded with `SENSITIVE_NAMESPACES` in `.env`.
 - **Customer balance, cost, receivable and payable** (post-development)
 - Flat-wise report and Receivables
 
-The dashboard shows quick cost statistics (pre/post/total, per-flat share, this month, biggest heads) once unlocked.
+The book and the project cost list download as Excel too (real numbers and dates, not text). The dashboard shows quick cost statistics (pre/post/total, per-flat share, this month, biggest heads) once unlocked.
 
 ## Configuration (`.env`)
 

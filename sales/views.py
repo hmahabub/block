@@ -8,6 +8,7 @@ from django.views.generic import CreateView, DetailView, FormView, ListView, Upd
 
 from activity_log.services import log_activity
 from core.mixins import CreateAuditMixin, UpdateAuditMixin
+from core.reauth import money_visible
 from core.utils import int_or_none
 from projects.models import Flat, Project
 from sms.services import notify_payment
@@ -71,7 +72,7 @@ class _SaleFormMixin:
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['price_map'] = context['form'].price_map()
+        context['price_map'] = context['form'].price_map(include_base=money_visible(self.request))
         return context
 
 
@@ -179,7 +180,15 @@ class CustomerPaymentCreateView(PermissionRequiredMixin, CreateAuditMixin, Creat
         log = notify_payment(self.object, self.request.user)
         if log is None:
             messages.info(self.request, 'No SMS sent: this customer is excluded from SMS.')
-        elif log.status == 'FAILED':
+        elif log.status == log.Status.SENT:
+            messages.success(self.request, f'Payment SMS sent to {log.phone}.')
+        elif log.status == log.Status.LOGGED:
+            messages.warning(
+                self.request,
+                f'Payment saved, but the SMS to {log.phone} was NOT delivered: no SMS gateway is set up yet, '
+                'so it was only recorded in the SMS log.',
+            )
+        else:
             messages.warning(self.request, f'Payment saved, but the SMS could not be sent: {log.error}')
         return response
 

@@ -48,8 +48,10 @@
                 <div class="card mb-3">
                     <div class="card-body">
                         <h5 class="card-title">Receivable Summary</h5>
+                        {% if money_visible %}
                         <h3 class="text-danger">{{ object.total_receivable|taka }}</h3>
                         <p class="text-muted mb-0">Total outstanding across all bookings</p>
+                        {% else %}<p class="text-muted mb-0"><i class="fas fa-lock"></i> Hidden while screens are locked</p>{% endif %}
                         <p class="mb-0 mt-2 small">
                             {% if object.sms_enabled %}<span class="badge bg-success">SMS on</span>
                             {% else %}<span class="badge bg-secondary">Excluded from SMS</span>{% endif %}
@@ -85,9 +87,9 @@
                             <th>Sale No.</th>
                             <th>Project</th>
                             <th>Flat</th>
-                            <th>Net Value</th>
-                            <th>Received</th>
-                            <th>Receivable</th>
+                            {% if money_visible %}<th>Net Value</th>{% endif %}
+                            {% if money_visible %}<th>Received</th>{% endif %}
+                            {% if money_visible %}<th>Receivable</th>{% endif %}
                             <th>Status</th>
                         </tr>
                     </thead>
@@ -97,9 +99,9 @@
                             <td><a href="{% url 'sales:detail' sale.pk %}">{{ sale.sale_no }}</a></td>
                             <td>{{ sale.project }}</td>
                             <td>{{ sale.flat.flat_no }}</td>
-                            <td>{{ sale.net_value|taka }}</td>
-                            <td>{{ sale.received_amount|taka }}</td>
-                            <td>{{ sale.receivable_amount|taka }}</td>
+                            {% if money_visible %}<td>{{ sale.net_value|taka }}</td>{% endif %}
+                            {% if money_visible %}<td>{{ sale.received_amount|taka }}</td>{% endif %}
+                            {% if money_visible %}<td>{{ sale.receivable_amount|taka }}</td>{% endif %}
                             <td>{{ sale.get_status_display }}</td>
                         </tr>
                         {% endfor %}
