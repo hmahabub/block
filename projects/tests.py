@@ -144,13 +144,13 @@ class BookingMapTests(TestCase):
         self.assertEqual([flat.flat_no for flat in rows[0][1]], ['A3', 'B3'])
         self.assertEqual(others, [])
 
-    def test_booked_flats_show_their_customer(self):
+    def test_sold_flats_show_their_customer(self):
         project, flats = make_project(floors=1, units=2)
         customer = Customer.objects.create(name='Rahim', phone='01711111111')
         FlatSale.objects.create(flat=flats[0], customer=customer, sale_date='2026-01-01', sale_value=1200)
         _, rows, _ = build_booking_map(project)
-        booked, free = rows[0][1]
-        self.assertEqual((booked.status, booked.active_sale.customer), (Flat.Status.BOOKED, customer))
+        sold, free = rows[0][1]
+        self.assertEqual((sold.status, sold.active_sale.customer), (Flat.Status.SOLD, customer))
         self.assertEqual((free.status, free.active_sale), (Flat.Status.AVAILABLE, None))
 
     def test_older_flats_without_a_unit_letter_are_kept_off_the_grid(self):

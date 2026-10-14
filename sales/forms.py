@@ -34,7 +34,7 @@ class FlatSaleForm(forms.ModelForm):
         self.fields['ref'].queryset = Reference.objects.all()
         self.fields['sale_value'].help_text = 'Pre-filled with the quoted price (plus parking if taken). It cannot be below the total base price.'
         if self.instance.pk:
-            # The flat is fixed once the sale exists; changing it would leave the old flat marked booked/sold.
+            # The flat is fixed once the sale exists; changing it would leave the old flat marked sold.
             self.fields['flat'].disabled = True
         else:
             self.fields['flat'].queryset = Flat.objects.filter(status=Flat.Status.AVAILABLE).select_related('project')

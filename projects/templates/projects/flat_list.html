@@ -68,7 +68,6 @@
                         <td>
                             <span class="badge
                                 {% if flat.status == 'AVAILABLE' %}bg-success
-                                {% elif flat.status == 'BOOKED' %}bg-warning text-dark
                                 {% elif flat.status == 'SOLD' %}bg-primary
                                 {% endif %}">
                                 {{ flat.get_status_display }}

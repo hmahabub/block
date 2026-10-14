@@ -21,7 +21,6 @@
     .seat .parking-free { border: 1px solid currentColor; opacity: .85; }
     .seat .seat-customer { font-size: .72rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .seat-available { background: #2f9e6b; }
-    .seat-booked { background: #e0a100; color: #2b2100 !important; }
     .seat-sold { background: #0b3d3a; }
     .seat-empty { display: block; width: 118px; height: 74px; border: 2px dashed #dee2e6; border-radius: 8px; }
     .legend-dot { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 4px; vertical-align: middle; }
@@ -55,7 +54,7 @@
                     <div class="col-6"><h5>{{ object.floor_no }}</h5><small>Floors</small></div>
                     <div class="col-6"><h5>{{ object.flat_count }}</h5><small>Flats</small></div>
                     <div class="col-6"><h5>{{ object.sold_flat_count }}</h5><small>Sold</small></div>
-                    <div class="col-6"><h5>{{ object.booked_flat_count }}</h5><small>Booked</small></div>
+                    <div class="col-6"><h5>{{ object.parking_taken_count }}</h5><small>Parking taken</small></div>
                     <div class="col-6"><h5>{{ object.available_flat_count }}</h5><small>Available</small></div>
                     <div class="col-6"><h5>{{ object.total_saleable_area }}</h5><small>Saleable sqft</small></div>
                 </div>
@@ -148,7 +147,6 @@
         <div class="tab-pane fade show active" id="tab-map">
             <div class="mb-2 small">
                 <span class="me-3"><span class="legend-dot" style="background:#2f9e6b"></span>Free</span>
-                <span class="me-3"><span class="legend-dot" style="background:#e0a100"></span>Booked</span>
                 <span class="me-3"><span class="legend-dot" style="background:#0b3d3a"></span>Sold</span>
                 <span class="me-3"><i class="fas fa-car-side"></i> <strong>BOOKED</strong> / <strong>FREE</strong> = parking lot taken or not</span>
                 <span class="text-muted">Each flat shows its linked parking lot. Click a free flat to book it.</span>
@@ -222,7 +220,6 @@
                             <td>
                                 <span class="badge
                                     {% if flat.status == 'AVAILABLE' %}bg-success
-                                    {% elif flat.status == 'BOOKED' %}bg-warning text-dark
                                     {% elif flat.status == 'SOLD' %}bg-primary
                                     {% endif %}">
                                     {{ flat.get_status_display }}

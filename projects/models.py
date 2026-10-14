@@ -99,8 +99,9 @@ class Project(models.Model):
         return self.flats.filter(status=Flat.Status.AVAILABLE).count()
 
     @property
-    def booked_flat_count(self):
-        return self.flats.filter(status=Flat.Status.BOOKED).count()
+    def parking_taken_count(self):
+        """Parking lots taken: flats whose active sale includes the parking lot."""
+        return self.sales.exclude(status='CANCELLED').filter(with_parking=True).count()
 
     @property
     def total_saleable_area(self):
@@ -176,7 +177,6 @@ class Flat(models.Model):
 
     class Status(models.TextChoices):
         AVAILABLE = 'AVAILABLE', 'Available'
-        BOOKED = 'BOOKED', 'Booked'
         SOLD = 'SOLD', 'Sold'
 
     project = models.ForeignKey(Project, on_delete=models.PROTECT, related_name='flats')
@@ -187,8 +187,7 @@ class Flat(models.Model):
     parking_lot = models.CharField(
         max_length=20, blank=True, help_text='Parking lot linked to this flat. Defaults to P-<flat no.>.',
     )
-    # Managed by FlatSale: Available (no active sale), Booked (active sale not yet fully paid),
-    # Sold (sale value fully paid). Never edited by hand.
+    # Managed by FlatSale: Available (no active sale) or Sold (it has one). Never edited by hand.
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.AVAILABLE, editable=False)
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

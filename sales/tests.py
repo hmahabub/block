@@ -65,21 +65,22 @@ class SaleMoneyTests(SaleTestCase):
         sale = self.make_sale(sale_value=1200, reg_value=300)
         self.assertEqual((sale.net_value, sale.receivable_amount), (1500, 1500))
 
-    def test_new_sale_is_booked_and_flat_becomes_booked(self):
+    def test_a_new_sale_is_sold_and_so_is_its_flat(self):
         sale = self.make_sale()
         self.flat.refresh_from_db()
-        self.assertEqual((sale.status, self.flat.status), (FlatSale.Status.BOOKED, Flat.Status.BOOKED))
+        self.assertEqual((sale.status, self.flat.status), (FlatSale.Status.SOLD, Flat.Status.SOLD))
 
-    def test_sold_once_the_sale_value_is_paid_even_before_reg_value(self):
+    def test_a_sale_is_sold_whether_or_not_it_has_been_paid_for(self):
         sale = self.make_sale(sale_value=1200, reg_value=300)
-        self.pay(sale, 600)
-        sale.refresh_from_db()
-        self.assertEqual(sale.status, FlatSale.Status.BOOKED)
+        self.assertEqual(sale.status, FlatSale.Status.SOLD)
         self.pay(sale, 600)
         sale.refresh_from_db()
         self.flat.refresh_from_db()
         self.assertEqual((sale.status, self.flat.status), (FlatSale.Status.SOLD, Flat.Status.SOLD))
-        self.assertEqual(sale.receivable_amount, 300)  # the registration cost is still to come
+        self.assertEqual(sale.receivable_amount, 900)  # what is still to be collected is tracked separately
+        self.pay(sale, 900)
+        sale.refresh_from_db()
+        self.assertEqual((sale.status, sale.receivable_amount), (FlatSale.Status.SOLD, 0))
 
     def test_paying_more_than_the_net_value_becomes_customer_balance(self):
         sale = self.make_sale(sale_value=1200, reg_value=100)
@@ -88,17 +89,19 @@ class SaleMoneyTests(SaleTestCase):
         self.assertEqual((sale.receivable_amount, sale.customer_balance), (0, 200))
         self.assertEqual(sale.status, FlatSale.Status.SOLD)
 
-    def test_removing_a_payment_reverts_to_booked(self):
+    def test_removing_a_payment_does_not_unsell_the_flat(self):
         sale = self.make_sale()
         payment = self.pay(sale, 1200)
         payment.delete()
         sale.refresh_from_db()
         self.flat.refresh_from_db()
-        self.assertEqual((sale.status, self.flat.status), (FlatSale.Status.BOOKED, Flat.Status.BOOKED))
+        self.assertEqual((sale.status, self.flat.status), (FlatSale.Status.SOLD, Flat.Status.SOLD))
+        self.assertEqual(sale.receivable_amount, 1200)
 
     def test_flat_status_is_not_editable(self):
         self.assertFalse(Flat._meta.get_field('status').editable)
-        self.assertEqual([c[0] for c in Flat.Status.choices], ['AVAILABLE', 'BOOKED', 'SOLD'])
+        self.assertEqual([c[0] for c in Flat.Status.choices], ['AVAILABLE', 'SOLD'])
+        self.assertEqual([c[0] for c in FlatSale.Status.choices], ['SOLD', 'CANCELLED'])
 
     def test_payment_method_follows_the_account(self):
         cash = make_account('Petty cash', account_type=Account.AccountType.CASH)
@@ -170,7 +173,7 @@ class CancellationTests(SaleTestCase):
         sale = self.make_sale()
         self.cancel(sale, 100)
         again = self.make_sale()
-        self.assertEqual(again.status, FlatSale.Status.BOOKED)
+        self.assertEqual(again.status, FlatSale.Status.SOLD)
 
 
 class FlatSaleFormTests(SaleTestCase):
@@ -186,7 +189,7 @@ class FlatSaleFormTests(SaleTestCase):
         self.assertNotIn(taken.flat, offered)
         self.assertIn(self.flat, offered)
 
-    def test_cannot_pick_a_booked_flat(self):
+    def test_cannot_pick_a_flat_that_is_already_sold(self):
         taken = self.make_sale(self.flats[1])
         form = FlatSaleForm(data=self.data(taken.flat))
         self.assertFalse(form.is_valid())
@@ -196,7 +199,7 @@ class FlatSaleFormTests(SaleTestCase):
         form = FlatSaleForm(data=self.data(self.flat, ref=self.ref.pk))
         self.assertTrue(form.is_valid(), form.errors)
         sale = form.save()
-        self.assertEqual((sale.status, sale.ref), (FlatSale.Status.BOOKED, self.ref))
+        self.assertEqual((sale.status, sale.ref), (FlatSale.Status.SOLD, self.ref))
 
     def test_sale_value_cannot_be_below_the_base_price(self):
         form = FlatSaleForm(data=self.data(self.flat, sale_value='999'))

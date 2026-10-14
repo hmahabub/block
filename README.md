@@ -53,8 +53,8 @@ need a look afterwards:
 | Reg value | registration cost, borne by the customer |
 | Net value | sale value + reg value: everything the customer owes |
 
-A booking becomes **Sold** once the sale value is fully received (**Booked** until then). Paying more than the net value
-is kept as the **customer balance**. Cancelling a booking returns a **refund percentage** of everything received (it can
+A flat is **Sold** as soon as a sale is saved (there is no separate "Booked" status), and **Available** again if the sale is
+cancelled. Paying more than the net value is kept as the **customer balance**. Cancelling a booking returns a **refund percentage** of everything received (it can
 be below 100%); the company keeps the rest. Pre-development profit = base price earned from share sales (+ money kept on
 cancellations) − land, marketing and pre-development administrative costs.
 
@@ -94,7 +94,7 @@ Confirm entries page, then confirm them.
 
 All flats in a project are identical, so type, area, rooms and prices are set **once on the project**. Flats are numbered
 **unit letter + floor** (A1 = unit A, floor 1) and each has a linked parking lot (default `P-A1`). *Generate flats*
-creates every unit on every floor in one step. The project page has a bus-seat style **booking map** (free / booked / sold,
+creates every unit on every floor in one step. The project page has a bus-seat style **booking map** (free / sold,
 parking lot and customer on each seat); click a free flat to book it.
 
 The all-flats list shows **one project at a time**. Flats cannot be deleted directly. An admin (superuser, or a user with `projects.delete_flat`) **requests** the deletion with

@@ -37,7 +37,7 @@ class Reference(models.Model):
 
 
 class FlatSale(models.Model):
-    """A flat share sold (or booked) to a customer.
+    """A flat share sold to a customer.
 
     sale_value      what the customer actually agreed to pay for the flat (and parking, if taken)
     total_base_price base price + parking price: what the company needs from the sale
@@ -47,7 +47,6 @@ class FlatSale(models.Model):
     """
 
     class Status(models.TextChoices):
-        BOOKED = 'BOOKED', 'Booked'
         SOLD = 'SOLD', 'Sold'
         CANCELLED = 'CANCELLED', 'Cancelled'
 
@@ -74,7 +73,7 @@ class FlatSale(models.Model):
     received_amount = models.DecimalField(max_digits=14, decimal_places=2, default=0, editable=False)
     receivable_amount = models.DecimalField(max_digits=14, decimal_places=2, default=0, editable=False)
     customer_balance = models.DecimalField(max_digits=14, decimal_places=2, default=0, editable=False)
-    status = models.CharField(max_length=10, choices=Status.choices, default=Status.BOOKED)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.SOLD)
 
     cancelled_on = models.DateField(null=True, blank=True, editable=False)
     refund_percent = models.DecimalField(
@@ -161,12 +160,12 @@ class FlatSale(models.Model):
         self.refund_amount = (self.received_amount * self.refund_percent / Decimal(100)).quantize(CENT, ROUND_HALF_UP)
 
     def recompute(self):
-        """Recalculate every derived amount and the Booked/Sold status."""
+        """Recalculate every derived amount. A sale is Sold from the moment it is made, until it is cancelled."""
         self.net_value = self.sale_value + self.reg_value
         self.receivable_amount = max(self.net_value - self.received_amount, ZERO)
         self.customer_balance = max(self.received_amount - self.net_value, ZERO)
         if self.status != self.Status.CANCELLED:
-            self.status = self.Status.SOLD if self.sale_value > 0 and self.received_amount >= self.sale_value else self.Status.BOOKED
+            self.status = self.Status.SOLD
         else:
             self.refund_amount = (self.received_amount * (self.refund_percent or ZERO) / Decimal(100)).quantize(CENT, ROUND_HALF_UP)
 
@@ -186,17 +185,12 @@ class FlatSale(models.Model):
         self._sync_flat_status()
 
     def _sync_flat_status(self):
-        """Flat is Available with no active sale, Booked while payment is pending, Sold once the sale value is paid."""
+        """A flat is Sold while it has an active sale, and Available again once that sale is cancelled."""
         from projects.models import Flat
 
         flat = self.flat
         active = flat.sales.exclude(status=self.Status.CANCELLED)
-        if not active.exists():
-            new_status = Flat.Status.AVAILABLE
-        elif active.filter(status=self.Status.SOLD).exists():
-            new_status = Flat.Status.SOLD
-        else:
-            new_status = Flat.Status.BOOKED
+        new_status = Flat.Status.SOLD if active.exists() else Flat.Status.AVAILABLE
         if flat.status != new_status:
             flat.status = new_status
             flat.save(update_fields=['status'])

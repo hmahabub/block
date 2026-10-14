@@ -33,7 +33,6 @@ class HomeView(TemplateView):
         context['supplier_count'] = Supplier.objects.count()
         context['flat_count'] = Flat.objects.count()
         context['sold_count'] = Flat.objects.filter(status=Flat.Status.SOLD).count()
-        context['booked_count'] = Flat.objects.filter(status=Flat.Status.BOOKED).count()
         context['available_count'] = Flat.objects.filter(status=Flat.Status.AVAILABLE).count()
 
         # Money figures stay hidden while the sensitive screens are locked, since this page is shown to buyers.

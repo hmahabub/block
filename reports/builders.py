@@ -76,7 +76,7 @@ def finance_report(project=None):
 
     sales_table = ReportTable(
         'Sales, collection and receivable',
-        [Column('Project'), Column('Flats', INT), Column('Booked / sold', INT), Column('Sale value', MONEY),
+        [Column('Project'), Column('Flats', INT), Column('Flats sold', INT), Column('Sale value', MONEY),
          Column('Honorarium', MONEY), Column('Reg value', MONEY), Column('Net value', MONEY),
          Column('Received', MONEY), Column('Receivable', MONEY)],
         sales_rows, totals(sales_rows),

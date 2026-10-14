@@ -205,7 +205,7 @@ class SeedDemoDataTests(TestCase):
         self.assertEqual(Customer.objects.count(), 4)
         self.assertEqual(FlatSale.objects.count(), 6)
         self.assertEqual(FlatSale.objects.values('customer').distinct().count(), 4)
-        self.assertEqual(Flat.objects.filter(status=Flat.Status.BOOKED).count(), 6)
+        self.assertEqual(Flat.objects.filter(status=Flat.Status.SOLD).count(), 6)
         self.assertEqual(FlatSale.objects.filter(flat__project__project_name='Tower 1').count(), 3)
         self.assertEqual(FlatSale.objects.filter(flat__project__project_name='Tower 2').count(), 3)
         self.assertEqual(
@@ -223,7 +223,7 @@ class SeedDemoDataTests(TestCase):
         for sale in FlatSale.objects.select_related('flat__project'):
             expected = 2_300_000 if sale.flat.project.project_name == 'Tower 1' else 2_100_000
             self.assertEqual(sale.received_amount, expected)
-            self.assertEqual(sale.status, FlatSale.Status.BOOKED)
+            self.assertEqual(sale.status, FlatSale.Status.SOLD)
             self.assertEqual(sale.receivable_amount, sale.net_value - expected)
             self.assertGreaterEqual(sale.sale_value, sale.total_base_price)
 

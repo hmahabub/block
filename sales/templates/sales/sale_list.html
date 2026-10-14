@@ -72,7 +72,7 @@
                         <td class="text-end">{{ sale.received_amount|taka }}</td>
                         <td class="text-end">{{ sale.receivable_amount|taka }}</td>{% endif %}
                         <td>
-                            <span class="badge {% if sale.status == 'SOLD' %}bg-primary{% elif sale.status == 'BOOKED' %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+                            <span class="badge {% if sale.status == 'SOLD' %}bg-primary{% else %}bg-danger{% endif %}">
                                 {{ sale.get_status_display }}
                             </span>
                         </td>
