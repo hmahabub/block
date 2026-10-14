@@ -459,3 +459,31 @@ class LogoutEverywhereTests(TestCase):
         self.assertEqual(client.get('/logout-all/').status_code, 405)
         from django.test import Client
         self.assertEqual(Client().post('/logout-all/').status_code, 302)
+
+
+class TemplateContextCopyTests(TestCase):
+    """Django 4.2 on Python 3.14 could not copy a template context (it broke the admin user list)."""
+
+    def test_a_context_can_be_copied(self):
+        from copy import copy
+        from django.template import Context, RequestContext
+        context = Context({'a': 1})
+        context.push(b=2)
+        duplicate = copy(context)
+        self.assertEqual((duplicate['a'], duplicate['b']), (1, 2))
+        duplicate.push(c=3)
+        self.assertNotIn('c', context)   # layers pushed on the copy do not leak back
+        self.assertIsInstance(copy(RequestContext(RequestFactory().get('/'))), RequestContext)
+
+    def test_the_admin_user_list_opens(self):
+        admin = User.objects.create_superuser('boss', 'b@example.com', 'pw')
+        self.client.force_login(admin)
+        response = self.client.get('/admin/auth/user/')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'boss')
+
+    def test_the_normal_pages_also_work_through_the_test_client_now(self):
+        admin = User.objects.create_superuser('boss', 'b@example.com', 'pw')
+        self.client.force_login(admin)
+        for url in ('/', '/customers/', '/projects/', '/sales/', '/admin/'):
+            self.assertEqual(self.client.get(url).status_code, 200, url)
