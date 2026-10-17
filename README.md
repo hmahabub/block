@@ -125,6 +125,8 @@ package (their HTTP docs are not public): confirm one real send after switching 
 
 ## Invoices on WhatsApp
 
+**Switched off by default.** Set `WHATSAPP_ENABLED=True` in `.env` and restart to show it; until then the menu item, the sale-page button and the pages are hidden (invoice links already sent keep working).
+
 Sales → **Send invoices on WhatsApp** lists every customer with a **WhatsApp number** and an active sale (customers
 without one are listed separately with an "Add WhatsApp no." link). **Send** opens WhatsApp (app or web) with the
 customer's number and the message already typed; you press send there. The sale page has the same **Send on WhatsApp**

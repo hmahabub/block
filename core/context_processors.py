@@ -32,6 +32,13 @@ def reauth_state(request):
     return {'money_visible': lambda: money_visible(request), 'entries_to_confirm': pending}
 
 
+def features(request):
+    """Switches for features that can be turned off in .env."""
+    from django.conf import settings
+
+    return {'whatsapp_enabled': settings.WHATSAPP_ENABLED}
+
+
 def company(request):
     # Lazy: the database is only queried on pages that actually use `company` (the printable documents).
     return {'company': SimpleLazyObject(CompanyProfile.current)}

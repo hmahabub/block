@@ -106,6 +106,7 @@ TEMPLATES = [
                 'core.context_processors.company',
                 'core.context_processors.flat_deletion_pending',
                 'core.context_processors.reauth_state',
+                'core.context_processors.features',
             ],
         },
     },
@@ -182,6 +183,9 @@ COMPANY_PHONE = env('COMPANY_PHONE', default='')
 
 # The public address of this site, used in links sent to customers (invoice links on WhatsApp).
 SITE_URL = env('SITE_URL', default='')
+
+# The "send invoice on WhatsApp" feature is built but switched off until it is wanted.
+WHATSAPP_ENABLED = env.bool('WHATSAPP_ENABLED', default=False)
 CURRENCY_SYMBOL = '৳'
 
 # Email settings for password reset (configure via .env in production)

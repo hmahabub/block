@@ -202,7 +202,7 @@
                                 <li><a class="dropdown-item" href="{% url 'sales:payment-list' %}">Customer Payments</a></li>
                                 <li><a class="dropdown-item" href="{% url 'sales:reference-list' %}">References</a></li>
                                 <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="{% url 'sms:whatsapp-invoices' %}"><i class="fab fa-whatsapp"></i> Send invoices on WhatsApp</a></li>
+                                {% if whatsapp_enabled %}<li><a class="dropdown-item" href="{% url 'sms:whatsapp-invoices' %}"><i class="fab fa-whatsapp"></i> Send invoices on WhatsApp</a></li>{% endif %}
                                 <li><a class="dropdown-item" href="{% url 'sms:reminders' %}">Balance reminders (SMS)</a></li>
                                 <li><a class="dropdown-item" href="{% url 'sms:log' %}">SMS log</a></li>
                             </ul>

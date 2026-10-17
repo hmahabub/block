@@ -17,7 +17,7 @@ from .models import WhatsAppShare
 from .views import WhatsAppInvoicesView, WhatsAppSendView
 
 
-@override_settings(ALLOWED_HOSTS=['erp.example.com', 'testserver'])
+@override_settings(ALLOWED_HOSTS=['erp.example.com', 'testserver'], WHATSAPP_ENABLED=True)
 class WhatsAppTestCase(TestCase):
     def setUp(self):
         self.user = User.objects.create_superuser('boss', 'b@example.com', 'pw')
@@ -315,3 +315,39 @@ class PaidInFullStampTests(WhatsAppTestCase):
             html = response.content.decode()
             self.assertIn(expected, html)
             self.assertNotIn(absent, html)
+
+
+class WhatsAppSwitchedOffTests(WhatsAppTestCase):
+    """The feature is off unless WHATSAPP_ENABLED is set, and then nothing about it is visible or reachable."""
+
+    def test_it_is_off_by_default(self):
+        from block.settings import WHATSAPP_ENABLED
+        self.assertFalse(WHATSAPP_ENABLED)
+
+    @override_settings(WHATSAPP_ENABLED=False)
+    def test_the_list_and_send_pages_are_not_found(self):
+        with self.assertRaises(Http404):
+            WhatsAppInvoicesView.as_view()(self.request())
+        with self.assertRaises(Http404):
+            WhatsAppSendView.as_view()(self.request('/', 'post'), pk=self.sale.pk)
+        self.assertEqual(WhatsAppShare.objects.count(), 0)
+
+    @override_settings(WHATSAPP_ENABLED=False)
+    def test_the_menu_item_and_sale_button_are_hidden(self):
+        from sales.views import FlatSaleDetailView
+        response = FlatSaleDetailView.as_view()(self.request(), pk=self.sale.pk)
+        response.render()
+        html = response.content.decode()
+        for text in ('WhatsApp', 'whatsapp'):
+            self.assertNotIn(text, html)
+
+    @override_settings(WHATSAPP_ENABLED=False)
+    def test_invoice_links_already_sent_keep_working(self):
+        response = SharedInvoiceView.as_view()(RequestFactory().get('/'), token=whatsapp.invoice_token(self.sale))
+        self.assertEqual(response.status_code, 200)
+
+    def test_when_switched_on_the_menu_item_shows(self):
+        from sales.views import FlatSaleDetailView
+        response = FlatSaleDetailView.as_view()(self.request(), pk=self.sale.pk)
+        response.render()
+        self.assertIn('Send invoices on WhatsApp', response.content.decode())

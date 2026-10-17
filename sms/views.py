@@ -1,7 +1,8 @@
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.core.exceptions import PermissionDenied
-from django.http import HttpResponseRedirect
+from django.conf import settings
+from django.http import Http404, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect
 from django.views import View
 from django.views.generic import ListView, TemplateView
@@ -62,6 +63,11 @@ class WhatsAppInvoicesView(PermissionRequiredMixin, TemplateView):
     template_name = 'sms/whatsapp_invoices.html'
     permission_required = 'sms.add_whatsappshare'
 
+    def dispatch(self, request, *args, **kwargs):
+        if not settings.WHATSAPP_ENABLED:
+            raise Http404('WhatsApp sending is switched off.')
+        return super().dispatch(request, *args, **kwargs)
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         project = Project.objects.filter(pk=int_or_none(self.request.GET.get('project'))).first()
@@ -87,6 +93,11 @@ class WhatsAppSendView(PermissionRequiredMixin, View):
 
     http_method_names = ['post']
     permission_required = 'sms.add_whatsappshare'
+
+    def dispatch(self, request, *args, **kwargs):
+        if not settings.WHATSAPP_ENABLED:
+            raise Http404('WhatsApp sending is switched off.')
+        return super().dispatch(request, *args, **kwargs)
 
     def post(self, request, pk):
         sale = get_object_or_404(FlatSale.objects.select_related('customer', 'flat', 'project'), pk=pk)
