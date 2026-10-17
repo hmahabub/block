@@ -30,3 +30,20 @@ class SmsLog(models.Model):
 
     def __str__(self):
         return f'{self.get_kind_display()} to {self.phone} ({self.get_status_display()})'
+
+
+class WhatsAppShare(models.Model):
+    """Each time a user opened WhatsApp to send an invoice (the message itself is sent from WhatsApp)."""
+
+    sale = models.ForeignKey('sales.FlatSale', on_delete=models.CASCADE, related_name='whatsapp_shares')
+    customer = models.ForeignKey('customers.Customer', null=True, on_delete=models.SET_NULL, related_name='whatsapp_shares')
+    phone = models.CharField('WhatsApp no.', max_length=20)
+    opened_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at', '-id']
+        verbose_name = 'WhatsApp invoice'
+
+    def __str__(self):
+        return f'{self.sale.sale_no} to {self.phone}'

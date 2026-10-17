@@ -314,3 +314,13 @@ class ReminderTests(SmsTestCase):
         view.setup(make_request(user, '/'))
         customers = view.get_context_data()['customers']
         self.assertEqual([(c.name, c.sms_enabled) for c in customers], [('Rahim', False)])
+
+
+class TestsNeverSendRealSmsTests(TestCase):
+    """The test run must not reach the real gateway even when .env switches live sending on."""
+
+    def test_the_test_run_uses_the_log_backend_and_has_no_key(self):
+        from django.conf import settings
+        self.assertEqual(settings.SMS_BACKEND, 'log')
+        self.assertEqual(settings.SMS_API_KEY, '')
+        self.assertIsInstance(get_backend(), LogBackend)

@@ -2,6 +2,7 @@
 Django settings for the block project (DAR AL JANNAH ERP, powered by NOORSYS).
 """
 
+import sys
 from pathlib import Path
 
 import environ
@@ -178,6 +179,9 @@ COMPANY_NAME = env('COMPANY_NAME', default='DAR AL JANNAH')
 COMPANY_CODE_PREFIX = env('COMPANY_CODE_PREFIX', default='AB')
 COMPANY_ADDRESS = env('COMPANY_ADDRESS', default='')
 COMPANY_PHONE = env('COMPANY_PHONE', default='')
+
+# The public address of this site, used in links sent to customers (invoice links on WhatsApp).
+SITE_URL = env('SITE_URL', default='')
 CURRENCY_SYMBOL = '৳'
 
 # Email settings for password reset (configure via .env in production)
@@ -195,3 +199,8 @@ SMS_API_URL = env('SMS_API_URL', default='https://api.zendsms.com/api/v1/send-sm
 SMS_BALANCE_URL = env('SMS_BALANCE_URL', default='https://api.zendsms.com/api/v1/balance')
 SMS_API_KEY = env('SMS_API_KEY', default='')
 SMS_SENDER_ID = env('SMS_SENDER_ID', default='')
+
+# Running the tests must never send a real SMS, whatever the .env says: force the log-only backend and drop the key.
+if 'test' in sys.argv:
+    SMS_BACKEND = 'log'
+    SMS_API_KEY = ''

@@ -51,7 +51,7 @@
 <body>
     <div class="toolbar">
         <button class="btn btn-primary" onclick="window.print()"><i class="fas fa-print"></i> Print</button>
-        <a class="btn btn-secondary" href="{% block back_url %}/{% endblock %}"><i class="fas fa-arrow-left"></i> Back</a>
+        {% if not shared %}<a class="btn btn-secondary" href="{% block back_url %}/{% endblock %}"><i class="fas fa-arrow-left"></i> Back</a>{% endif %}
     </div>
 
     <div class="sheet">
@@ -73,7 +73,7 @@
         {% block body %}{% endblock %}
 
         <div class="foot">
-            <span>Printed by {{ user.get_full_name|default:user.username }} on {% now "j M Y, g:i A" %}</span>
+            <span>{% if shared %}Printed on {% else %}Printed by {{ user.get_full_name|default:user.username }} on {% endif %}{% now "j M Y, g:i A" %}</span>
             <span>This is a computer-generated document.</span>
         </div>
     </div>

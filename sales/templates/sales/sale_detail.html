@@ -19,6 +19,19 @@
     </div>
     <div>
         <a href="{% url 'sales:invoice' object.pk %}" target="_blank" class="btn btn-success"><i class="fas fa-print"></i> Print Invoice</a>
+        {% if object.status != 'CANCELLED' and perms.sms.add_whatsappshare %}
+        {% if object.customer.whatsapp_no %}
+        <form method="post" action="{% url 'sms:whatsapp-send' object.pk %}" target="_blank" class="d-inline">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <button type="submit" class="btn btn-outline-success" title="Opens WhatsApp with the invoice link ready to send to {{ object.customer.whatsapp_no }}">
+                <i class="fab fa-whatsapp"></i> Send on WhatsApp
+            </button>
+        </form>
+        {% else %}
+        <a href="{% url 'customers:update' object.customer.pk %}" class="btn btn-outline-secondary" title="This customer has no WhatsApp number. Click to add one."><i class="fab fa-whatsapp"></i> No WhatsApp no.</a>
+        {% endif %}
+        {% endif %}
         {% if object.status != 'CANCELLED' %}
         <a href="{% url 'sales:update' object.pk %}" class="btn btn-warning"><i class="fas fa-edit"></i> Edit</a>
         {% if perms.sales.change_flatsale %}<a href="{% url 'sales:cancel' object.pk %}" class="btn btn-outline-danger"><i class="fas fa-ban"></i> Cancel sale</a>{% endif %}

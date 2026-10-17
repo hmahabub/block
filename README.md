@@ -123,6 +123,21 @@ Sales → SMS log → **Check SMS balance** asks ZendSMS what is left, and every
 the reason it refused. A gateway failure never stops a payment from saving. The request format follows ZendSMS's Laravel
 package (their HTTP docs are not public): confirm one real send after switching on `zendsms`.
 
+## Invoices on WhatsApp
+
+Sales → **Send invoices on WhatsApp** lists every customer with a **WhatsApp number** and an active sale (customers
+without one are listed separately with an "Add WhatsApp no." link). **Send** opens WhatsApp (app or web) with the
+customer's number and the message already typed; you press send there. The sale page has the same **Send on WhatsApp**
+button. Each time WhatsApp is opened it is recorded.
+
+WhatsApp cannot attach a file from a link, so the message carries a **private link to the invoice page** that the customer
+can open, view and print with no password. The link is signed, so it cannot be guessed or changed, and it stops working after
+30 days. The page shows only the customer-facing invoice (never the base price or honorarium). Set `SITE_URL` in `.env`
+(for example `https://erp.example.com`) so the link always has the right address behind a hosting proxy.
+
+Sending automatically from the server (no click) needs the WhatsApp Business Cloud API, which means a Meta business account and
+approved message templates. This version does not use it.
+
 ## Reports (Reports menu, PDF and Excel buttons on each)
 
 - **Finance report** (all phases): sales, cost, receivable, payable and money in hand

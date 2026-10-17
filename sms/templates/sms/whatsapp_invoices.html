@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}Send Invoices on WhatsApp{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="fab fa-whatsapp text-success"></i> Send invoices on WhatsApp</h2>
+    <form method="get" class="d-flex gap-2">
+        <select name="project" class="form-select" onchange="this.form.submit()">
+            <option value="">All projects</option>
+            {% for item in projects %}
+            <option value="{{ item.pk }}" {% if selected_project and selected_project.pk == item.pk %}selected{% endif %}>{{ item.project_name }}</option>
+            {% endfor %}
+        </select>
+    </form>
+</div>
+
+<div class="alert alert-info">
+    Only customers with a <strong>WhatsApp number</strong> are listed to send to. <strong>Send</strong> opens WhatsApp (app or web)
+    with their number and the message ready; you press send there. The message carries a private link to the invoice
+    (valid 30 days) that the customer can open, view and print without a password.
+</div>
+
+<div class="card mb-4">
+    <div class="card-header"><strong>{{ ready|length }}</strong> invoice{{ ready|length|pluralize }} ready to send</div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr><th>Customer</th><th>WhatsApp no.</th><th>Sale</th><th>Flat</th><th>Last opened</th><th></th></tr>
+                </thead>
+                <tbody>
+                    {% for sale in ready %}
+                    <tr>
+                        <td><a href="{% url 'customers:detail' sale.customer.pk %}">{{ sale.customer.display_name }}</a></td>
+                        <td>{{ sale.customer.whatsapp_no }}</td>
+                        <td><a href="{% url 'sales:detail' sale.pk %}">{{ sale.sale_no }}</a></td>
+                        <td>{{ sale.flat.flat_no }} <small class="text-muted">{{ sale.project.project_code }}</small></td>
+                        <td>{% if sale.last_share %}{{ sale.last_share.created_at|date:"j M Y H:i" }}{% else %}<span class="text-muted">never</span>{% endif %}</td>
+                        <td class="text-end">
+                            <form method="post" action="{% url 'sms:whatsapp-send' sale.pk %}" target="_blank" class="d-inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                <button type="submit" class="btn btn-success btn-sm"><i class="fab fa-whatsapp"></i> Send</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" class="text-center py-4 text-muted">No customer with a WhatsApp number has an active sale.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% if missing %}
+<div class="card border-warning">
+    <div class="card-header"><strong>{{ missing|length }}</strong> invoice{{ missing|length|pluralize }} cannot be sent: no WhatsApp number</div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead class="table-light"><tr><th>Customer</th><th>Phone</th><th>Sale</th><th>Flat</th><th></th></tr></thead>
+                <tbody>
+                    {% for sale in missing %}
+                    <tr>
+                        <td>{{ sale.customer.display_name }}</td>
+                        <td>{{ sale.customer.phone }}</td>
+                        <td><a href="{% url 'sales:detail' sale.pk %}">{{ sale.sale_no }}</a></td>
+                        <td>{{ sale.flat.flat_no }}</td>
+                        <td class="text-end"><a href="{% url 'customers:update' sale.customer.pk %}" class="btn btn-outline-secondary btn-sm">Add WhatsApp no.</a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -3,13 +3,13 @@
 
 {% block doc_title %}Invoice{% endblock %}
 {% block doc_no %}{{ sale.sale_no }}{% endblock %}
-{% block back_url %}{% url 'sales:detail' sale.pk %}{% endblock %}
+{% block back_url %}{% if not shared %}{% url 'sales:detail' sale.pk %}{% endif %}{% endblock %}
 {% block doc_heading %}INVOICE{% endblock %}
 {% block doc_meta %}
     <div><strong>Invoice No:</strong> {{ sale.sale_no }}</div>
     <div><strong>Date:</strong> {{ sale.sale_date|date:"j M Y" }}</div>
-    {% if sale.status == 'SOLD' %}<div class="stamp">PAID IN FULL</div>
-    {% elif sale.status == 'CANCELLED' %}<div class="stamp" style="color:#dc3545;border-color:#dc3545;">CANCELLED</div>{% endif %}
+    {% if sale.status == 'CANCELLED' %}<div class="stamp" style="color:#dc3545;border-color:#dc3545;">CANCELLED</div>
+    {% elif sale.receivable_amount == 0 and sale.net_value > 0 %}<div class="stamp">PAID IN FULL</div>{% endif %}
 {% endblock %}
 
 {% block body %}

@@ -1,13 +1,19 @@
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
-from django.shortcuts import redirect
+from django.core.exceptions import PermissionDenied
+from django.http import HttpResponseRedirect
+from django.shortcuts import get_object_or_404, redirect
 from django.views import View
 from django.views.generic import ListView, TemplateView
 
+from core.utils import int_or_none
 from customers.models import Customer
+from projects.models import Project
+from sales.models import FlatSale
 
 from .backends import SmsError
-from .models import SmsLog
+from .models import SmsLog, WhatsAppShare
+from .whatsapp import has_whatsapp, invoice_message, invoice_url, whatsapp_link
 from .services import backend_description, customers_with_dues, gateway_balance, reminder_message, send_reminders
 
 
@@ -48,6 +54,55 @@ class SendRemindersView(PermissionRequiredMixin, View):
             names = ', '.join(c.name for c in skipped)
             messages.warning(request, f'Skipped (excluded from SMS or nothing due): {names}')
         return redirect('sms:log')
+
+
+class WhatsAppInvoicesView(PermissionRequiredMixin, TemplateView):
+    """Customers with a WhatsApp number, each with a button that opens WhatsApp ready to send their invoice."""
+
+    template_name = 'sms/whatsapp_invoices.html'
+    permission_required = 'sms.add_whatsappshare'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        project = Project.objects.filter(pk=int_or_none(self.request.GET.get('project'))).first()
+        sales = FlatSale.objects.exclude(status=FlatSale.Status.CANCELLED).select_related('customer', 'flat', 'project')
+        if project:
+            sales = sales.filter(project=project)
+        last_sent = {}
+        for share in WhatsAppShare.objects.filter(sale__in=sales):
+            last_sent.setdefault(share.sale_id, share)
+        ready, missing = [], []
+        for sale in sales.order_by('customer__name', 'sale_no'):
+            sale.last_share = last_sent.get(sale.pk)
+            (ready if has_whatsapp(sale.customer) else missing).append(sale)
+        context.update({
+            'ready': ready, 'missing': missing, 'projects': Project.objects.order_by('project_name'),
+            'selected_project': project,
+        })
+        return context
+
+
+class WhatsAppSendView(PermissionRequiredMixin, View):
+    """Record that WhatsApp was opened for this sale's invoice, then go to WhatsApp with the message ready."""
+
+    http_method_names = ['post']
+    permission_required = 'sms.add_whatsappshare'
+
+    def post(self, request, pk):
+        sale = get_object_or_404(FlatSale.objects.select_related('customer', 'flat', 'project'), pk=pk)
+        back = request.POST.get('next') or ''
+        back = back if back.startswith('/') and not back.startswith('//') else '/sms/whatsapp/'
+        if sale.status == FlatSale.Status.CANCELLED:
+            messages.error(request, f'{sale.sale_no} is cancelled; there is no invoice to send.')
+            return redirect(back)
+        if not has_whatsapp(sale.customer):
+            messages.error(request, f'{sale.customer.name} has no WhatsApp number. Add one on the customer page first.')
+            return redirect(back)
+        WhatsAppShare.objects.create(
+            sale=sale, customer=sale.customer, phone=sale.customer.whatsapp_no, opened_by=request.user,
+        )
+        text = invoice_message(sale, invoice_url(request, sale))
+        return HttpResponseRedirect(whatsapp_link(sale.customer.whatsapp_no, text))
 
 
 class SmsBalanceView(PermissionRequiredMixin, View):

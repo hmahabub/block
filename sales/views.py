@@ -1,4 +1,5 @@
 from django.contrib import messages
+from django.http import Http404
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.db import transaction
 from django.db.models import Q, Sum
@@ -12,6 +13,7 @@ from core.reauth import money_visible
 from core.utils import int_or_none
 from projects.models import Flat, Project
 from sms.services import notify_payment
+from sms.whatsapp import sale_pk_from_token
 
 from .forms import (
     CustomerPaymentForm,
@@ -230,7 +232,7 @@ class RefundPaymentCreateView(_SalePayoutCreateView):
     title = 'Refund to customer'
 
 
-class FlatSaleInvoiceView(LoginRequiredMixin, DetailView):
+class _InvoiceView(DetailView):
     model = FlatSale
     template_name = 'sales/sale_invoice.html'
     context_object_name = 'sale'
@@ -242,6 +244,33 @@ class FlatSaleInvoiceView(LoginRequiredMixin, DetailView):
         context = super().get_context_data(**kwargs)
         context['payments'] = self.object.payments.order_by('payment_date', 'id')
         return context
+
+
+class FlatSaleInvoiceView(LoginRequiredMixin, _InvoiceView):
+    pass
+
+
+class SharedInvoiceView(_InvoiceView):
+    """The invoice behind a private link (sent on WhatsApp), opened without logging in.
+
+    Only the signed, unexpired link works; anything else is a plain 404. It shows exactly the customer-facing invoice."""
+
+    def get_object(self, queryset=None):
+        pk = sale_pk_from_token(self.kwargs['token'])
+        if pk is None:
+            raise Http404('This invoice link is not valid any more.')
+        return get_object_or_404(self.get_queryset(), pk=pk)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['shared'] = True
+        return context
+
+    def render_to_response(self, context, **kwargs):
+        response = super().render_to_response(context, **kwargs)
+        response['X-Robots-Tag'] = 'noindex, nofollow'
+        response['Cache-Control'] = 'private, no-store'
+        return response
 
 
 class CustomerPaymentReceiptView(LoginRequiredMixin, DetailView):

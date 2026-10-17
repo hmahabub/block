@@ -8,6 +8,7 @@ from .views import (
     FlatSaleCreateView,
     FlatSaleDetailView,
     FlatSaleInvoiceView,
+    SharedInvoiceView,
     FlatSaleListView,
     FlatSaleUpdateView,
     HonorariumPaymentCreateView,
@@ -30,6 +31,7 @@ urlpatterns = [
     path('<int:pk>/refund/', RefundPaymentCreateView.as_view(), name='refund-create'),
 
     path('<int:pk>/invoice/', FlatSaleInvoiceView.as_view(), name='invoice'),
+    path('invoice/shared/<str:token>/', SharedInvoiceView.as_view(), name='invoice-shared'),
 
     path('payments/', CustomerPaymentListView.as_view(), name='payment-list'),
     path('payments/create/', CustomerPaymentCreateView.as_view(), name='payment-create'),
