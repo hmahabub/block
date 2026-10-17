@@ -138,7 +138,7 @@ class PaymentSmsMessageTests(TestCase):
             name = 'http'
             delivers = True
 
-            def send(self, phone, message):
+            def send(self, phone, message, reference=''):
                 return 'ok'
 
         with mock.patch('sms.services.get_backend', return_value=Gateway()):

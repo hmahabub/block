@@ -189,8 +189,9 @@ EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
 DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='DAR AL JANNAH <noreply@example.com>')
 
-# Customer SMS. 'log' only records messages in the SMS log; 'http' posts to a gateway (see sms/backends.py).
+# Customer SMS. 'log' only records messages in the SMS log; 'zendsms' really sends them (see sms/backends.py).
 SMS_BACKEND = env('SMS_BACKEND', default='log')
-SMS_API_URL = env('SMS_API_URL', default='')
+SMS_API_URL = env('SMS_API_URL', default='https://api.zendsms.com/api/v1/send-sms')
+SMS_BALANCE_URL = env('SMS_BALANCE_URL', default='https://api.zendsms.com/api/v1/balance')
 SMS_API_KEY = env('SMS_API_KEY', default='')
 SMS_SENDER_ID = env('SMS_SENDER_ID', default='')

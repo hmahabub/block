@@ -25,21 +25,23 @@ def _day(value):
     return f'{value:%d-%m-%Y}'
 
 
-def deliver(customer, message, kind, user=None):
+def deliver(customer, message, kind, user=None, reference=''):
     """Send one SMS to the customer and record the result. Never raises: a gateway problem must never
-    stop a payment from being saved. Returns the SmsLog, or None if the customer is excluded."""
+    stop a payment from being saved. Returns the SmsLog, or None if the customer is excluded.
+    `reference` (e.g. the receipt number) is passed to the gateway so the message can be traced there."""
     if not customer.sms_enabled or not customer.phone:
         return None
     backend = get_backend()
-    status, error = SmsLog.Status.SENT if backend.delivers else SmsLog.Status.LOGGED, ''
+    status, error, gateway_id = SmsLog.Status.SENT if backend.delivers else SmsLog.Status.LOGGED, '', ''
     try:
-        backend.send(customer.phone, message)
+        gateway_id = backend.send(customer.phone, message, reference) or ''
     except SmsError as exc:
         status, error = SmsLog.Status.FAILED, str(exc)[:300]
     except Exception as exc:  # noqa: BLE001 - any gateway fault is recorded, never raised
         status, error = SmsLog.Status.FAILED, f'{type(exc).__name__}: {exc}'[:300]
     return SmsLog.objects.create(
-        customer=customer, phone=customer.phone, kind=kind, message=message, status=status, error=error, sent_by=user,
+        customer=customer, phone=customer.phone, kind=kind, message=message, status=status, error=error,
+        gateway_id=gateway_id[:100], sent_by=user,
     )
 
 
@@ -61,7 +63,7 @@ def payment_message(payment):
 
 def notify_payment(payment, user=None):
     """SMS on every payment received (skipped for customers excluded from SMS)."""
-    return deliver(payment.customer, payment_message(payment), SmsLog.Kind.PAYMENT, user)
+    return deliver(payment.customer, payment_message(payment), SmsLog.Kind.PAYMENT, user, reference=payment.receipt_no)
 
 
 def customer_statement(customer):
@@ -105,13 +107,21 @@ def send_reminders(customers, user):
     sent, skipped = [], []
     for customer in customers:
         message = reminder_message(customer)
-        log = deliver(customer, message, SmsLog.Kind.REMINDER, user) if message else None
+        reference = f'REM-{customer.pk}-{datetime.date.today():%Y%m%d}'
+        log = deliver(customer, message, SmsLog.Kind.REMINDER, user, reference=reference) if message else None
         (sent if log else skipped).append(customer)
     return sent, skipped
 
 
 def backend_description():
-    name = get_backend().name
-    if name == 'http':
-        return 'Live gateway (http)'
+    if get_backend().delivers:
+        return 'ZendSMS - messages are really sent'
     return 'No gateway configured - messages are only recorded in the log'
+
+
+def gateway_balance():
+    """The SMS balance reported by the gateway, as readable text. Raises SmsError if it cannot be read."""
+    data = get_backend().balance()
+    if isinstance(data, dict):
+        return ', '.join(f'{key.replace("_", " ")}: {value}' for key, value in data.items())
+    return str(data)

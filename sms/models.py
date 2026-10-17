@@ -20,6 +20,7 @@ class SmsLog(models.Model):
     message = models.TextField()
     status = models.CharField(max_length=10, choices=Status.choices)
     error = models.CharField(max_length=300, blank=True)
+    gateway_id = models.CharField('Gateway message id', max_length=100, blank=True)
     sent_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
     created_at = models.DateTimeField(auto_now_add=True)
 

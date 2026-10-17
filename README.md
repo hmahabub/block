@@ -116,9 +116,12 @@ flat, sales, payment and customer pages. Change which areas are guarded with `SE
 - Tick **Send SMS** off on a customer to exclude them from everything.
 - Every message is recorded in Sales → SMS log.
 
-`SMS_BACKEND=log` (the default) only records messages. `SMS_BACKEND=http` posts to your provider using `SMS_API_URL`,
-`SMS_API_KEY` and `SMS_SENDER_ID`. **The gateway integration has not been tested against a live provider**; check
-`sms/backends.py` against your provider's API documentation first. A gateway failure never stops a payment from saving.
+`SMS_BACKEND=log` (the default) only records messages in the SMS log. `SMS_BACKEND=zendsms` sends them for real through
+[ZendSMS](https://api.zendsms.com) using `SMS_API_KEY` and `SMS_SENDER_ID` (plus `SMS_API_URL` / `SMS_BALANCE_URL`, which
+default to ZendSMS's addresses). Put the API key in `.env` only, never in `.env.example` or in git.
+Sales → SMS log → **Check SMS balance** asks ZendSMS what is left, and every log line shows the gateway's message id or
+the reason it refused. A gateway failure never stops a payment from saving. The request format follows ZendSMS's Laravel
+package (their HTTP docs are not public): confirm one real send after switching on `zendsms`.
 
 ## Reports (Reports menu, PDF and Excel buttons on each)
 

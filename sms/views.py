@@ -6,8 +6,9 @@ from django.views.generic import ListView, TemplateView
 
 from customers.models import Customer
 
+from .backends import SmsError
 from .models import SmsLog
-from .services import backend_description, customers_with_dues, reminder_message, send_reminders
+from .services import backend_description, customers_with_dues, gateway_balance, reminder_message, send_reminders
 
 
 class ReminderView(PermissionRequiredMixin, TemplateView):
@@ -46,6 +47,20 @@ class SendRemindersView(PermissionRequiredMixin, View):
         if skipped:
             names = ', '.join(c.name for c in skipped)
             messages.warning(request, f'Skipped (excluded from SMS or nothing due): {names}')
+        return redirect('sms:log')
+
+
+class SmsBalanceView(PermissionRequiredMixin, View):
+    """Ask the SMS gateway how much balance is left."""
+
+    http_method_names = ['get']
+    permission_required = 'sms.add_smslog'
+
+    def get(self, request):
+        try:
+            messages.info(request, f'SMS balance - {gateway_balance()}')
+        except SmsError as error:
+            messages.error(request, f'Could not read the SMS balance: {error}')
         return redirect('sms:log')
 
 

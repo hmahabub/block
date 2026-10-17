@@ -5,7 +5,12 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h2><i class="fas fa-clock-rotate-left"></i> SMS log</h2>
-    {% if perms.sms.add_smslog %}<a href="{% url 'sms:reminders' %}" class="btn btn-primary"><i class="fas fa-comment-sms"></i> Balance reminders</a>{% endif %}
+    {% if perms.sms.add_smslog %}
+    <div>
+        <a href="{% url 'sms:balance' %}" class="btn btn-outline-secondary"><i class="fas fa-wallet"></i> Check SMS balance</a>
+        <a href="{% url 'sms:reminders' %}" class="btn btn-primary"><i class="fas fa-comment-sms"></i> Balance reminders</a>
+    </div>
+    {% endif %}
 </div>
 <div class="card">
     <div class="card-body">
@@ -20,7 +25,8 @@
                         <td>{{ log.phone }}</td>
                         <td>{{ log.get_kind_display }}</td>
                         <td><span class="badge {% if log.status == 'SENT' %}bg-success{% elif log.status == 'FAILED' %}bg-danger{% else %}bg-secondary{% endif %}">{{ log.get_status_display }}</span>
-                            {% if log.error %}<br><small class="text-danger">{{ log.error }}</small>{% endif %}</td>
+                            {% if log.error %}<br><small class="text-danger">{{ log.error }}</small>{% endif %}
+                            {% if log.gateway_id %}<br><small class="text-muted">id {{ log.gateway_id }}</small>{% endif %}</td>
                         <td><small>{{ log.message }}</small></td>
                     </tr>
                     {% empty %}
