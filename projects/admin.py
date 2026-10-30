@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Flat, FlatDeletionRequest, Project
+from .models import Development, Flat, FlatDeletionRequest, Project
 
 
 class FlatInline(admin.TabularInline):
@@ -11,9 +11,15 @@ class FlatInline(admin.TabularInline):
     can_delete = False  # flats are removed only through the two-admin approval flow
 
 
+@admin.register(Development)
+class DevelopmentAdmin(admin.ModelAdmin):
+    list_display = ('code', 'name', 'status', 'location')
+    search_fields = ('code', 'name', 'location')
+
+
 @admin.register(Project)
 class ProjectAdmin(admin.ModelAdmin):
-    list_display = ('project_code', 'project_name', 'status', 'floor_no', 'flat_type', 'base_price', 'quoted_price')
+    list_display = ('project_code', 'project_name', 'development', 'status', 'floor_no', 'flat_type', 'base_price', 'quoted_price')
     search_fields = ('project_code', 'project_name', 'location')
     list_filter = ('status',)
     inlines = [FlatInline]

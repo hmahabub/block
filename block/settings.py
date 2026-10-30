@@ -66,6 +66,7 @@ INSTALLED_APPS = [
     'costing',
     'sales',
     'books',
+    'directors',
     'sms',
     'reports',
     'dashboard',
@@ -173,7 +174,11 @@ MESSAGE_TAGS = {
 # Company identity — used across templates, printed documents and auto-numbering.
 # Screens (URL namespaces) that ask for the password again before opening, and for how long they
 # then stay unlocked while the user keeps working.
-SENSITIVE_NAMESPACES = env.list('SENSITIVE_NAMESPACES', default=['costing', 'books', 'reports'])
+# Director money and the audit trail are always behind the password prompt, whatever .env says.
+ALWAYS_SENSITIVE = ['directors', 'activity_log']
+SENSITIVE_NAMESPACES = list(dict.fromkeys(
+    env.list('SENSITIVE_NAMESPACES', default=['costing', 'books', 'reports']) + ALWAYS_SENSITIVE
+))
 REAUTH_MINUTES = env.int('REAUTH_MINUTES', default=15)
 
 COMPANY_NAME = env('COMPANY_NAME', default='DAR AL JANNAH')

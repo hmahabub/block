@@ -22,7 +22,7 @@ def describe_filters(applied):
         period = f'up to {date_to:%d %b %Y}'
     else:
         period = 'All dates'
-    parts = [f'Period: {period}', f'Project: {applied["project"].project_name if applied["project"] else "All"}']
+    parts = [f'Period: {period}', f'Building: {applied["project"].project_name if applied["project"] else "All"}']
     parts.append({'PRE': 'Phase: Pre-development', 'POST': 'Phase: Post-development'}.get(applied.get('phase'), 'Phase: Pre & post'))
     parts.append({'shared': 'Type: Shared costs only', 'direct': 'Type: Direct flat costs only'}.get(applied['type'], 'Type: Shared & direct'))
     if applied['q']:
@@ -38,7 +38,7 @@ def _draw_page_footer(canvas, doc):
     canvas.saveState()
     canvas.setFont('Helvetica', 7.5)
     canvas.setFillColor(colors.grey)
-    canvas.drawString(doc.leftMargin, 8 * mm, f'{doc.company_name} - Project Cost Report')
+    canvas.drawString(doc.leftMargin, 8 * mm, f'{doc.company_name} - Cost Report')
     canvas.drawRightString(doc.pagesize[0] - doc.rightMargin, 8 * mm, f'Page {canvas.getPageNumber()}')
     canvas.restoreState()
 
@@ -55,7 +55,7 @@ def build_cost_report_pdf(target, costs, applied, user):
 
     doc = SimpleDocTemplate(
         target, pagesize=landscape(A4), leftMargin=14 * mm, rightMargin=14 * mm,
-        topMargin=12 * mm, bottomMargin=16 * mm, title='Project Cost Report',
+        topMargin=12 * mm, bottomMargin=16 * mm, title='Cost Report',
     )
 
     costs = list(costs.select_related('project', 'cost_category', 'cost_category__parent_category', 'supplier', 'flat', 'account'))
@@ -68,13 +68,13 @@ def build_cost_report_pdf(target, costs, applied, user):
     elements = [
         *header,
         Spacer(1, 4),
-        Paragraph('Project Cost Report', subtitle),
+        Paragraph('Cost Report', subtitle),
         Paragraph(' &nbsp;|&nbsp; '.join(describe_filters(applied)), meta),
         Paragraph(f'Generated {timezone.localtime():%d %b %Y, %I:%M %p} by {user.get_full_name() or user.username}', meta),
         Spacer(1, 6),
     ]
 
-    header = [Paragraph(h, head) for h in ('Date', 'Voucher', 'Project', 'Cost head', 'Phase', 'Supplier', 'Charged to', 'Paid from', 'Description / Ref', 'Amount (BDT)')]
+    header = [Paragraph(h, head) for h in ('Date', 'Voucher', 'Building', 'Cost head', 'Phase', 'Supplier', 'Charged to', 'Paid from', 'Description / Ref', 'Amount (BDT)')]
     rows = [header]
     for cost in costs:
         detail = cost.description or ''
@@ -152,11 +152,11 @@ def cost_report_table(costs):
             f'Flat {cost.flat.flat_no}' if cost.flat else ('Company' if cost.phase == 'PRE' else 'All flats'),
             str(cost.account) if cost.account else None, detail or None, cost.amount,
         ])
-    columns = [Column('Date', DATE), Column('Voucher'), Column('Project'), Column('Cost head'), Column('Phase'),
+    columns = [Column('Date', DATE), Column('Voucher'), Column('Building'), Column('Cost head'), Column('Phase'),
                Column('Supplier'), Column('Charged to'), Column('Paid from'), Column('Description / Ref'),
                Column('Amount', MONEY)]
     totals = ['Total'] + [''] * 8 + [sum((c.amount for c in costs), 0)]
-    return ReportTable('Project costs', columns, rows, totals)
+    return ReportTable('Costs', columns, rows, totals)
 
 
 def _group_by_category(costs):

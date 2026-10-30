@@ -8,7 +8,7 @@ from activity_log.models import ActivityLog
 from core.reauth import money_visible
 from costing.models import Phase, ProjectCost
 from customers.models import Customer
-from projects.models import Flat, Project
+from projects.models import Development, Flat, Project
 from sales.models import FlatSale
 from suppliers.models import Supplier
 
@@ -28,6 +28,7 @@ class HomeView(TemplateView):
             return context
 
         context['activity_logs'] = ActivityLog.objects.select_related('user')[:5]
+        context['development_count'] = Development.objects.count()
         context['project_count'] = Project.objects.count()
         context['customer_count'] = Customer.objects.count()
         context['supplier_count'] = Supplier.objects.count()

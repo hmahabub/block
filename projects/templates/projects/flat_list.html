@@ -46,9 +46,10 @@
                 <thead class="table-light">
                     <tr>
                         <th>Flat</th>
-                        <th>Project</th>
+                        <th>Building</th>
                         <th>Floor</th>
                         <th>Parking lot</th>
+                        <th class="text-end">Parking price</th>
                         <th>Parking</th>
                         <th>Status</th>
                         <th>Customer</th>
@@ -64,6 +65,7 @@
                         <td><a href="{% url 'projects:detail' flat.project.pk %}">{{ flat.project.project_name }}</a></td>
                         <td>{{ flat.floor_no }}</td>
                         <td>{{ flat.parking_lot|default:"-" }}</td>
+                        <td class="text-end">{{ flat.effective_parking_price|taka }}{% if flat.parking_price is not None %} <i class="fas fa-pen text-muted" title="Set for this flat"></i>{% endif %}</td>
                         <td>{% if flat.active_sale %}{% if flat.active_sale.with_parking %}<span class="badge bg-dark">Booked</span>{% else %}<span class="badge bg-light text-dark border">Not taken</span>{% endif %}{% else %}<span class="badge bg-light text-dark border">Free</span>{% endif %}</td>
                         <td>
                             <span class="badge
@@ -89,7 +91,7 @@
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="10" class="text-center py-4">No flats found</td></tr>
+                    <tr><td colspan="11" class="text-center py-4">No flats found</td></tr>
                     {% endfor %}
                 </tbody>
             </table>

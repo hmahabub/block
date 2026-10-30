@@ -1,13 +1,26 @@
 from django import forms
 
-from .models import Flat, Project
+from .models import Development, Flat, Project
+
+
+class DevelopmentForm(forms.ModelForm):
+    class Meta:
+        model = Development
+        fields = ['name', 'location', 'status', 'start_date', 'expected_completion_date', 'description']
+        widgets = {
+            'start_date': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
+            'expected_completion_date': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
+            'description': forms.Textarea(attrs={'rows': 3}),
+        }
 
 
 class ProjectForm(forms.ModelForm):
+    """A building. New buildings must say which project they belong to."""
+
     class Meta:
         model = Project
         fields = [
-            'project_name', 'location', 'status', 'start_date', 'expected_completion_date',
+            'development', 'project_name', 'location', 'status', 'start_date', 'expected_completion_date',
             'floor_no', 'land_area', 'budget_amount', 'description',
             'flat_type', 'flat_area', 'bedrooms', 'bathrooms', 'features',
             'base_price', 'quoted_price', 'parking_price', 'parking_area',
@@ -17,6 +30,12 @@ class ProjectForm(forms.ModelForm):
             'expected_completion_date': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
             'description': forms.Textarea(attrs={'rows': 2}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['development'].required = True
+        self.fields['development'].empty_label = 'Choose the project...'
+        self.fields['development'].queryset = Development.objects.all()
 
     def clean(self):
         cleaned = super().clean()
@@ -34,7 +53,7 @@ class FlatForm(forms.ModelForm):
 
     class Meta:
         model = Flat
-        fields = ['unit', 'floor_no', 'facing', 'parking_lot', 'notes']
+        fields = ['unit', 'floor_no', 'facing', 'parking_lot', 'parking_price', 'notes']
         widgets = {'notes': forms.Textarea(attrs={'rows': 2})}
 
     def __init__(self, *args, project=None, **kwargs):

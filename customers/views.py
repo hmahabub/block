@@ -21,6 +21,7 @@ class CustomerListView(LoginRequiredMixin, ListView):
         if q:
             queryset = queryset.filter(
                 Q(name__icontains=q)
+                | Q(customer_code__icontains=q)
                 | Q(phone__icontains=q)
                 | Q(email__icontains=q)
                 | Q(identification_no__icontains=q)

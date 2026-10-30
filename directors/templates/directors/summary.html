@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% load core_tags %}
+
+{% block title %}Director Investment{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2><i class="fas fa-chart-pie"></i> Investment by project</h2>
+    <div>
+        <a href="?{{ request.GET.urlencode }}{% if request.GET %}&amp;{% endif %}format=xlsx" class="btn btn-success"><i class="fas fa-file-excel"></i> Excel</a>
+        <a href="{% url 'directors:list' %}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Directors</a>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">All projects</div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light"><tr><th>Project</th><th class="text-end">Invested</th><th class="text-end">Capital withdrawn</th><th class="text-end">Outstanding</th><th class="text-end">Returned</th><th class="text-end">Profit paid</th></tr></thead>
+                <tbody>
+                    {% for row in project_rows %}
+                    <tr>
+                        <td><a href="?development={{ row.development.pk }}">{{ row.development.name }}</a></td>
+                        <td class="text-end">{{ row.invested|taka }}</td>
+                        <td class="text-end">{{ row.withdrawn|taka }}</td>
+                        <td class="text-end"><strong>{{ row.outstanding|taka }}</strong></td>
+                        <td class="text-end">{% if row.returned_percent is not None %}{{ row.returned_percent|floatformat:1 }}%{% else %}-{% endif %}</td>
+                        <td class="text-end">{{ row.profit_paid|taka }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" class="text-center py-4 text-muted">No director money recorded yet</td></tr>
+                    {% endfor %}
+                </tbody>
+                {% if project_rows %}
+                <tfoot class="table-secondary"><tr><th>Total</th><th class="text-end">{{ grand.invested|taka }}</th><th class="text-end">{{ grand.withdrawn|taka }}</th><th class="text-end">{{ grand.outstanding|taka }}</th><th></th><th class="text-end">{{ grand.profit_paid|taka }}</th></tr></tfoot>
+                {% endif %}
+            </table>
+        </div>
+    </div>
+</div>
+
+{% if selected_development %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Directors in <strong>{{ selected_development.name }}</strong></span>
+        <small class="text-muted">Collected from customers so far: <strong>{{ collected|taka }}</strong> &middot; capital still to return: <strong>{{ project_totals.outstanding|taka }}</strong></small>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light"><tr><th>Director</th><th class="text-end">Invested</th><th class="text-end">Capital withdrawn</th><th class="text-end">Outstanding</th><th class="text-end">Returned</th><th class="text-end">Profit paid</th></tr></thead>
+                <tbody>
+                    {% for row in director_rows %}
+                    <tr>
+                        <td><a href="{{ row.director.get_absolute_url }}?development={{ selected_development.pk }}">{{ row.director.name }}</a></td>
+                        <td class="text-end">{{ row.invested|taka }}</td>
+                        <td class="text-end">{{ row.withdrawn|taka }}</td>
+                        <td class="text-end"><strong>{{ row.outstanding|taka }}</strong></td>
+                        <td class="text-end">{% if row.returned_percent is not None %}{{ row.returned_percent|floatformat:1 }}%{% else %}-{% endif %}</td>
+                        <td class="text-end">{{ row.profit_paid|taka }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

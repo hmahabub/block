@@ -7,13 +7,82 @@ from django.db import models, transaction
 from django.urls import reverse
 from django.utils import timezone
 
-from core.numbering import generate_code
+from core.numbering import generate_code, generate_dashed_code
 
 ZERO = Decimal('0')
 
 
+class Development(models.Model):
+    """A project in the business sense: a piece of land developed into one or more buildings.
+
+    NAMING: in the screens this is called a "Project" and each `Project` row below is called a "Building".
+    The code keeps the older class name `Project` for a building so no table or foreign key had to be renamed;
+    read `Project` in the code as "Building" and `Development` as "Project".
+    Directors invest in a Development and get their money back as its buildings sell.
+    """
+
+    class Status(models.TextChoices):
+        PLANNING = 'PLANNING', 'Planning'
+        ONGOING = 'ONGOING', 'Ongoing'
+        COMPLETED = 'COMPLETED', 'Completed'
+        ON_HOLD = 'ON_HOLD', 'On Hold'
+
+    code = models.CharField(max_length=20, unique=True, editable=False)
+    name = models.CharField('Project name', max_length=150)
+    location = models.CharField(max_length=255, blank=True)
+    start_date = models.DateField(null=True, blank=True)
+    expected_completion_date = models.DateField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PLANNING)
+    description = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'Project'
+
+    def __str__(self):
+        return f'{self.code} - {self.name}'
+
+    def save(self, *args, **kwargs):
+        if not self.code:
+            self.code = generate_dashed_code('development', 'PRJ')
+        super().save(*args, **kwargs)
+
+    def get_absolute_url(self):
+        return reverse('projects:development-detail', kwargs={'pk': self.pk})
+
+    @property
+    def building_count(self):
+        return self.buildings.count()
+
+    @property
+    def flat_count(self):
+        return sum((b.flat_count for b in self.buildings.all()), 0)
+
+    @property
+    def sold_flat_count(self):
+        return sum((b.sold_flat_count for b in self.buildings.all()), 0)
+
+    @property
+    def total_sales_value(self):
+        return sum((b.total_sales_value for b in self.buildings.all()), ZERO)
+
+    @property
+    def total_received(self):
+        return sum((b.total_received for b in self.buildings.all()), ZERO)
+
+    @property
+    def total_receivable(self):
+        return sum((b.total_receivable for b in self.buildings.all()), ZERO)
+
+    @property
+    def total_cost(self):
+        return sum((b.total_cost for b in self.buildings.all()), ZERO)
+
+
 class Project(models.Model):
-    """One building. Every flat in it is identical, so the flat type, size and prices are set here once."""
+    """One BUILDING (see Development). Every flat in it is identical, so the flat type, size and prices are set here once."""
 
     class Status(models.TextChoices):
         PLANNING = 'PLANNING', 'Planning'
@@ -32,8 +101,12 @@ class Project(models.Model):
         COMMERCIAL = 'COMMERCIAL', 'Commercial'
         OTHER = 'OTHER', 'Other'
 
-    project_code = models.CharField(max_length=20, unique=True, editable=False)
-    project_name = models.CharField(max_length=150)
+    development = models.ForeignKey(
+        Development, null=True, blank=True, on_delete=models.PROTECT, related_name='buildings', verbose_name='Project',
+        help_text='The project (land) this building belongs to.',
+    )
+    project_code = models.CharField('Building code', max_length=20, unique=True, editable=False)
+    project_name = models.CharField('Building name', max_length=150)
     location = models.CharField(max_length=255, blank=True)
     start_date = models.DateField(null=True, blank=True)
     expected_completion_date = models.DateField(null=True, blank=True)
@@ -59,8 +132,9 @@ class Project(models.Model):
         help_text='The price quoted to buyers; it pre-fills the sale value.',
     )
     parking_price = models.DecimalField(
-        'Parking lot price', max_digits=14, decimal_places=2, default=0, validators=[MinValueValidator(0)],
-        help_text='Extra price when the buyer takes the parking lot linked to the flat.',
+        'Default parking lot price', max_digits=14, decimal_places=2, default=0, validators=[MinValueValidator(0)],
+        help_text='Extra price when the buyer takes the parking lot linked to a flat. It is only the default: '
+                  'each flat can be given its own parking price.',
     )
     parking_area = models.DecimalField('Parking lot area (sqft)', max_digits=8, decimal_places=2, null=True, blank=True)
 
@@ -69,6 +143,7 @@ class Project(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+        verbose_name = 'Building'
         indexes = [
             models.Index(fields=['project_code']),
             models.Index(fields=['status']),
@@ -187,6 +262,10 @@ class Flat(models.Model):
     parking_lot = models.CharField(
         max_length=20, blank=True, help_text='Parking lot linked to this flat. Defaults to P-<flat no.>.',
     )
+    parking_price = models.DecimalField(
+        'Parking price', max_digits=14, decimal_places=2, null=True, blank=True, validators=[MinValueValidator(0)],
+        help_text="This flat's own parking lot price. Leave blank to use the building's default.",
+    )
     # Managed by FlatSale: Available (no active sale) or Sold (it has one). Never edited by hand.
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.AVAILABLE, editable=False)
     notes = models.TextField(blank=True)
@@ -237,8 +316,9 @@ class Flat(models.Model):
         return self.project.quoted_price
 
     @property
-    def parking_price(self):
-        return self.project.parking_price
+    def effective_parking_price(self):
+        """The parking price that applies to this flat: its own, else the building's default."""
+        return self.project.parking_price if self.parking_price is None else self.parking_price
 
     @property
     def parking_area(self):

@@ -17,6 +17,7 @@
     <div class="col-6">
         <div class="section-label">Bill to</div>
         <div class="fs-5 fw-semibold">{{ sale.customer.name }}</div>
+        <div class="text-muted small">Customer ID: {{ sale.customer.customer_code }}</div>
         <div class="text-muted small">Phone: {{ sale.customer.phone }}</div>
         {% if sale.customer.email %}<div class="text-muted small">{{ sale.customer.email }}</div>{% endif %}
         {% if sale.customer.identification_no %}<div class="text-muted small">NID / Passport: {{ sale.customer.identification_no }}</div>{% endif %}

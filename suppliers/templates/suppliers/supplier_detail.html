@@ -34,7 +34,7 @@
                     <div class="card-body">
                         <h5 class="card-title">Total Costs</h5>
                         <h3>{{ object.total_cost|taka }}</h3>
-                        <p class="text-muted mb-0">Total spent across all project costs</p>
+                        <p class="text-muted mb-0">Total spent across all costs</p>
                     </div>
                 </div>
             </div>
@@ -47,7 +47,7 @@
                 <table class="table table-sm table-hover">
                     <thead class="table-light">
                         <tr>
-                            <th>Project</th>
+                            <th>Building</th>
                             <th>Category</th>
                             <th>Date</th>
                             <th>Amount</th>
@@ -66,7 +66,7 @@
                 </table>
             </div>
             {% else %}
-            <div class="alert alert-info">No project costs recorded for this supplier yet.</div>
+            <div class="alert alert-info">No costs recorded for this supplier yet.</div>
             {% endif %}
         </div>
 

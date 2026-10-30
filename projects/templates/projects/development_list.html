@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% load core_tags %}
+
+{% block title %}Projects{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-diagram-project"></i> Projects</h2>
+    {% if perms.projects.add_development %}
+    <a href="{% url 'projects:development-create' %}" class="btn btn-primary"><i class="fas fa-plus"></i> Add Project</a>
+    {% endif %}
+</div>
+<p class="text-muted">A project is a piece of land developed into one or more <a href="{% url 'projects:list' %}">buildings</a>.</p>
+
+<div class="card mb-4"><div class="card-body">
+    <form method="get" class="row g-3">
+        <div class="col-md-5"><input type="text" name="q" class="form-control" placeholder="Search by name, code, location..." value="{{ request.GET.q }}"></div>
+        <div class="col-md-2"><button type="submit" class="btn btn-primary w-100"><i class="fas fa-filter"></i> Filter</button></div>
+    </form>
+</div></div>
+
+<div class="row">
+    {% for item in object_list %}
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title"><a href="{{ item.get_absolute_url }}">{{ item.name }}</a></h5>
+                <p class="text-muted mb-1">{{ item.code }} &middot; {{ item.location|default:"-" }}</p>
+                <span class="badge bg-secondary mb-2">{{ item.get_status_display }}</span>
+                <ul class="list-unstyled small mb-3">
+                    <li><i class="fas fa-building"></i> {{ item.buildings.all|length }} building{{ item.buildings.all|length|pluralize }}</li>
+                    <li><i class="fas fa-door-open"></i> {{ item.flat_count }} flats &middot; {{ item.sold_flat_count }} sold</li>
+                </ul>
+                <a href="{{ item.get_absolute_url }}" class="btn btn-outline-primary btn-sm">View Details</a>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12"><div class="alert alert-info">No projects yet. Add a project first, then add its buildings.</div></div>
+    {% endfor %}
+</div>
+{% include "includes/pagination.html" %}
+{% endblock %}

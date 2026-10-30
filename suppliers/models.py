@@ -35,6 +35,9 @@ class Supplier(models.Model):
             models.Index(fields=['name']),
             models.Index(fields=['supplier_code']),
         ]
+        constraints = [
+            models.UniqueConstraint(fields=['tin'], condition=~models.Q(tin=''), name='supplier_tin_unique_when_given'),
+        ]
 
     def __str__(self):
         return f'{self.supplier_code} - {self.name}'
@@ -42,6 +45,7 @@ class Supplier(models.Model):
     def save(self, *args, **kwargs):
         if not self.supplier_code:
             self.supplier_code = generate_dashed_code('supplier', 'S')
+        self.tin = (self.tin or '').strip()
         self.phone = normalize_phone(self.phone)
         super().save(*args, **kwargs)
 

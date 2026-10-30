@@ -7,7 +7,7 @@
     <h2><i class="fab fa-whatsapp text-success"></i> Send invoices on WhatsApp</h2>
     <form method="get" class="d-flex gap-2">
         <select name="project" class="form-select" onchange="this.form.submit()">
-            <option value="">All projects</option>
+            <option value="">All buildings</option>
             {% for item in projects %}
             <option value="{{ item.pk }}" {% if selected_project and selected_project.pk == item.pk %}selected{% endif %}>{{ item.project_name }}</option>
             {% endfor %}

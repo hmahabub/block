@@ -2,6 +2,7 @@ from django.core.validators import RegexValidator
 from django.db import models
 from django.urls import reverse
 
+from core.numbering import generate_plain_code
 from core.phone import normalize_phone
 
 phone_regex = RegexValidator(
@@ -11,18 +12,23 @@ phone_regex = RegexValidator(
 
 
 class Customer(models.Model):
+    """A buyer. Identified by a permanent customer ID (C0001, C0002 ...), a unique phone number, and, when given,
+    a unique NID/passport number and a unique TIN."""
+
     class Title(models.TextChoices):
         MR = 'MR', 'Mr.'
         MS = 'MS', 'Ms.'
 
+    customer_code = models.CharField('Customer ID', max_length=10, unique=True, editable=False)
     title = models.CharField(max_length=2, choices=Title.choices, blank=True)
     name = models.CharField('Customer Name', max_length=150)
     phone = models.CharField(validators=[phone_regex], max_length=17, unique=True,
                              help_text='+88 is added automatically to local numbers.')
     whatsapp_no = models.CharField('WhatsApp no.', validators=[phone_regex], max_length=17, blank=True)
     email = models.EmailField(blank=True)
-    identification_no = models.CharField('NID / Passport No.', max_length=50, blank=True)
-    tin = models.CharField('TIN', max_length=30, blank=True)
+    identification_no = models.CharField('NID / Passport No.', max_length=50, blank=True,
+                                         help_text='Must be unique: two customers cannot share an NID / passport number.')
+    tin = models.CharField('TIN', max_length=30, blank=True, help_text='Must be unique when given.')
     date_of_birth = models.DateField(null=True, blank=True)
     nationality = models.CharField(max_length=50, default='Bangladeshi', blank=True)
     occupation = models.CharField('Occupation / Profession', max_length=100, blank=True)
@@ -54,6 +60,12 @@ class Customer(models.Model):
         indexes = [
             models.Index(fields=['name']),
         ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['identification_no'], condition=~models.Q(identification_no=''), name='customer_nid_unique_when_given',
+            ),
+            models.UniqueConstraint(fields=['tin'], condition=~models.Q(tin=''), name='customer_tin_unique_when_given'),
+        ]
 
     def __str__(self):
         return f'{self.name} ({self.phone})'
@@ -63,6 +75,10 @@ class Customer(models.Model):
         return f'{self.get_title_display()} {self.name}'.strip()
 
     def save(self, *args, **kwargs):
+        if not self.customer_code:
+            self.customer_code = generate_plain_code('customer', 'C')
+        self.identification_no = (self.identification_no or '').strip()
+        self.tin = (self.tin or '').strip()
         self.phone = normalize_phone(self.phone)
         self.whatsapp_no = normalize_phone(self.whatsapp_no)
         self.emergency_contact_phone = normalize_phone(self.emergency_contact_phone)

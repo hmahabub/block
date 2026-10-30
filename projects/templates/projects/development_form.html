@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}{% if object %}Update{% else %}Create{% endif %} Project{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header"><h3 class="mb-0">{% if object %}Update{% else %}Create New{% endif %} Project</h3></div>
+    <div class="card-body">
+        <p class="text-muted">A project is the whole land development. Add its buildings after saving.</p>
+        <form method="post">
+            {% csrf_token %}
+            {{ form.non_field_errors }}
+            <div class="row">
+                <div class="col-md-6">
+                    {{ form.name|as_crispy_field }}
+                    {{ form.location|as_crispy_field }}
+                    {{ form.description|as_crispy_field }}
+                </div>
+                <div class="col-md-6">
+                    {{ form.status|as_crispy_field }}
+                    {{ form.start_date|as_crispy_field }}
+                    {{ form.expected_completion_date|as_crispy_field }}
+                </div>
+            </div>
+            <div class="mt-3">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> {% if object %}Update{% else %}Create{% endif %}</button>
+                <a href="{% if object %}{{ object.get_absolute_url }}{% else %}{% url 'projects:development-list' %}{% endif %}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

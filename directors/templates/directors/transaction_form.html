@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}{% if object %}Update{% else %}Record{% endif %} Director Transaction{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header"><h3 class="mb-0">{% if object %}Update {{ object.reference_no }}{% else %}Record investment / withdrawal{% endif %}</h3></div>
+    <div class="card-body">
+        <form method="post" class="col-lg-7 px-0">
+            {% csrf_token %}
+            {{ form.non_field_errors }}
+            {{ form|crispy }}
+            <div id="outstanding-note" class="alert alert-info py-2 d-none"></div>
+            <div class="alert alert-secondary small">
+                The money moves through the account you choose, so this waits on <em>Books → Confirm entries</em> like every other payment.
+                Capital withdrawals cannot be more than the director still has invested in that project.
+            </div>
+            <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save</button>
+            <a href="{% if object %}{{ object.get_absolute_url }}{% else %}{% url 'directors:list' %}{% endif %}" class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ outstanding|json_script:"outstanding-data" }}
+<script>
+    (function () {
+        var data = JSON.parse(document.getElementById('outstanding-data').textContent);
+        var director = document.getElementById('id_director'), project = document.getElementById('id_development');
+        var kind = document.getElementById('id_kind'), note = document.getElementById('outstanding-note');
+        function refresh() {
+            var left = (data[director.value] || {})[project.value];
+            if (left === undefined || kind.value !== 'WITHDRAWAL') { note.classList.add('d-none'); return; }
+            note.textContent = 'Capital still outstanding for this director in this project: Tk ' + Number(left).toLocaleString('en-US', {minimumFractionDigits: 2});
+            note.classList.remove('d-none');
+        }
+        [director, project, kind].forEach(function (el) { el.addEventListener('change', refresh); });
+        refresh();
+    })();
+</script>
+{% endblock %}

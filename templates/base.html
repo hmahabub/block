@@ -167,7 +167,8 @@
                                 {% if flat_deletions_waiting %}<span class="badge bg-warning text-dark">{{ flat_deletions_waiting }}</span>{% endif %}
                             </a>
                             <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="{% url 'projects:list' %}">Projects</a></li>
+                                <li><a class="dropdown-item" href="{% url 'projects:development-list' %}">Projects</a></li>
+                                <li><a class="dropdown-item" href="{% url 'projects:list' %}">Buildings</a></li>
                                 <li><a class="dropdown-item" href="{% url 'projects:flat-list' %}">All Flats</a></li>
                                 <li><a class="dropdown-item" href="{% url 'projects:deletion-requests' %}">Flat deletion requests
                                     {% if flat_deletions_waiting %}<span class="badge bg-warning text-dark">{{ flat_deletions_waiting }}</span>{% endif %}</a></li>
@@ -188,8 +189,8 @@
                                 <i class="fas fa-coins"></i> Costing
                             </a>
                             <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="{% url 'costing:cost-list' %}">Project Costs</a></li>
-                                <li><a class="dropdown-item" href="{% url 'costing:budget-list' %}">Project Budget</a></li>
+                                <li><a class="dropdown-item" href="{% url 'costing:cost-list' %}">Costs</a></li>
+                                <li><a class="dropdown-item" href="{% url 'costing:budget-list' %}">Building Budget</a></li>
                                 <li><a class="dropdown-item" href="{% url 'costing:category-list' %}">Cost Categories</a></li>
                             </ul>
                         </li>
@@ -205,6 +206,17 @@
                                 {% if whatsapp_enabled %}<li><a class="dropdown-item" href="{% url 'sms:whatsapp-invoices' %}"><i class="fab fa-whatsapp"></i> Send invoices on WhatsApp</a></li>{% endif %}
                                 <li><a class="dropdown-item" href="{% url 'sms:reminders' %}">Balance reminders (SMS)</a></li>
                                 <li><a class="dropdown-item" href="{% url 'sms:log' %}">SMS log</a></li>
+                            </ul>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-user-tie"></i> Directors
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{% url 'directors:list' %}">Directors</a></li>
+                                <li><a class="dropdown-item" href="{% url 'directors:summary' %}">Investment by project</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{% url 'directors:transaction-create' %}">Record investment / withdrawal</a></li>
                             </ul>
                         </li>
                         <li class="nav-item dropdown">

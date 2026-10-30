@@ -53,7 +53,7 @@ class FlatSaleForm(forms.ModelForm):
             project = flat.project
             data[flat.pk] = {
                 'quoted': str(project.quoted_price),
-                'parking': str(sale.parking_price if sale and sale.parking_price else project.parking_price),
+                'parking': str(sale.parking_price if sale and sale.parking_price else flat.effective_parking_price),
             }
             if include_base:
                 data[flat.pk]['base'] = str(sale.base_price if sale and sale.base_price else project.base_price)

@@ -219,7 +219,7 @@ class ProjectCostReportExcelView(LoginRequiredMixin, View):
         stamp = f'{applied["date_from"] or "start"}_to_{applied["date_to"] or "end"}' if (applied['date_from'] or applied['date_to']) else 'all'
         response = HttpResponse(content_type=XLSX_CONTENT_TYPE)
         response['Content-Disposition'] = f'attachment; filename="project_costs_{stamp}.xlsx"'
-        build_xlsx(response, 'Project Cost Report', describe_filters(applied), [cost_report_table(costs)], request.user)
+        build_xlsx(response, 'Cost Report', describe_filters(applied), [cost_report_table(costs)], request.user)
         return response
 
 

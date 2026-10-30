@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 {% load crispy_forms_tags %}
 
-{% block title %}{% if object %}Update{% else %}Create{% endif %} Project{% endblock %}
+{% block title %}{% if object %}Update{% else %}Create{% endif %} Building{% endblock %}
 
 {% block content %}
 <div class="card">
     <div class="card-header">
-        <h3 class="mb-0">{% if object %}Update{% else %}Create New{% endif %} Project</h3>
+        <h3 class="mb-0">{% if object %}Update{% else %}Create New{% endif %} Building</h3>
     </div>
     <div class="card-body">
         <form method="post">
@@ -15,6 +15,7 @@
             <div class="row">
                 <div class="col-md-6">
                     <h5>Basic Information</h5>
+                    {{ form.development|as_crispy_field }}
                     {{ form.project_name|as_crispy_field }}
                     {{ form.location|as_crispy_field }}
                     <div class="row">

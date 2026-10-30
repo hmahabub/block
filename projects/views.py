@@ -13,8 +13,8 @@ from activity_log.services import log_activity
 from core.mixins import CreateAuditMixin, DeleteAuditMixin, UpdateAuditMixin
 from core.utils import int_or_none
 
-from .forms import DecisionNoteForm, FlatDeletionRequestForm, FlatForm, GenerateFlatsForm, ProjectForm
-from .models import Flat, FlatDeletionRequest, Project
+from .forms import DecisionNoteForm, DevelopmentForm, FlatDeletionRequestForm, FlatForm, GenerateFlatsForm, ProjectForm
+from .models import Development, Flat, FlatDeletionRequest, Project
 
 
 def attach_active_sales(flats):
@@ -45,7 +45,61 @@ def build_booking_map(project):
     return units, rows, others
 
 
+class DevelopmentListView(LoginRequiredMixin, ListView):
+    """The projects (land developments), each holding one or more buildings."""
+
+    model = Development
+    template_name = 'projects/development_list.html'
+    context_object_name = 'object_list'
+    paginate_by = 15
+
+    def get_queryset(self):
+        queryset = super().get_queryset().prefetch_related('buildings')
+        q = self.request.GET.get('q')
+        if q:
+            queryset = queryset.filter(Q(name__icontains=q) | Q(code__icontains=q) | Q(location__icontains=q))
+        return queryset
+
+
+class DevelopmentDetailView(LoginRequiredMixin, DetailView):
+    model = Development
+    template_name = 'projects/development_detail.html'
+    context_object_name = 'object'
+
+    def get_context_data(self, **kwargs):
+        from core.reauth import money_visible
+        from directors.models import totals_for
+
+        context = super().get_context_data(**kwargs)
+        context['buildings'] = self.object.buildings.all()
+        if money_visible(self.request):
+            context['investment'] = totals_for(None, self.object)
+        return context
+
+
+class DevelopmentCreateView(PermissionRequiredMixin, CreateAuditMixin, CreateView):
+    model = Development
+    form_class = DevelopmentForm
+    template_name = 'projects/development_form.html'
+    permission_required = 'projects.add_development'
+
+
+class DevelopmentUpdateView(PermissionRequiredMixin, UpdateAuditMixin, UpdateView):
+    model = Development
+    form_class = DevelopmentForm
+    template_name = 'projects/development_form.html'
+    permission_required = 'projects.change_development'
+
+
+class DevelopmentDeleteView(PermissionRequiredMixin, DeleteAuditMixin, DeleteView):
+    model = Development
+    template_name = 'projects/development_confirm_delete.html'
+    success_url = reverse_lazy('projects:development-list')
+    permission_required = 'projects.delete_development'
+
+
 class ProjectListView(LoginRequiredMixin, ListView):
+    """The buildings."""
     model = Project
     template_name = 'projects/project_list.html'
     context_object_name = 'object_list'
@@ -55,15 +109,19 @@ class ProjectListView(LoginRequiredMixin, ListView):
         queryset = super().get_queryset()
         q = self.request.GET.get('q')
         status = self.request.GET.get('status')
+        development_id = int_or_none(self.request.GET.get('development'))
         if q:
             queryset = queryset.filter(Q(project_name__icontains=q) | Q(project_code__icontains=q) | Q(location__icontains=q))
         if status:
             queryset = queryset.filter(status=status)
-        return queryset
+        if development_id:
+            queryset = queryset.filter(development_id=development_id)
+        return queryset.select_related('development')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['status_choices'] = Project.Status.choices
+        context['developments'] = Development.objects.all()
         return context
 
 
@@ -87,6 +145,13 @@ class ProjectCreateView(PermissionRequiredMixin, CreateAuditMixin, CreateView):
     form_class = ProjectForm
     template_name = 'projects/project_form.html'
     permission_required = 'projects.add_project'
+
+    def get_initial(self):
+        initial = super().get_initial()
+        development = Development.objects.filter(pk=int_or_none(self.request.GET.get('development'))).first()
+        if development:
+            initial['development'] = development
+        return initial
 
     def get_success_url(self):
         return reverse_lazy('projects:detail', kwargs={'pk': self.object.pk})

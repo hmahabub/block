@@ -15,15 +15,16 @@
             {% csrf_token %}
             {{ form.non_field_errors }}
             <div class="row">
-                <div class="col-md-3">{{ form.unit|as_crispy_field }}</div>
-                <div class="col-md-3">{{ form.floor_no|as_crispy_field }}</div>
-                <div class="col-md-3">{{ form.facing|as_crispy_field }}</div>
+                <div class="col-md-2">{{ form.unit|as_crispy_field }}</div>
+                <div class="col-md-2">{{ form.floor_no|as_crispy_field }}</div>
+                <div class="col-md-2">{{ form.facing|as_crispy_field }}</div>
                 <div class="col-md-3">{{ form.parking_lot|as_crispy_field }}</div>
+                <div class="col-md-3">{{ form.parking_price|as_crispy_field }}</div>
             </div>
             {{ form.notes|as_crispy_field }}
             <div class="alert alert-info mt-3 mb-0">
                 <i class="fas fa-info-circle"></i>
-                Type, size, rooms and prices are set once on the <a href="{% url 'projects:update' project.pk %}">project</a>.
+                Type, size, rooms and the base price are set once on the <a href="{% url 'projects:update' project.pk %}">building</a>. The parking price can be different for each flat; leave it blank to use the building's default.
                 Status is automatic: <strong>Available</strong> until a customer buys the flat, then <strong>Sold</strong>
                 (and <strong>Available</strong> again if the sale is cancelled).
             </div>

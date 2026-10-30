@@ -34,7 +34,7 @@ def _percent(part, whole):
 
 
 def project_line(project):
-    return f'Project: {project.project_name}' if project else 'Project: all'
+    return f'Building: {project.project_name}' if project else 'Building: all'
 
 
 def period_line(date_from, date_to):
@@ -76,7 +76,7 @@ def finance_report(project=None):
 
     sales_table = ReportTable(
         'Sales, collection and receivable',
-        [Column('Project'), Column('Flats', INT), Column('Flats sold', INT), Column('Sale value', MONEY),
+        [Column('Building'), Column('Flats', INT), Column('Flats sold', INT), Column('Sale value', MONEY),
          Column('Honorarium', MONEY), Column('Reg value', MONEY), Column('Net value', MONEY),
          Column('Received', MONEY), Column('Receivable', MONEY)],
         sales_rows, totals(sales_rows),
@@ -84,7 +84,7 @@ def finance_report(project=None):
     )
     cost_table = ReportTable(
         'Cost and payable',
-        [Column('Project'), Column('Pre-development cost', MONEY), Column('Post-development cost', MONEY),
+        [Column('Building'), Column('Pre-development cost', MONEY), Column('Post-development cost', MONEY),
          Column('Total cost', MONEY), Column('Honorarium payable', MONEY), Column('Refunds payable', MONEY),
          Column('Total payable', MONEY)],
         cost_rows, totals(cost_rows),
@@ -194,7 +194,7 @@ def profit_loss_report(project=None):
                   _sum(r[11] for r in rows)]
     tables = [ReportTable(
         'Pre-development profit / loss, collection and due',
-        [Column('Project'), Column('Shares sold', INT), Column('Base price earned', MONEY),
+        [Column('Building'), Column('Shares sold', INT), Column('Base price earned', MONEY),
          Column('Kept on cancellations', MONEY), Column('Pre-dev cost', MONEY), Column('Profit / (loss)', MONEY),
          Column('Net value', MONEY), Column('Collected', MONEY), Column('Collected %', PERCENT),
          Column('Due', MONEY), Column('Honorarium', MONEY), Column('Honorarium paid', MONEY)],
@@ -241,7 +241,7 @@ def customer_post_report(project=None):
         totals = ['Total', '', ''] + [_sum(r[i] for r in rows) for i in range(3, 9)]
     tables = [ReportTable(
         'Customer balance, cost, receivable and payable',
-        [Column('Customer'), Column('Flat'), Column('Project'), Column('Net value', MONEY), Column('Received', MONEY),
+        [Column('Customer'), Column('Flat'), Column('Building'), Column('Net value', MONEY), Column('Received', MONEY),
          Column('Receivable', MONEY), Column('Customer balance', MONEY), Column('Post-dev cost share', MONEY),
          Column('Balance after cost', MONEY)],
         rows, totals,
@@ -278,7 +278,7 @@ def flat_wise_report(project=None):
         totals = ['Total', '', '', '', col(4), col(5), col(6), col(7), col(8), col(9), col(10), col(11)]
     table = ReportTable(
         'Flat-wise report',
-        [Column('Flat'), Column('Project'), Column('Status'), Column('Customer'), Column('Sale value', MONEY),
+        [Column('Flat'), Column('Building'), Column('Status'), Column('Customer'), Column('Sale value', MONEY),
          Column('Honorarium', MONEY), Column('Net value', MONEY), Column('Received', MONEY), Column('Receivable', MONEY),
          Column('Shared cost share', MONEY), Column('Direct cost', MONEY), Column('Total cost', MONEY)],
         rows, totals,

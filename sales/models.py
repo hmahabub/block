@@ -136,7 +136,7 @@ class FlatSale(models.Model):
             return None
         project = self.flat.project
         base = self.base_price if self.base_price else project.base_price
-        parking = (self.parking_price or project.parking_price) if self.with_parking else ZERO
+        parking = (self.parking_price or self.flat.effective_parking_price) if self.with_parking else ZERO
         return base + parking
 
     def clean(self):
@@ -151,7 +151,7 @@ class FlatSale(models.Model):
         project = self.flat.project
         if not self.base_price:
             self.base_price = project.base_price
-        self.parking_price = project.parking_price if self.with_parking else ZERO
+        self.parking_price = self.flat.effective_parking_price if self.with_parking else ZERO
 
     def cancel(self, refund_percent):
         self.status = self.Status.CANCELLED
@@ -179,7 +179,7 @@ class FlatSale(models.Model):
         elif not self.with_parking:
             self.parking_price = ZERO
         elif not self.parking_price:
-            self.parking_price = self.flat.project.parking_price
+            self.parking_price = self.flat.effective_parking_price
         self.recompute()
         super().save(*args, **kwargs)
         self._sync_flat_status()

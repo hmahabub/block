@@ -7,6 +7,8 @@ recorded, so there is no double entry:
     refunds to customers               (sales.RefundPayment)         money out
     honorarium paid to references      (sales.HonorariumPayment)     money out
     cost payments                      (costing.ProjectCost)         money out
+    director investments               (directors.DirectorTransaction) money in
+    director capital/profit withdrawals (directors.DirectorTransaction) money out
     internal transfers                 (books.Transfer)              out of one account, into another
 
 A collected line only enters the book once a user has confirmed it on the "Confirm entries" page. Confirming
@@ -40,13 +42,14 @@ class Entry:
 def _sources():
     """Kind code -> model, loaded lazily so the apps can import each other."""
     from costing.models import ProjectCost
+    from directors.models import DirectorTransaction
     from sales.models import CustomerPayment, HonorariumPayment, RefundPayment
 
     from .models import Transfer
 
     return {
         'cp': CustomerPayment, 'rf': RefundPayment, 'hp': HonorariumPayment,
-        'pc': ProjectCost, 'tr': Transfer,
+        'pc': ProjectCost, 'dt': DirectorTransaction, 'tr': Transfer,
     }
 
 
@@ -62,6 +65,7 @@ def collect_entries(accounts=None, unassigned=False, confirmed=None):
     accounts existed); they cannot be confirmed until an account is chosen.
     """
     from costing.models import ProjectCost
+    from directors.models import DirectorTransaction
     from sales.models import CustomerPayment, HonorariumPayment, RefundPayment
 
     from .models import Transfer
@@ -104,6 +108,15 @@ def collect_entries(accounts=None, unassigned=False, confirmed=None):
             f'pc:{item.pk}', item.date, 4, 'Cost payment', item.voucher_no,
             f'{item.cost_category} - {who} ({item.project.project_code})',
             item.account, ZERO, item.amount, item.is_confirmed, item.get_absolute_url(),
+        ))
+
+    for item in scope(DirectorTransaction.objects.select_related('account', 'director', 'development')):
+        investing = item.kind == item.Kind.INVESTMENT
+        entries.append(Entry(
+            f'dt:{item.pk}', item.date, 3 if not investing else 1, f'Director {item.get_kind_display().lower()}',
+            item.reference_no, f'{item.director.name} - {item.development.name}',
+            item.account, item.amount if investing else ZERO, ZERO if investing else item.amount,
+            item.is_confirmed, item.get_absolute_url(),
         ))
 
     if not unassigned:
@@ -178,11 +191,12 @@ def account_summaries(accounts):
 def pending_count():
     """Lines waiting for confirmation, across every account (shown as a badge in the menu)."""
     from costing.models import ProjectCost
+    from directors.models import DirectorTransaction
     from sales.models import CustomerPayment, HonorariumPayment, RefundPayment
 
     from .models import Transfer
 
-    models = (CustomerPayment, RefundPayment, HonorariumPayment, ProjectCost)
+    models = (CustomerPayment, RefundPayment, HonorariumPayment, ProjectCost, DirectorTransaction)
     total = sum(
         model.objects.filter(confirmed_at__isnull=True, account__isnull=False).count() for model in models
     )

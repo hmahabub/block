@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% load core_tags %}
+
+{% block title %}{{ object.name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h3 class="mb-0"><i class="fas fa-user-tie"></i> {{ object.name }} <small class="text-muted">{{ object.director_code }}</small>
+            {% if not object.is_active %}<span class="badge bg-secondary">Inactive</span>{% endif %}</h3>
+        <p class="text-muted mb-0">{{ object.phone|default:"no phone" }}{% if object.email %} &middot; {{ object.email }}{% endif %}</p>
+    </div>
+    <div>
+        <a href="?{{ request.GET.urlencode }}{% if request.GET %}&amp;{% endif %}format=xlsx" class="btn btn-success"><i class="fas fa-file-excel"></i> Excel</a>
+        {% if perms.directors.add_directortransaction %}
+        <a href="{% url 'directors:transaction-create' %}?director={{ object.pk }}&amp;kind=INVESTMENT" class="btn btn-primary"><i class="fas fa-plus"></i> Investment</a>
+        <a href="{% url 'directors:transaction-create' %}?director={{ object.pk }}&amp;kind=WITHDRAWAL" class="btn btn-outline-primary"><i class="fas fa-arrow-up-from-bracket"></i> Withdrawal</a>
+        {% endif %}
+        {% if perms.directors.change_director %}<a href="{% url 'directors:update' object.pk %}" class="btn btn-warning"><i class="fas fa-edit"></i></a>{% endif %}
+        <a href="{% url 'directors:list' %}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i></a>
+    </div>
+</div>
+
+<div class="row text-center mb-3">
+    <div class="col-md-3"><div class="card"><div class="card-body py-2"><strong>{{ overall.invested|taka }}</strong><br><small class="text-muted">Invested</small></div></div></div>
+    <div class="col-md-3"><div class="card"><div class="card-body py-2"><strong>{{ overall.withdrawn|taka }}</strong><br><small class="text-muted">Capital withdrawn</small></div></div></div>
+    <div class="col-md-3"><div class="card"><div class="card-body py-2"><strong class="text-danger">{{ overall.outstanding|taka }}</strong><br><small class="text-muted">Capital still outstanding</small></div></div></div>
+    <div class="col-md-3"><div class="card"><div class="card-body py-2"><strong>{{ overall.profit_paid|taka }}</strong><br><small class="text-muted">Profit share paid</small></div></div></div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">By project</div>
+    <div class="card-body">
+        <table class="table table-sm align-middle mb-0">
+            <thead class="table-light"><tr><th>Project</th><th class="text-end">Invested</th><th class="text-end">Withdrawn</th><th class="text-end">Outstanding</th><th class="text-end">Returned</th><th class="text-end">Profit paid</th></tr></thead>
+            <tbody>
+                {% for row in project_rows %}
+                <tr>
+                    <td><a href="{{ row.development.get_absolute_url }}">{{ row.development.name }}</a></td>
+                    <td class="text-end">{{ row.invested|taka }}</td>
+                    <td class="text-end">{{ row.withdrawn|taka }}</td>
+                    <td class="text-end"><strong>{{ row.outstanding|taka }}</strong></td>
+                    <td class="text-end">{% if row.returned_percent is not None %}{{ row.returned_percent|floatformat:1 }}%{% else %}-{% endif %}</td>
+                    <td class="text-end">{{ row.profit_paid|taka }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="text-center py-3 text-muted">No money recorded yet</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-auto"><strong>Statement</strong></div>
+            <div class="col-md-3">
+                <select name="development" class="form-select form-select-sm">
+                    <option value="">All projects</option>
+                    {% for item in developments %}<option value="{{ item.pk }}" {% if selected_development and selected_development.pk == item.pk %}selected{% endif %}>{{ item.name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-auto"><input type="date" name="date_from" class="form-control form-control-sm" value="{{ date_from|date:'Y-m-d' }}"></div>
+            <div class="col-auto"><input type="date" name="date_to" class="form-control form-control-sm" value="{{ date_to|date:'Y-m-d' }}"></div>
+            <div class="col-auto"><button class="btn btn-sm btn-primary">Filter</button> <a href="{{ object.get_absolute_url }}" class="btn btn-sm btn-outline-secondary">Reset</a></div>
+        </form>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover table-sm align-middle mb-0">
+                <thead class="table-light">
+                    <tr><th>Date</th><th>Ref.</th><th>Project</th><th>Type</th><th>Account</th><th class="text-end">Invested</th><th class="text-end">Withdrawn</th><th class="text-end">Outstanding after</th><th class="text-center">Book</th><th></th></tr>
+                </thead>
+                <tbody>
+                    {% for item in transactions %}
+                    <tr>
+                        <td>{{ item.date|date:"j M Y" }}</td>
+                        <td>{{ item.reference_no }}</td>
+                        <td>{{ item.development.name }}</td>
+                        <td><span class="badge {% if item.kind == 'INVESTMENT' %}bg-success{% elif item.kind == 'WITHDRAWAL' %}bg-warning text-dark{% else %}bg-info text-dark{% endif %}">{{ item.get_kind_display }}</span></td>
+                        <td>{{ item.account.name }}</td>
+                        <td class="text-end text-success">{% if item.kind == 'INVESTMENT' %}{{ item.amount|taka }}{% endif %}</td>
+                        <td class="text-end text-danger">{% if item.kind != 'INVESTMENT' %}{{ item.amount|taka }}{% endif %}</td>
+                        <td class="text-end">{{ item.capital_after|taka }}</td>
+                        <td class="text-center">{% if item.is_confirmed %}<i class="fas fa-check-circle text-success" title="Confirmed in the book"></i>{% else %}<i class="far fa-circle text-muted" title="Waiting for confirmation"></i>{% endif %}</td>
+                        <td class="text-nowrap">
+                            {% if not item.is_confirmed %}
+                            {% if perms.directors.change_directortransaction %}<a href="{% url 'directors:transaction-update' item.pk %}" class="btn btn-sm btn-warning"><i class="fas fa-edit"></i></a>{% endif %}
+                            {% if perms.directors.delete_directortransaction %}<a href="{% url 'directors:transaction-delete' item.pk %}" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></a>{% endif %}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="10" class="text-center py-4 text-muted">No transactions</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -12,7 +12,7 @@ from customers.models import Customer
 from sales.models import FlatSale
 
 from .forms import FlatForm, GenerateFlatsForm, ProjectForm
-from .models import Flat, FlatDeletionRequest, Project
+from .models import Development, Flat, FlatDeletionRequest, Project
 from .views import (
     FlatDeletionApproveView,
     FlatDeletionRejectView,
@@ -75,7 +75,7 @@ class IdenticalFlatSpecTests(TestCase):
             flat_type=Project.FlatType.FOUR_BED, bedrooms=4, bathrooms=4, features='Drawing, Dining', parking_area=120,
         )
         flat = flats[0]
-        self.assertEqual((flat.saleable_area, flat.base_price, flat.quoted_price, flat.parking_price), (1000, 1000, 1200, 100))
+        self.assertEqual((flat.saleable_area, flat.base_price, flat.quoted_price, flat.effective_parking_price), (1000, 1000, 1200, 100))
         self.assertEqual((flat.get_flat_type_display(), flat.bedrooms, flat.parking_area), ('4 Bedroom', 4, 120))
         project.base_price = 2000
         project.save()
@@ -93,7 +93,7 @@ class IdenticalFlatSpecTests(TestCase):
 
     def test_project_form_rejects_a_quoted_price_below_the_base_price(self):
         data = {
-            'project_name': 'P', 'status': 'PLANNING', 'floor_no': 1, 'land_area': 0, 'budget_amount': 0,
+            'development': Development.objects.create(name='Estate').pk, 'project_name': 'P', 'status': 'PLANNING', 'floor_no': 1, 'land_area': 0, 'budget_amount': 0,
             'flat_type': '2BED', 'flat_area': 1000, 'base_price': 1000, 'quoted_price': 900, 'parking_price': 0,
         }
         form = ProjectForm(data=data)

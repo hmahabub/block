@@ -41,6 +41,12 @@ def generate_dashed_code(series, infix, width=3):
     return f"{prefix}-{n:0{width}d}"
 
 
+def generate_plain_code(series, letter, width=4):
+    """e.g. generate_plain_code('customer', 'C') -> 'C0001'. A letter and a running number, nothing else."""
+    n = next_number(f"{series}:{letter}")
+    return f"{letter}{n:0{width}d}"
+
+
 def generate_slash_code(series, width=5):
     """e.g. generate_slash_code('sale') -> 'AB/2026/00001'."""
     year = timezone.now().year

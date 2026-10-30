@@ -1,6 +1,11 @@
 from django.urls import path
 
 from .views import (
+    DevelopmentCreateView,
+    DevelopmentDeleteView,
+    DevelopmentDetailView,
+    DevelopmentListView,
+    DevelopmentUpdateView,
     FlatCreateView,
     FlatDeletionApproveView,
     FlatDeletionRejectView,
@@ -21,6 +26,14 @@ from .views import (
 app_name = 'projects'
 
 urlpatterns = [
+    # Projects (a piece of land with one or more buildings)
+    path('developments/', DevelopmentListView.as_view(), name='development-list'),
+    path('developments/create/', DevelopmentCreateView.as_view(), name='development-create'),
+    path('developments/<int:pk>/', DevelopmentDetailView.as_view(), name='development-detail'),
+    path('developments/<int:pk>/update/', DevelopmentUpdateView.as_view(), name='development-update'),
+    path('developments/<int:pk>/delete/', DevelopmentDeleteView.as_view(), name='development-delete'),
+
+    # Buildings
     path('', ProjectListView.as_view(), name='list'),
     path('create/', ProjectCreateView.as_view(), name='create'),
     path('<int:pk>/', ProjectDetailView.as_view(), name='detail'),

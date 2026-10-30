@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 {% load core_tags %}
 
-{% block title %}Project Budget{% endblock %}
+{% block title %}Building Budget{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2><i class="fas fa-calculator"></i> Project Budget</h2>
+    <h2><i class="fas fa-calculator"></i> Building Budget</h2>
     <a href="{% url 'costing:budget-create' %}" class="btn btn-primary">
         <i class="fas fa-plus"></i> Add Budget Line
     </a>
@@ -16,7 +16,7 @@
         <form method="get" class="row g-3">
             <div class="col-md-4">
                 <select name="project" class="form-select">
-                    <option value="">All Projects</option>
+                    <option value="">All Buildings</option>
                     {% for project in projects %}
                     <option value="{{ project.id }}" {% if request.GET.project == project.id|stringformat:"s" %}selected{% endif %}>{{ project.project_name }}</option>
                     {% endfor %}
@@ -35,7 +35,7 @@
             <table class="table table-hover">
                 <thead class="table-light">
                     <tr>
-                        <th>Project</th>
+                        <th>Building</th>
                         <th>Cost Category</th>
                         <th>Budget</th>
                         <th>Actual Cost</th>

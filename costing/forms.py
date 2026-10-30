@@ -28,6 +28,7 @@ class ProjectBudgetForm(forms.ModelForm):
     class Meta:
         model = ProjectBudget
         fields = ['project', 'cost_category', 'budget_amount', 'notes']
+        labels = {'project': 'Building'}
         widgets = {
             'notes': forms.Textarea(attrs={'rows': 2}),
         }
@@ -55,6 +56,8 @@ class _CostFormBase(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        if 'project' in self.fields:
+            self.fields['project'].label = 'Building'
         self.fields['supplier'].required = False
         self.fields['account'].required = True
         self.fields['account'].queryset = Account.objects.filter(is_active=True)

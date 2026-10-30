@@ -19,7 +19,7 @@
             </div>
             <div class="col-md-3">
                 <select name="project" class="form-select">
-                    <option value="">All Projects</option>
+                    <option value="">All Buildings</option>
                     {% for project in projects %}
                     <option value="{{ project.id }}" {% if request.GET.project == project.id|stringformat:"s" %}selected{% endif %}>{{ project.project_name }}</option>
                     {% endfor %}
@@ -47,7 +47,7 @@
                 <thead class="table-light">
                     <tr>
                         <th>Sale No.</th>
-                        <th>Project / Flat</th>
+                        <th>Building / Flat</th>
                         <th>Customer</th>
                         <th>Ref</th>
                         {% if money_visible %}<th class="text-end">Sale Value</th>

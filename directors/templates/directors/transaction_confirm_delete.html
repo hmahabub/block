@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}Delete Director Transaction{% endblock %}
+
+{% block content %}
+<div class="card border-danger">
+    <div class="card-header bg-danger text-white"><h3 class="mb-0">Delete {{ object.reference_no }}</h3></div>
+    <div class="card-body">
+        <p>Delete <strong>{{ object.get_kind_display }} {{ object.amount }}</strong> for {{ object.director.name }} ({{ object.development.name }})?
+            It has not been confirmed in the book yet.</p>
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger"><i class="fas fa-trash"></i> Delete</button>
+            <a href="{{ object.get_absolute_url }}" class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

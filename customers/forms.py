@@ -43,6 +43,20 @@ class CustomerForm(forms.ModelForm):
             raise forms.ValidationError('A customer with this phone number already exists.')
         return phone
 
+    def _clean_unique(self, field, label):
+        value = (self.cleaned_data.get(field) or '').strip()
+        if value:
+            clash = Customer.objects.filter(**{f'{field}__iexact': value}).exclude(pk=self.instance.pk).first()
+            if clash:
+                raise forms.ValidationError(f'{label} {value} already belongs to customer {clash.customer_code} ({clash.name}).')
+        return value
+
+    def clean_identification_no(self):
+        return self._clean_unique('identification_no', 'NID / passport number')
+
+    def clean_tin(self):
+        return self._clean_unique('tin', 'TIN')
+
     def clean_whatsapp_no(self):
         return self._clean_phone('whatsapp_no')
 
