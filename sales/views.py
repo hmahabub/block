@@ -7,7 +7,6 @@ from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.views.generic import CreateView, DetailView, FormView, ListView, UpdateView
 
-from activity_log.services import log_activity
 from core.mixins import CreateAuditMixin, UpdateAuditMixin
 from core.reauth import money_visible
 from core.utils import int_or_none
@@ -139,7 +138,6 @@ class FlatSaleCancelView(PermissionRequiredMixin, FormView):
         sale.cancelled_on = form.cleaned_data['cancelled_on']
         sale.cancel(form.cleaned_data['refund_percent'])
         sale.save()
-        log_activity(self.request.user, 'updated', sale)
         messages.success(
             self.request,
             f'{sale.sale_no} cancelled. Refundable to the customer: {sale.refund_amount:,.2f} '

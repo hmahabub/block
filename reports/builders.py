@@ -18,8 +18,13 @@ def _sum(values):
     return sum(values, ZERO)
 
 
-def _projects(project):
-    return [project] if project else list(Project.objects.all())
+def _projects(project, development=None):
+    """The buildings a report covers: the one chosen, else every building of the chosen project, else all of them."""
+    if project:
+        return [project]
+    if development:
+        return list(development.buildings.all())
+    return list(Project.objects.all())
 
 
 def _active_sales(project):
@@ -33,8 +38,12 @@ def _percent(part, whole):
     return (part / whole * 100) if whole else None
 
 
-def project_line(project):
-    return f'Building: {project.project_name}' if project else 'Building: all'
+def project_line(project, development=None):
+    if project:
+        return f'Building: {project.project_name}'
+    if development:
+        return f'Project: {development.name} (all its buildings)'
+    return 'Building: all'
 
 
 def period_line(date_from, date_to):
@@ -48,9 +57,9 @@ def period_line(date_from, date_to):
 
 
 # --- Finance report: every phase together --------------------------------------
-def finance_report(project=None):
+def finance_report(project=None, development=None):
     sales_rows, cost_rows = [], []
-    for item in _projects(project):
+    for item in _projects(project, development):
         active = _active_sales(item)
         all_sales = list(item.sales.prefetch_related('refund_payments'))
         sale_value = _sum(s.sale_value for s in active)
@@ -105,14 +114,14 @@ def finance_report(project=None):
              _sum(r[4] for r in account_rows), sum(r[5] for r in account_rows)],
             note='Only confirmed entries are in the book, so only they count towards the balance.',
         ))
-    return [project_line(project), 'Position as of today'], tables
+    return [project_line(project, development), 'Position as of today'], tables
 
 
 # --- Pre-development ------------------------------------------------------------
-def periodic_collection_report(project=None, date_from=None, date_to=None):
+def periodic_collection_report(project=None, date_from=None, date_to=None, development=None):
     payments = CustomerPayment.objects.select_related('sale', 'sale__flat', 'sale__project', 'customer', 'account')
-    if project:
-        payments = payments.filter(sale__project=project)
+    if project or development:
+        payments = payments.filter(sale__project__in=_projects(project, development))
     if date_from:
         payments = payments.filter(payment_date__gte=date_from)
     if date_to:
@@ -158,15 +167,15 @@ def periodic_collection_report(project=None, date_from=None, date_to=None):
         ReportTable('Collection by account', [Column('Account'), Column('Payments', INT), Column('Collected', MONEY)],
                     account_rows, ['Total', len(payments), total]),
     ]
-    return [project_line(project), period_line(date_from, date_to)], tables
+    return [project_line(project, development), period_line(date_from, date_to)], tables
 
 
-def profit_loss_report(project=None):
+def profit_loss_report(project=None, development=None):
     """Pre-development result: what the company earns from selling flat shares at base price,
     against land, marketing and pre-development administrative cost; plus collection and dues."""
     rows = []
     cost_by_category = OrderedDict()
-    for item in _projects(project):
+    for item in _projects(project, development):
         active = _active_sales(item)
         cancelled = list(item.sales.filter(status=FlatSale.Status.CANCELLED))
         base_value = _sum(s.total_base_price for s in active)
@@ -209,16 +218,16 @@ def profit_loss_report(project=None):
             [[name, amount] for name, amount in category_rows],
             ['Total', _sum(a for _, a in category_rows)],
         ))
-    return [project_line(project), 'Pre-development phase'], tables
+    return [project_line(project, development), 'Pre-development phase'], tables
 
 
 # --- Post-development -----------------------------------------------------------
-def customer_post_report(project=None):
+def customer_post_report(project=None, development=None):
     """Per customer: balance held, receivable, post-development cost share and payable."""
     rows = []
     unsold_flats = 0
     unsold_share = ZERO
-    for item in _projects(project):
+    for item in _projects(project, development):
         for sale in _active_sales(item):
             share = sale.flat.total_cost
             rows.append([
@@ -232,8 +241,8 @@ def customer_post_report(project=None):
     rows.sort(key=lambda r: (r[0].lower(), r[1]))
 
     cancelled_qs = FlatSale.objects.filter(status=FlatSale.Status.CANCELLED)
-    if project:
-        cancelled_qs = cancelled_qs.filter(project=project)
+    if project or development:
+        cancelled_qs = cancelled_qs.filter(project__in=_projects(project, development))
     refund_due = _sum(s.refund_due for s in cancelled_qs)
 
     totals = None
@@ -254,13 +263,13 @@ def customer_post_report(project=None):
         ['Refunds still payable to customers (cancelled bookings)', None, refund_due],
     ]
     tables.append(ReportTable('Other post-development items', [Column('Item'), Column('Flats', INT), Column('Amount', MONEY)], summary))
-    return [project_line(project), 'Post-development phase'], tables
+    return [project_line(project, development), 'Post-development phase'], tables
 
 
-def flat_wise_report(project=None):
+def flat_wise_report(project=None, development=None):
     flats = Flat.objects.select_related('project')
-    if project:
-        flats = flats.filter(project=project)
+    if project or development:
+        flats = flats.filter(project__in=_projects(project, development))
     rows = []
     for flat in flats:
         sale = flat.current_sale
@@ -283,13 +292,13 @@ def flat_wise_report(project=None):
          Column('Shared cost share', MONEY), Column('Direct cost', MONEY), Column('Total cost', MONEY)],
         rows, totals,
     )
-    return [project_line(project)], [table]
+    return [project_line(project, development)], [table]
 
 
-def dues_report(project=None):
+def dues_report(project=None, development=None):
     sales = FlatSale.objects.exclude(status=FlatSale.Status.CANCELLED).filter(receivable_amount__gt=0)
-    if project:
-        sales = sales.filter(project=project)
+    if project or development:
+        sales = sales.filter(project__in=_projects(project, development))
     rows = [
         [s.customer.name, s.customer.phone, s.flat.flat_no, s.net_value, s.received_amount, s.receivable_amount]
         for s in sales.select_related('customer', 'flat').order_by('customer__name')
@@ -301,4 +310,4 @@ def dues_report(project=None):
          Column('Receivable', MONEY)],
         rows, totals,
     )
-    return [project_line(project)], [table]
+    return [project_line(project, development)], [table]

@@ -56,7 +56,9 @@ class CostCategory(models.Model):
             self.phase = self.parent_category.phase
         super().save(*args, **kwargs)
         if not self.parent_category_id:
-            self.subcategories.exclude(phase=self.phase).update(phase=self.phase)
+            for child in self.subcategories.exclude(phase=self.phase):
+                child.phase = self.phase
+                child.save()  # a save (not .update()) so the change reaches the audit trail
 
     @property
     def effective_phase(self):

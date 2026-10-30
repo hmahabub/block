@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% load core_tags %}
+
+{% block title %}Ledger - {{ object.name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 d-print-none">
+    <div>
+        <h3 class="mb-0"><i class="fas fa-book-open"></i> Supplier ledger</h3>
+        <p class="text-muted mb-0">{{ object.name }} <small>{{ object.supplier_code }}</small>{% if object.cost_category %} &middot; {{ object.cost_category }}{% endif %}</p>
+    </div>
+    <div>
+        {% if not locked %}
+        <a href="?{{ request.GET.urlencode }}{% if request.GET %}&amp;{% endif %}format=xlsx" class="btn btn-success"><i class="fas fa-file-excel"></i> Excel</a>
+        <button class="btn btn-info" onclick="window.print()"><i class="fas fa-print"></i> Print</button>
+        {% endif %}
+        <a href="{% url 'suppliers:detail' object.pk %}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Supplier</a>
+    </div>
+</div>
+
+{% if locked %}
+{% include "includes/locked_note.html" %}
+{% else %}
+<div class="d-none d-print-block mb-3">
+    <h4>{{ object.name }} - ledger</h4>
+    <p class="mb-0">{{ object.supplier_code }}{% if object.tin %} &middot; TIN {{ object.tin }}{% endif %}{% if object.phone %} &middot; {{ object.phone }}{% endif %}</p>
+</div>
+
+<div class="card mb-3 d-print-none">
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small text-muted mb-1">Building</label>
+                <select name="project" class="form-select">
+                    <option value="">All buildings</option>
+                    {% for item in buildings %}<option value="{{ item.pk }}" {% if building and building.pk == item.pk %}selected{% endif %}>{{ item.project_name }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-muted mb-1">Phase</label>
+                <select name="phase" class="form-select">
+                    <option value="">Pre &amp; post</option>
+                    <option value="PRE" {% if phase == 'PRE' %}selected{% endif %}>Pre-development</option>
+                    <option value="POST" {% if phase == 'POST' %}selected{% endif %}>Post-development</option>
+                </select>
+            </div>
+            <div class="col-md-2"><label class="form-label small text-muted mb-1">From</label><input type="date" name="date_from" class="form-control" value="{{ date_from|date:'Y-m-d' }}"></div>
+            <div class="col-md-2"><label class="form-label small text-muted mb-1">To</label><input type="date" name="date_to" class="form-control" value="{{ date_to|date:'Y-m-d' }}"></div>
+            <div class="col-md-3 d-flex gap-2">
+                <button class="btn btn-primary"><i class="fas fa-filter"></i> Filter</button>
+                <a href="{% url 'suppliers:ledger' object.pk %}" class="btn btn-outline-secondary">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row text-center mb-3">
+    <div class="col-md-4"><div class="card"><div class="card-body py-2"><strong>{{ brought_forward|taka }}</strong><br><small class="text-muted">Paid before this period</small></div></div></div>
+    <div class="col-md-4"><div class="card"><div class="card-body py-2"><strong>{{ period_total|taka }}</strong><br><small class="text-muted">Paid in this period</small></div></div></div>
+    <div class="col-md-4"><div class="card"><div class="card-body py-2"><strong>{{ closing_total|taka }}</strong><br><small class="text-muted">Total paid to date</small></div></div></div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover table-sm align-middle mb-0">
+                <thead class="table-light">
+                    <tr><th>Date</th><th>Voucher</th><th>Building</th><th>Particulars</th><th>Phase</th><th>Paid from</th><th class="text-end">Paid</th><th class="text-end">Total paid</th><th class="text-center">Book</th></tr>
+                </thead>
+                <tbody>
+                    {% if date_from %}
+                    <tr class="table-light"><td colspan="7"><em>Brought forward</em></td><td class="text-end">{{ brought_forward|taka }}</td><td></td></tr>
+                    {% endif %}
+                    {% for cost in rows %}
+                    <tr>
+                        <td>{{ cost.date|date:"j M Y" }}</td>
+                        <td><a href="{{ cost.get_absolute_url }}">{{ cost.voucher_no }}</a></td>
+                        <td>{{ cost.project.project_name }}</td>
+                        <td>{{ cost.cost_category }}{% if cost.description %} <small class="text-muted">- {{ cost.description }}</small>{% endif %}{% if cost.flat %} <small class="text-muted">(flat {{ cost.flat.flat_no }})</small>{% endif %}</td>
+                        <td>{{ cost.get_phase_display }}</td>
+                        <td>{{ cost.account|default:"-" }}</td>
+                        <td class="text-end">{{ cost.amount|taka }}</td>
+                        <td class="text-end">{{ cost.running_total|taka }}</td>
+                        <td class="text-center">{% if cost.is_confirmed %}<i class="fas fa-check-circle text-success"></i>{% else %}<i class="far fa-circle text-muted"></i>{% endif %}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="9" class="text-center py-4 text-muted">No payments to this supplier in this period</td></tr>
+                    {% endfor %}
+                </tbody>
+                {% if rows %}
+                <tfoot class="table-secondary"><tr><th colspan="6">Total</th><th class="text-end">{{ period_total|taka }}</th><th class="text-end">{{ closing_total|taka }}</th><th></th></tr></tfoot>
+                {% endif %}
+            </table>
+        </div>
+    </div>
+</div>
+
+{% if by_building|length > 1 %}
+<div class="card">
+    <div class="card-header">By building</div>
+    <div class="card-body">
+        <table class="table table-sm mb-0" style="max-width: 520px;">
+            <tbody>
+                {% for item, total in by_building %}<tr><td>{{ item.project_name }}</td><td class="text-end">{{ total|taka }}</td></tr>{% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}

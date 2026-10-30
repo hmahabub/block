@@ -5,7 +5,7 @@ from django.http import HttpResponse
 from django.views.generic import TemplateView
 
 from core.utils import int_or_none
-from projects.models import Project
+from projects.models import Development, Project
 
 from . import builders
 from .excel import XLSX_CONTENT_TYPE, build_xlsx
@@ -37,7 +37,10 @@ class ReportView(LoginRequiredMixin, TemplateView):
         params = self.request.GET
         project_id = int_or_none(params.get('project'))
         project = Project.objects.filter(pk=project_id).first() if project_id else None
-        return {'project': project, 'date_from': _date(params.get('date_from')), 'date_to': _date(params.get('date_to'))}
+        development_id = int_or_none(params.get('development'))
+        development = Development.objects.filter(pk=development_id).first() if development_id else None
+        return {'project': project, 'development': development,
+                'date_from': _date(params.get('date_from')), 'date_to': _date(params.get('date_to'))}
 
     def build(self, filters):
         raise NotImplementedError
@@ -64,6 +67,7 @@ class ReportView(LoginRequiredMixin, TemplateView):
         context.update({
             'title': self.title, 'description': self.description, 'phase': self.phase,
             'uses_period': self.uses_period, 'projects': Project.objects.all(),
+            'developments': Development.objects.all(), 'selected_development': filters['development'],
             'selected_project': filters['project'], 'date_from': filters['date_from'], 'date_to': filters['date_to'],
         })
         return context
@@ -76,7 +80,7 @@ class FinanceReportView(ReportView):
     pdf_name = 'finance_report'
 
     def build(self, filters):
-        return builders.finance_report(filters['project'])
+        return builders.finance_report(filters['project'], filters['development'])
 
 
 class PeriodicCollectionReportView(ReportView):
@@ -87,7 +91,7 @@ class PeriodicCollectionReportView(ReportView):
     pdf_name = 'periodic_collection'
 
     def build(self, filters):
-        return builders.periodic_collection_report(filters['project'], filters['date_from'], filters['date_to'])
+        return builders.periodic_collection_report(filters['project'], filters['date_from'], filters['date_to'], filters['development'])
 
 
 class ProfitLossReportView(ReportView):
@@ -97,7 +101,7 @@ class ProfitLossReportView(ReportView):
     pdf_name = 'profit_loss_collection_due'
 
     def build(self, filters):
-        return builders.profit_loss_report(filters['project'])
+        return builders.profit_loss_report(filters['project'], filters['development'])
 
 
 class CustomerPostReportView(ReportView):
@@ -107,7 +111,7 @@ class CustomerPostReportView(ReportView):
     pdf_name = 'customer_balance_cost'
 
     def build(self, filters):
-        return builders.customer_post_report(filters['project'])
+        return builders.customer_post_report(filters['project'], filters['development'])
 
 
 class FlatWiseReportView(ReportView):
@@ -117,7 +121,7 @@ class FlatWiseReportView(ReportView):
     pdf_name = 'flat_wise_report'
 
     def build(self, filters):
-        return builders.flat_wise_report(filters['project'])
+        return builders.flat_wise_report(filters['project'], filters['development'])
 
 
 class DuesReportView(ReportView):
@@ -127,4 +131,4 @@ class DuesReportView(ReportView):
     pdf_name = 'receivables'
 
     def build(self, filters):
-        return builders.dues_report(filters['project'])
+        return builders.dues_report(filters['project'], filters['development'])

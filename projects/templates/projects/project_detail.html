@@ -36,6 +36,7 @@
         </p>
     </div>
     <div>
+        <a href="{% url 'activity_log:list' %}?app=projects&amp;model=Project&amp;object={{ object.pk }}" class="btn btn-outline-secondary" title="Who changed this, and when"><i class="fas fa-clock-rotate-left"></i> History</a>
         <a href="{% url 'projects:update' object.pk %}" class="btn btn-warning">
             <i class="fas fa-edit"></i> Edit
         </a>

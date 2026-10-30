@@ -9,7 +9,8 @@ from django.db.models import Sum
 from books.models import Account, Transfer
 from costing.models import CostCategory, ProjectCost
 from customers.models import Customer
-from projects.models import Flat, Project
+from directors.models import Director, DirectorTransaction
+from projects.models import Development, Flat, Project
 from sales.models import CustomerPayment, FlatSale, HonorariumPayment, Reference
 
 FLOORS = 12
@@ -29,6 +30,14 @@ ACCOUNTS = [
     dict(name='Bank 1', account_type='BANK', bank_name='Demo Bank Ltd', account_number='1001-200-300', opening_balance=20_000_000),
     dict(name='Bank 2', account_type='BANK', bank_name='Sample Bank PLC', account_number='2002-400-500', opening_balance=8_000_000),
 ]
+# (name, phone, [(kind, date, amount, account)]): the directors who funded the project and took part back
+DIRECTORS = [
+    ('Mr. Anwar Hossain', '+8801911100001', [('INVESTMENT', '2026-04-01', 20_000_000), ('WITHDRAWAL', '2026-09-28', 2_000_000)]),
+    ('Mr. Belal Ahmed', '+8801911100002', [('INVESTMENT', '2026-04-01', 10_000_000), ('WITHDRAWAL', '2026-09-28', 1_000_000)]),
+    ('Ms. Chowdhury', '+8801911100003', [('INVESTMENT', '2026-04-05', 5_000_000)]),
+]
+FLAT_WITH_OWN_PARKING_PRICE = ('Tower 1', 'B4', Decimal('650000'))   # its parking lot costs more than the building's default
+
 REFERENCES = [
     dict(name='Mr. Alam (reference)', phone='+8801811100001'),
     dict(name='Ms. Sultana (reference)', phone='+8801811100002'),
@@ -100,7 +109,12 @@ class Command(BaseCommand):
 
         call_command('seed_cost_categories', verbosity=0)
         accounts = self.create_accounts()
-        projects = {name: self.create_tower(name) for name in ('Tower 1', 'Tower 2')}
+        development = Development.objects.create(
+            name='Dar Al Jannah Residency', location='Dhaka', status=Development.Status.ONGOING,
+            description='One site, two towers.',
+        )
+        projects = {name: self.create_tower(name, development) for name in ('Tower 1', 'Tower 2')}
+        self.create_directors(development, accounts)
         customers = {data['name']: Customer.objects.create(**data) for data in CUSTOMERS}
         references = [Reference.objects.create(**data) for data in REFERENCES]
         self.create_bookings(projects, customers, references, accounts)
@@ -128,9 +142,19 @@ class Command(BaseCommand):
         )
         return accounts
 
-    def create_tower(self, name):
+    def create_directors(self, development, accounts):
+        for name, phone, moves in DIRECTORS:
+            director = Director.objects.create(name=name, phone=phone)
+            for kind, date, amount in moves:
+                account = accounts['Bank 1'] if kind == 'INVESTMENT' else accounts['Bank 2']
+                DirectorTransaction.objects.create(
+                    director=director, development=development, kind=kind, date=date, amount=amount, account=account,
+                    notes='Initial investment' if kind == 'INVESTMENT' else 'Part of the capital returned',
+                )
+
+    def create_tower(self, name, development):
         project = Project.objects.create(
-            project_name=name, floor_no=FLOORS, budget_amount=PROJECT_BUDGET, status=Project.Status.ONGOING,
+            development=development, project_name=name, floor_no=FLOORS, budget_amount=PROJECT_BUDGET, status=Project.Status.ONGOING,
             description=f'{name}: {FLOORS} floors, {UNITS_PER_FLOOR} flats per floor.',
             flat_type=Project.FlatType.FOUR_BED, flat_area=FLAT_AREA, parking_area=PARKING_AREA,
             bedrooms=4, bathrooms=4, features='Drawing, Dining, Balcony & others included',
@@ -139,6 +163,11 @@ class Command(BaseCommand):
         for floor in range(1, FLOORS + 1):
             for index in range(UNITS_PER_FLOOR):
                 Flat.objects.create(project=project, unit=chr(65 + index), floor_no=floor)
+        own_tower, own_flat, own_price = FLAT_WITH_OWN_PARKING_PRICE
+        if name == own_tower:
+            flat = Flat.objects.get(project=project, flat_no=own_flat)
+            flat.parking_price = own_price
+            flat.save()
         return project
 
     def create_bookings(self, projects, customers, references, accounts):
@@ -173,7 +202,7 @@ class Command(BaseCommand):
     def report(self):
         total_cost = ProjectCost.objects.aggregate(t=Sum('amount'))['t']
         self.stdout.write(self.style.SUCCESS(
-            f'Created {Project.objects.count()} projects, {Flat.objects.count()} flats, '
+            f'Created {Development.objects.count()} project, {Project.objects.count()} buildings, {Flat.objects.count()} flats, '
             f'{Customer.objects.count()} customers, {FlatSale.objects.count()} bookings, '
             f'{CustomerPayment.objects.count()} payments; total cost {total_cost:,.2f}.'
         ))

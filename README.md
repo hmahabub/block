@@ -90,6 +90,47 @@ The book shows **one account at a time** (tabs along the top) for a date range, 
 downloads as **Excel**. Records made before accounts existed have no account: give them one at the bottom of the
 Confirm entries page, then confirm them.
 
+## Projects, buildings and flats
+
+A **Project** is a piece of land developed into one or more **Buildings** (Projects menu). Each building has its own flats,
+flat specification and prices; the flats list shows one building at a time. A project adds up its buildings, and the reports
+can be filtered by project (all its buildings), by building, or not at all.
+(In the code a building is still the class `Project` and a project is `Development`: only the screens use the new names.)
+
+Flat **parking price** is not fixed: the building has a default parking price, and any flat can be given its own on the flat
+form (leave it blank to use the default). A sale freezes the flat's parking price at the time it is made.
+
+## Customer ID, NID and TIN
+
+Every customer gets a permanent **customer ID** in the form `C0001`, `C0002` ... (never reused, never typed). Phone numbers are
+unique, and so are the **NID / passport number** and the **TIN** when given (blank is fine). Supplier and director NIDs and
+supplier TINs are unique the same way. Upgrading a database that already has duplicates stops with a list of the customers to
+fix, and changes nothing.
+
+## Directors
+
+Directors put money into a project and take it back as flats sell (Directors menu). Record each **investment**, **capital
+withdrawal** (installments of the money invested; never more than is still outstanding in that project) and **profit share paid**.
+Each director has a statement with a running outstanding balance and an Excel download, and *Investment by project* shows who
+invested what in each project. These move money through a bank/cash account, so they reach the book like every other payment: they
+wait on *Confirm entries* first. Director pages are always behind the password prompt. There is no director login: the screens are
+for staff only.
+
+## Audit trail
+
+Every **create, update and delete** of the business records is recorded with who did it, when, from which IP address, and the
+**old and new value of every field that changed** (passwords are never written out). It is recorded from the model layer, so a form,
+the admin site, a payment that recalculates a sale, a book confirmation or a script are all captured; changes made by a script
+are attributed to "System". Open it from the user menu → *Audit Trail*: filter by user, action, record type, date or search, open
+the history of one record from its page (History button), or download it as Excel. Entries can never be edited or deleted, not even
+in the admin site. The page is always behind the password prompt.
+
+## Supplier ledger
+
+Each supplier has a ledger (Suppliers → the book icon, or *Ledger* on the supplier page): every payment to them oldest first with a
+running total, filters by building, phase and period (the amount paid before the period is carried forward), Excel and print. Costs
+count as paid when recorded, so the ledger is the list of payments.
+
 ## Flats and the booking map
 
 All flats in a project are identical, so type, area, rooms and prices are set **once on the project**. Flats are numbered
@@ -107,7 +148,7 @@ The software is shown to buyers but also records money, so Costing, Books and Re
 their password again. It stays unlocked while they keep working and locks after `REAUTH_MINUTES` of inactivity, when the
 browser is closed, or via the user menu → *Lock sensitive screens*. While locked, the money figures stay hidden everywhere
 else too: costs, sale value, received, receivable, honorarium, the base price and payment amounts on the home, project,
-flat, sales, payment and customer pages. Change which areas are guarded with `SENSITIVE_NAMESPACES` in `.env`.
+flat, sales, payment and customer pages. Change which areas are guarded with `SENSITIVE_NAMESPACES` in `.env`; the directors and the audit trail are always guarded.
 
 ## Customer SMS
 
@@ -174,14 +215,15 @@ with a message naming the bad entry.
 - `core` — atomic numbering, audit-log mixins, `taka` filter, password re-entry (`core.reauth`), `+88` phone normalising
 - `customers` — title, phones (`+88` added automatically), WhatsApp, emergency contact, TIN, SMS opt-out; unique phone, no delete
 - `suppliers` — company, owner, contact, bank account and a *type* (the cost categories); no delete
-- `projects` — `Project` (flat spec and prices set once), `Flat` (unit + floor, parking lot), booking map, two-admin flat deletion
+- `projects` — `Development` (a project: land with several buildings), `Project` (a building: flat spec and prices set once), `Flat` (unit + floor, parking lot and price), booking map, two-admin flat deletion
+- `directors` — directors, their investments, capital withdrawals and profit share, per project
 - `costing` — categories with phases, budgets, project costs (shared / direct, "paid from" account)
 - `sales` — `FlatSale`, `CustomerPayment`, `Reference`, `HonorariumPayment`, `RefundPayment`
 - `books` — accounts, internal transfers and the collected book with its confirmation layer
 - `sms` — payment SMS, balance reminders, SMS log
 - `reports` — the reports above, shown on screen and as letterhead PDFs
 - `dashboard` — home page with quick stats
-- `activity_log` — create/update/delete audit trail
+- `activity_log` — the audit trail (every create/update/delete with old and new values)
 
 ## Printing
 

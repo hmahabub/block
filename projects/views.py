@@ -9,7 +9,6 @@ from django.urls import reverse_lazy
 from django.views import View
 from django.views.generic import CreateView, DeleteView, DetailView, FormView, ListView, UpdateView
 
-from activity_log.services import log_activity
 from core.mixins import CreateAuditMixin, DeleteAuditMixin, UpdateAuditMixin
 from core.utils import int_or_none
 
@@ -207,8 +206,6 @@ class GenerateFlatsView(PermissionRequiredMixin, FormView):
                     continue
                 Flat.objects.create(project=self.project, unit=unit, floor_no=floor)
                 created += 1
-        if created:
-            log_activity(self.request.user, 'created', self.project)
         messages.success(
             self.request,
             f'{created} flat(s) created for {self.project.project_name}.' if created else 'Every flat already exists.',
@@ -334,7 +331,6 @@ class FlatDeletionRequestCreateView(LoginRequiredMixin, FormView):
         except ValidationError as error:
             messages.error(self.request, ' '.join(error.messages))
             return redirect(self.flat)
-        log_activity(self.request.user, 'created', deletion)
         messages.success(self.request, f'Deletion of {self.flat.flat_no} requested. A second admin must approve it.')
         return redirect('projects:deletion-requests')
 
@@ -369,7 +365,6 @@ class _DeletionDecisionView(LoginRequiredMixin, View):
             messages.error(request, ' '.join(error.messages))
         else:
             messages.success(request, message)
-            log_activity(request.user, 'updated', deletion)
         return redirect('projects:deletion-requests')
 
 
@@ -377,7 +372,6 @@ class FlatDeletionApproveView(_DeletionDecisionView):
     def act(self, deletion, user, note):
         label = deletion.flat_label
         deletion.approve(user)
-        log_activity(user, 'deleted', None, model_name='Flat', object_repr=label)
         return f'{label} was deleted.'
 
 

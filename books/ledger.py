@@ -20,6 +20,8 @@ from decimal import Decimal
 from django.db import transaction
 from django.urls import reverse
 
+from activity_log.services import log_activity
+
 ZERO = Decimal('0')
 
 
@@ -229,11 +231,14 @@ def confirm_entries(keys, user):
         item.confirm(user)
         broken = _accounts_gone_negative(item, kind)
         if broken:
-            # Take the confirmation straight back: it was never in the book.
+            # Take the confirmation straight back: it was never in the book, so nothing is recorded.
             type(item).objects.filter(pk=item.pk).update(confirmed_at=None, confirmed_by=None)
             problems.append(f'{entry.reference} ({entry.source}, {entry.date:%d %b %Y}) would take {broken} below zero.')
         else:
             done.append(entry.key)
+            # .update() sends no signals, so the confirmation is written to the audit trail here.
+            log_activity(user, 'updated', item, changes={'confirmed_at': [None, item.confirmed_at.replace(microsecond=0).isoformat()],
+                                                         'confirmed_by': [None, getattr(user, 'pk', None)]})
 
     for key in wanted - seen:
         problems.append(f'{key} could not be confirmed (already confirmed, unknown, or it has no account).')
@@ -264,5 +269,9 @@ def assign_account(keys, account):
         changes = {'account': account}
         if kind == 'cp':  # the payment method follows the account (an update() skips the model's save())
             changes['payment_method'] = 'CASH' if account.is_cash else 'BANK'
-        updated += model.objects.filter(pk=pk, account__isnull=True, confirmed_at__isnull=True).update(**changes)
+        found = model.objects.filter(pk=pk, account__isnull=True, confirmed_at__isnull=True).first()
+        count = model.objects.filter(pk=pk, account__isnull=True, confirmed_at__isnull=True).update(**changes)
+        if count and found is not None:
+            log_activity(None, 'updated', found, changes={'account': [None, account.pk]})
+        updated += count
     return updated

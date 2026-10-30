@@ -1,30 +1,93 @@
 {% extends "base.html" %}
 
-{% block title %}Activity Log{% endblock %}
+{% block title %}Audit Trail{% endblock %}
 
 {% block content %}
-<h2 class="mb-4"><i class="fas fa-history"></i> Activity Log</h2>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h2 class="mb-0"><i class="fas fa-clipboard-list"></i> Audit trail</h2>
+        <p class="text-muted mb-0 small">Every create, update and delete is recorded with who did it, when, and the old and new values. Entries can never be edited or deleted.</p>
+    </div>
+    <a href="?{{ request.GET.urlencode }}{% if request.GET %}&amp;{% endif %}format=xlsx" class="btn btn-success"><i class="fas fa-file-excel"></i> Excel</a>
+</div>
+
+{% if one_record %}
+<div class="alert alert-info py-2">Showing the history of one record. <a href="{% url 'activity_log:list' %}">Show everything</a></div>
+{% endif %}
+
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-end">
+            {% if one_record %}
+            <input type="hidden" name="app" value="{{ request.GET.app }}"><input type="hidden" name="model" value="{{ request.GET.model }}"><input type="hidden" name="object" value="{{ request.GET.object }}">
+            {% endif %}
+            <div class="col-md-2">
+                <label class="form-label small text-muted mb-1">User</label>
+                <select name="user" class="form-select form-select-sm">
+                    <option value="">Everyone</option>
+                    <option value="system" {% if request.GET.user == 'system' %}selected{% endif %}>System</option>
+                    {% for item in users %}<option value="{{ item.pk }}" {% if request.GET.user == item.pk|stringformat:"s" %}selected{% endif %}>{{ item.get_full_name|default:item.username }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-muted mb-1">Action</label>
+                <select name="action" class="form-select form-select-sm">
+                    <option value="">All</option>
+                    {% for value, label in actions %}<option value="{{ value }}" {% if request.GET.action == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-muted mb-1">Record type</label>
+                <select name="type" class="form-select form-select-sm">
+                    <option value="">All</option>
+                    {% for value, label in kinds %}<option value="{{ value }}" {% if request.GET.type == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2"><label class="form-label small text-muted mb-1">Search</label><input type="text" name="q" class="form-control form-control-sm" value="{{ request.GET.q }}" placeholder="name, code, id..."></div>
+            <div class="col-md-1"><label class="form-label small text-muted mb-1">From</label><input type="date" name="date_from" class="form-control form-control-sm" value="{{ date_from|date:'Y-m-d' }}"></div>
+            <div class="col-md-1"><label class="form-label small text-muted mb-1">To</label><input type="date" name="date_to" class="form-control form-control-sm" value="{{ date_to|date:'Y-m-d' }}"></div>
+            <div class="col-md-2 d-flex gap-2"><button class="btn btn-sm btn-primary"><i class="fas fa-filter"></i> Filter</button><a href="{% url 'activity_log:list' %}" class="btn btn-sm btn-outline-secondary">Reset</a></div>
+        </form>
+    </div>
+</div>
 
 <div class="card">
     <div class="card-body">
         <div class="table-responsive">
-            <table class="table table-hover">
+            <table class="table table-hover align-middle">
                 <thead class="table-light">
-                    <tr>
-                        <th>When</th>
-                        <th>User</th>
-                        <th>Action</th>
-                    </tr>
+                    <tr><th>When</th><th>User</th><th>Action</th><th>Record</th><th>What changed</th><th>IP</th></tr>
                 </thead>
                 <tbody>
                     {% for log in logs %}
                     <tr>
-                        <td>{{ log.created_at|date:"Y-m-d H:i" }}</td>
-                        <td>{{ log.user|default:"System" }}</td>
-                        <td>{{ log }}</td>
+                        <td class="text-nowrap">{{ log.created_at|date:"j M Y H:i:s" }}</td>
+                        <td>{% if log.user %}{{ log.user.get_full_name|default:log.user.username }}{% else %}<span class="text-muted">System</span>{% endif %}</td>
+                        <td><span class="badge {% if log.action == 'created' %}bg-success{% elif log.action == 'updated' %}bg-warning text-dark{% else %}bg-danger{% endif %}">{{ log.get_action_display }}</span></td>
+                        <td>
+                            <strong>{{ log.model_label }}</strong> {{ log.object_repr }}
+                            {% if log.object_id and log.action != 'deleted' %}<br><a class="small" href="?app={{ log.app_label }}&amp;model={{ log.model_name }}&amp;object={{ log.object_id }}">history of this record</a>{% endif %}
+                        </td>
+                        <td>
+                            {% if log.changes %}
+                            <details>
+                                <summary class="small">{{ log.changes|length }} field{{ log.changes|length|pluralize }}</summary>
+                                <table class="table table-sm mb-0 mt-1">
+                                    {% for label, old, new in log.change_rows %}
+                                    <tr>
+                                        <th class="small fw-semibold">{{ label }}</th>
+                                        <td class="small text-danger">{% if old is not None %}{{ old }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
+                                        <td class="small text-success">{% if new is not None %}{{ new }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </table>
+                            </details>
+                            {% else %}<span class="text-muted small">-</span>{% endif %}
+                        </td>
+                        <td class="small text-muted">{{ log.ip_address|default:"" }}</td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="3" class="text-center py-4">No activity recorded yet</td></tr>
+                    <tr><td colspan="6" class="text-center py-4 text-muted">No entries match</td></tr>
                     {% endfor %}
                 </tbody>
             </table>

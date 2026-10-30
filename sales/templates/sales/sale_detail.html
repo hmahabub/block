@@ -18,6 +18,7 @@
         </p>
     </div>
     <div>
+        <a href="{% url 'activity_log:list' %}?app=sales&amp;model=FlatSale&amp;object={{ object.pk }}" class="btn btn-outline-secondary" title="Who changed this, and when"><i class="fas fa-clock-rotate-left"></i> History</a>
         <a href="{% url 'sales:invoice' object.pk %}" target="_blank" class="btn btn-success"><i class="fas fa-print"></i> Print Invoice</a>
         {% if whatsapp_enabled and object.status != 'CANCELLED' and perms.sms.add_whatsappshare %}
         {% if object.customer.whatsapp_no %}

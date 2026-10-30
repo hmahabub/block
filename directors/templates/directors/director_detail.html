@@ -16,6 +16,7 @@
         <a href="{% url 'directors:transaction-create' %}?director={{ object.pk }}&amp;kind=INVESTMENT" class="btn btn-primary"><i class="fas fa-plus"></i> Investment</a>
         <a href="{% url 'directors:transaction-create' %}?director={{ object.pk }}&amp;kind=WITHDRAWAL" class="btn btn-outline-primary"><i class="fas fa-arrow-up-from-bracket"></i> Withdrawal</a>
         {% endif %}
+        <a href="{% url 'activity_log:list' %}?app=directors&amp;model=Director&amp;object={{ object.pk }}" class="btn btn-outline-secondary" title="Who changed this, and when"><i class="fas fa-clock-rotate-left"></i> History</a>
         {% if perms.directors.change_director %}<a href="{% url 'directors:update' object.pk %}" class="btn btn-warning"><i class="fas fa-edit"></i></a>{% endif %}
         <a href="{% url 'directors:list' %}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i></a>
     </div>
