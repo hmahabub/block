@@ -210,6 +210,20 @@ SMS_BALANCE_URL = env('SMS_BALANCE_URL', default='https://api.zendsms.com/api/v1
 SMS_API_KEY = env('SMS_API_KEY', default='')
 SMS_SENDER_ID = env('SMS_SENDER_ID', default='')
 
+# The wording of each customer SMS. Change it in .env; {placeholders} are listed in .env.example and README.
+SMS_TEMPLATE_PAYMENT = env('SMS_TEMPLATE_PAYMENT', default=(
+    'Dear {customer}, we received {amount} on {date} for flat {flat}, {building}. Receipt {receipt_no}. '
+    'Total paid {total_paid}{balance_note} - {company}'
+))
+SMS_TEMPLATE_BOOKING = env('SMS_TEMPLATE_BOOKING', default=(
+    'Congratulations {customer}! Flat {flat}, {building} is now booked for you (sale {sale_no}). '
+    'Sale value {sale_value}, net value {net_value}. Welcome to the family. - {company}'
+))
+SMS_TEMPLATE_REMINDER = env('SMS_TEMPLATE_REMINDER', default=(
+    'Dear {customer}, a friendly reminder: balance due {total_due} - {details}. '
+    'Please pay at your earliest. Ignore if already paid. - {company}'
+))
+
 # Running the tests must never send a real SMS, whatever the .env says: force the log-only backend and drop the key.
 if 'test' in sys.argv:
     SMS_BACKEND = 'log'

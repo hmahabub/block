@@ -11,7 +11,8 @@ from core.mixins import CreateAuditMixin, UpdateAuditMixin
 from core.reauth import money_visible
 from core.utils import int_or_none
 from projects.models import Flat, Project
-from sms.services import notify_payment
+from sms.feedback import report_sms
+from sms.services import notify_booking, notify_payment
 from sms.whatsapp import sale_pk_from_token
 
 from .forms import (
@@ -90,6 +91,11 @@ class FlatSaleCreateView(PermissionRequiredMixin, _SaleFormMixin, CreateAuditMix
             initial['flat'] = flat
             initial['sale_value'] = flat.quoted_price
         return initial
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        report_sms(self.request, notify_booking(self.object, self.request.user), 'Booking')
+        return response
 
     def get_success_url(self):
         return reverse_lazy('sales:detail', kwargs={'pk': self.object.pk})
@@ -177,19 +183,7 @@ class CustomerPaymentCreateView(PermissionRequiredMixin, CreateAuditMixin, Creat
 
     def form_valid(self, form):
         response = super().form_valid(form)
-        log = notify_payment(self.object, self.request.user)
-        if log is None:
-            messages.info(self.request, 'No SMS sent: this customer is excluded from SMS.')
-        elif log.status == log.Status.SENT:
-            messages.success(self.request, f'Payment SMS sent to {log.phone}.')
-        elif log.status == log.Status.LOGGED:
-            messages.warning(
-                self.request,
-                f'Payment saved, but the SMS to {log.phone} was NOT delivered: no SMS gateway is set up yet, '
-                'so it was only recorded in the SMS log.',
-            )
-        else:
-            messages.warning(self.request, f'Payment saved, but the SMS could not be sent: {log.error}')
+        report_sms(self.request, notify_payment(self.object, self.request.user), 'Payment')
         return response
 
 

@@ -7,6 +7,7 @@ class SmsLog(models.Model):
 
     class Kind(models.TextChoices):
         PAYMENT = 'PAYMENT', 'Payment confirmation'
+        BOOKING = 'BOOKING', 'Booking confirmation'
         REMINDER = 'REMINDER', 'Balance reminder'
 
     class Status(models.TextChoices):

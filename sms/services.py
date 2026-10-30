@@ -1,9 +1,11 @@
-"""Customer SMS: one on every payment received, and balance reminders only when a user sends them."""
+"""Customer SMS: one when a flat is booked, one on every payment received, and balance reminders only when a user
+sends them. The wording of each is a template in .env (see sms.templating)."""
 import datetime
 from decimal import Decimal
 
 from .backends import SmsError, get_backend
 from .models import SmsLog
+from .templating import money, render
 
 ZERO = Decimal('0')
 
@@ -12,10 +14,6 @@ def _company():
     from core.models import CompanyProfile
 
     return CompanyProfile.current().display_name
-
-
-def _amount(value):
-    return f'Tk {Decimal(value):,.2f}'
 
 
 def _day(value):
@@ -45,20 +43,43 @@ def deliver(customer, message, kind, user=None, reference=''):
     )
 
 
+def _customer_values(customer):
+    return {
+        'customer': customer.display_name, 'name': customer.name, 'customer_id': customer.customer_code, 'company': _company(),
+    }
+
+
+def _sale_values(sale):
+    return {
+        **_customer_values(sale.customer),
+        'flat': sale.flat.flat_no, 'building': sale.project.project_name,
+        'project': sale.project.development.name if sale.project.development_id else '',
+        'sale_no': sale.sale_no, 'sale_value': money(sale.sale_value), 'reg_value': money(sale.reg_value),
+        'net_value': money(sale.net_value), 'received': money(sale.received_amount), 'balance_due': money(sale.receivable_amount),
+    }
+
+
+def booking_message(sale):
+    return render('BOOKING', {**_sale_values(sale), 'sale_date': _day(sale.sale_date)})
+
+
+def notify_booking(sale, user=None):
+    """SMS when a flat is booked for a customer (skipped for customers excluded from SMS)."""
+    return deliver(sale.customer, booking_message(sale), SmsLog.Kind.BOOKING, user, reference=sale.sale_no)
+
+
 def payment_message(payment):
     sale = payment.sale
-    text = (
-        f'Dear {payment.customer.display_name}, we received {_amount(payment.amount)} on {_day(payment.payment_date)} '
-        f'for flat {sale.flat.flat_no}, {sale.project.project_name}. Receipt {payment.receipt_no}. '
-        f'Total paid {_amount(sale.received_amount)}'
-    )
     if sale.receivable_amount > 0:
-        text += f', balance due {_amount(sale.receivable_amount)}.'
+        note = f', balance due {money(sale.receivable_amount)}.'
     elif sale.customer_balance > 0:
-        text += f'; your credit balance is {_amount(sale.customer_balance)}.'
+        note = f'; your credit balance is {money(sale.customer_balance)}.'
     else:
-        text += '; fully paid.'
-    return f'{text} - {_company()}'
+        note = '; fully paid.'
+    return render('PAYMENT', {
+        **_sale_values(sale), 'amount': money(payment.amount), 'date': _day(payment.payment_date),
+        'receipt_no': payment.receipt_no, 'total_paid': money(sale.received_amount), 'balance_note': note,
+    })
 
 
 def notify_payment(payment, user=None):
@@ -81,12 +102,9 @@ def reminder_message(customer):
     rows = [row for row in customer_statement(customer) if row['due'] > 0]
     if not rows:
         return ''
-    parts = '; '.join(f'flat {r["sale"].flat.flat_no} ({r["sale"].project.project_name}): {_amount(r["due"])}' for r in rows)
+    details = '; '.join(f'flat {r["sale"].flat.flat_no} ({r["sale"].project.project_name}): {money(r["due"])}' for r in rows)
     total = sum((r['due'] for r in rows), ZERO)
-    return (
-        f'Dear {customer.display_name}, a friendly reminder: balance due {_amount(total)} - {parts}. '
-        f'Please pay at your earliest. Ignore if already paid. - {_company()}'
-    )
+    return render('REMINDER', {**_customer_values(customer), 'total_due': money(total), 'details': details})
 
 
 def customers_with_dues():

@@ -152,7 +152,11 @@ flat, sales, payment and customer pages. Change which areas are guarded with `SE
 
 ## Customer SMS
 
-- An SMS is sent on **every payment received** (receipt number, amount, balance).
+- An SMS is sent when a **flat is booked** for a customer (a congratulations message) and on **every payment received** (receipt number, amount, balance).
+- **The wording is in `.env`**: `SMS_TEMPLATE_BOOKING`, `SMS_TEMPLATE_PAYMENT` and `SMS_TEMPLATE_REMINDER`. Edit the text, restart the
+  app, done. `{placeholders}` such as `{customer}`, `{flat}`, `{amount}` and `{balance_due}` are replaced with the real values
+  (the full list is in `.env.example`); anything else is sent as written, so a mistyped `{placeholder}` shows up in the SMS log.
+  The booking SMS never includes the base price or honorarium.
 - **Balance reminders** are only sent when a user does it: Sales → Balance reminders → tick customers → Send.
 - Tick **Send SMS** off on a customer to exclude them from everything.
 - Every message is recorded in Sales → SMS log.
