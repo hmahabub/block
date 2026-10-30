@@ -209,6 +209,11 @@ SMS_API_URL = env('SMS_API_URL', default='https://api.zendsms.com/api/v1/send-sm
 SMS_BALANCE_URL = env('SMS_BALANCE_URL', default='https://api.zendsms.com/api/v1/balance')
 SMS_API_KEY = env('SMS_API_KEY', default='')
 SMS_SENDER_ID = env('SMS_SENDER_ID', default='')
+# sms.net.bd has its own settings so switching gateways never means rewriting the other one's.
+SMSNETBD_API_URL = env('SMSNETBD_API_URL', default='https://api.sms.net.bd/sendsms')
+SMSNETBD_BALANCE_URL = env('SMSNETBD_BALANCE_URL', default='https://api.sms.net.bd/user/balance/')
+SMSNETBD_API_KEY = env('SMSNETBD_API_KEY', default='')
+SMSNETBD_SENDER_ID = env('SMSNETBD_SENDER_ID', default='')
 
 # The wording of each customer SMS. Change it in .env; {placeholders} are listed in .env.example and README.
 SMS_TEMPLATE_PAYMENT = env('SMS_TEMPLATE_PAYMENT', default=(
@@ -228,3 +233,4 @@ SMS_TEMPLATE_REMINDER = env('SMS_TEMPLATE_REMINDER', default=(
 if 'test' in sys.argv:
     SMS_BACKEND = 'log'
     SMS_API_KEY = ''
+    SMSNETBD_API_KEY = ''

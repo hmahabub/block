@@ -132,8 +132,10 @@ def send_reminders(customers, user):
 
 
 def backend_description():
-    if get_backend().delivers:
-        return 'ZendSMS - messages are really sent'
+    backend = get_backend()
+    if backend.delivers:
+        names = {'zendsms': 'ZendSMS', 'smsnetbd': 'sms.net.bd'}
+        return f'{names.get(backend.name, backend.name)} - messages are really sent'
     return 'No gateway configured - messages are only recorded in the log'
 
 

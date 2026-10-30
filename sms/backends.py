@@ -1,6 +1,7 @@
 """SMS gateways.
 
 `log`      (default) sends nothing; the message is only recorded in the SMS log. Safe for development.
+`smsnetbd` sends through sms.net.bd (https://api.sms.net.bd): see SmsNetBdBackend below.
 `zendsms`  sends through ZendSMS (https://api.zendsms.com):
 
     POST /api/v1/send-sms   Authorization: Bearer <API key>
@@ -15,12 +16,15 @@ real send once after setting the API key (Sales > SMS log shows the gateway's an
 """
 import json
 import urllib.error
+import urllib.parse
 import urllib.request
 
 from django.conf import settings
 
 DEFAULT_SEND_URL = 'https://api.zendsms.com/api/v1/send-sms'
 DEFAULT_BALANCE_URL = 'https://api.zendsms.com/api/v1/balance'
+DEFAULT_NETBD_SEND_URL = 'https://api.sms.net.bd/sendsms'
+DEFAULT_NETBD_BALANCE_URL = 'https://api.sms.net.bd/user/balance/'
 TIMEOUT = 20
 
 
@@ -108,7 +112,79 @@ class ZendSmsBackend:
         return self._call(request).get('data')
 
 
-BACKENDS = {'log': LogBackend, 'zendsms': ZendSmsBackend}
+class SmsNetBdBackend:
+    """sms.net.bd (https://sms.bd/api).
+
+    POST https://api.sms.net.bd/sendsms    api_key, msg, to  [+ sender_id]
+    GET  https://api.sms.net.bd/user/balance/?api_key=...
+
+    Every answer is HTTP 200 with JSON: {"error": 0, "msg": "...", "data": {"request_id": 123}}. Anything but error 0 is
+    a refusal; the codes include 405 authorization required, 413 invalid sender ID, 417 insufficient balance and
+    420 content blocked, and are shown to the user as sent by the gateway.
+    """
+
+    name = 'smsnetbd'
+    delivers = True
+
+    @staticmethod
+    def _recipient(phone):
+        """Country code and digits, no plus sign: +8801711000000 -> 8801711000000."""
+        return ''.join(ch for ch in phone if ch.isdigit())
+
+    @staticmethod
+    def _need_key():
+        if not settings.SMSNETBD_API_KEY:
+            raise SmsError('SMSNETBD_API_KEY is not set.')
+
+    def _call(self, request):
+        try:
+            with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
+                body = response.read().decode('utf-8', 'replace')
+        except urllib.error.HTTPError as error:
+            body = error.read().decode('utf-8', 'replace')
+            raise SmsError(self._reason(body) or f'Gateway answered HTTP {error.code}') from error
+        except (urllib.error.URLError, TimeoutError, OSError) as error:
+            raise SmsError(f'Gateway not reachable: {error}') from error
+        try:
+            data = json.loads(body)
+        except ValueError as error:
+            raise SmsError(f'Unreadable answer from the gateway: {body[:150]}') from error
+        if not isinstance(data, dict) or data.get('error') != 0:
+            raise SmsError(self._reason(body) or 'The gateway did not accept the request.')
+        return data
+
+    @staticmethod
+    def _reason(body):
+        try:
+            data = json.loads(body)
+        except ValueError:
+            return body[:200].strip()
+        if not isinstance(data, dict):
+            return ''
+        text = str(data.get('msg') or '')[:200]
+        return f'{text} (code {data["error"]})' if data.get('error') not in (None, 0) else text
+
+    def send(self, phone, message, reference=''):
+        """Send one message; returns the gateway's request id."""
+        self._need_key()
+        fields = {'api_key': settings.SMSNETBD_API_KEY, 'msg': message, 'to': self._recipient(phone)}
+        if settings.SMSNETBD_SENDER_ID:
+            fields['sender_id'] = settings.SMSNETBD_SENDER_ID
+        request = urllib.request.Request(
+            settings.SMSNETBD_API_URL or DEFAULT_NETBD_SEND_URL, data=urllib.parse.urlencode(fields).encode(), method='POST',
+        )
+        data = self._call(request).get('data') or {}
+        return str(data.get('request_id') or '')
+
+    def balance(self):
+        """The account balance as the gateway reports it (the `data` part of the answer)."""
+        self._need_key()
+        query = urllib.parse.urlencode({'api_key': settings.SMSNETBD_API_KEY})
+        url = f'{settings.SMSNETBD_BALANCE_URL or DEFAULT_NETBD_BALANCE_URL}?{query}'
+        return self._call(urllib.request.Request(url, method='GET')).get('data')
+
+
+BACKENDS = {'log': LogBackend, 'zendsms': ZendSmsBackend, 'smsnetbd': SmsNetBdBackend}
 
 
 def get_backend():

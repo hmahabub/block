@@ -161,12 +161,17 @@ flat, sales, payment and customer pages. Change which areas are guarded with `SE
 - Tick **Send SMS** off on a customer to exclude them from everything.
 - Every message is recorded in Sales → SMS log.
 
-`SMS_BACKEND=log` (the default) only records messages in the SMS log. `SMS_BACKEND=zendsms` sends them for real through
-[ZendSMS](https://api.zendsms.com) using `SMS_API_KEY` and `SMS_SENDER_ID` (plus `SMS_API_URL` / `SMS_BALANCE_URL`, which
-default to ZendSMS's addresses). Put the API key in `.env` only, never in `.env.example` or in git.
-Sales → SMS log → **Check SMS balance** asks ZendSMS what is left, and every log line shows the gateway's message id or
-the reason it refused. A gateway failure never stops a payment from saving. The request format follows ZendSMS's Laravel
-package (their HTTP docs are not public): confirm one real send after switching on `zendsms`.
+`SMS_BACKEND=log` (the default) only records messages in the SMS log. To really send, choose a gateway:
+
+- `SMS_BACKEND=smsnetbd`: [sms.net.bd](https://sms.bd/api). Set `SMSNETBD_API_KEY` (from the *API* page of your sms.net.bd panel);
+  `SMSNETBD_SENDER_ID` is optional and must be an approved sender ID (an unapproved one is refused with error 413, so leave it empty
+  if unsure). The gateway answers every request with HTTP 200 and an `error` code (405 bad key, 417 insufficient balance,
+  420 content blocked ...); the code and text are shown in the SMS log.
+- `SMS_BACKEND=zendsms`: [ZendSMS](https://api.zendsms.com). Set `SMS_API_KEY` and `SMS_SENDER_ID`.
+
+Each gateway has its own settings, so switching is a one-line change of `SMS_BACKEND`. Put API keys in `.env` only, never in
+`.env.example` or git. Sales → SMS log → **Check SMS balance** asks the gateway what is left, and every log line shows the gateway's
+request/message id or the reason it refused. A gateway failure never stops a payment or booking from saving.
 
 ## Invoices on WhatsApp
 
