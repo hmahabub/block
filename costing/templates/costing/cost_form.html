@@ -45,9 +45,9 @@
                     {{ form.cost_category|as_crispy_field }}
                     {% if form.phase %}<div id="phase-wrap">{{ form.phase|as_crispy_field }}</div>{% endif %}
                     {{ form.supplier|as_crispy_field }}
+                    <div id="paid-to-wrap">{{ form.paid_to|as_crispy_field }}</div>
                 </div>
                 <div class="col-md-6">
-                    {{ form.account|as_crispy_field }}
                     {{ form.date|as_crispy_field }}
                     {{ form.reference_no|as_crispy_field }}
                     {{ form.description|as_crispy_field }}
@@ -94,4 +94,14 @@
     })();
 </script>
 {% endif %}
+<script>
+    // "Paid to" is only for a payee who is not a listed supplier, so it is hidden while a supplier is chosen.
+    (function () {
+        var supplier = document.getElementById('id_supplier');
+        var wrap = document.getElementById('paid-to-wrap');
+        function sync() { wrap.style.display = supplier.value ? 'none' : ''; }
+        supplier.addEventListener('change', sync);
+        sync();
+    })();
+</script>
 {% endblock %}

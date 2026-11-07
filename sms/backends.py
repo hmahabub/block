@@ -12,7 +12,7 @@
     and, on failure, {"success": false, "code": 2001, "message": "Invalid API key"}.
 
 The request format follows ZendSMS's own Laravel package, because their HTTP documentation is not public. Verify a
-real send once after setting the API key (Sales > SMS log shows the gateway's answer for every message).
+real send once after setting the API key (SMS > SMS log shows the gateway's answer for every message).
 """
 import json
 import urllib.error

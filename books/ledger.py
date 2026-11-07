@@ -6,7 +6,7 @@ recorded, so there is no double entry:
     payments received from customers   (sales.CustomerPayment)      money in
     refunds to customers               (sales.RefundPayment)         money out
     honorarium paid to references      (sales.HonorariumPayment)     money out
-    cost payments                      (costing.ProjectCost)         money out
+    cost payments                      (costing.CostPayment)         money out (older costs paid in full when recorded: costing.ProjectCost)
     director investments               (directors.DirectorTransaction) money in
     director capital/profit withdrawals (directors.DirectorTransaction) money out
     internal transfers                 (books.Transfer)              out of one account, into another
@@ -43,7 +43,7 @@ class Entry:
 
 def _sources():
     """Kind code -> model, loaded lazily so the apps can import each other."""
-    from costing.models import ProjectCost
+    from costing.models import CostPayment, ProjectCost
     from directors.models import DirectorTransaction
     from sales.models import CustomerPayment, HonorariumPayment, RefundPayment
 
@@ -51,7 +51,7 @@ def _sources():
 
     return {
         'cp': CustomerPayment, 'rf': RefundPayment, 'hp': HonorariumPayment,
-        'pc': ProjectCost, 'dt': DirectorTransaction, 'tr': Transfer,
+        'pc': ProjectCost, 'cx': CostPayment, 'dt': DirectorTransaction, 'tr': Transfer,
     }
 
 
@@ -59,20 +59,25 @@ def confirmable_model(kind):
     return _sources().get(kind)
 
 
-def collect_entries(accounts=None, unassigned=False, confirmed=None):
+def collect_entries(accounts=None, unassigned=False, confirmed=None, development=None):
     """Book lines for the given accounts (a list), or every account.
+
+    With a `development` only that project's lines are returned (internal transfers belong to no project, so they are
+    left out).
 
     `confirmed=True` gives only what is in the book, `False` only what is waiting for confirmation, `None` both.
     With `unassigned=True` returns instead the lines that have no account yet (older records made before
     accounts existed); they cannot be confirmed until an account is chosen.
     """
-    from costing.models import ProjectCost
+    from costing.models import CostPayment, ProjectCost
     from directors.models import DirectorTransaction
     from sales.models import CustomerPayment, HonorariumPayment, RefundPayment
 
     from .models import Transfer
 
-    def scope(queryset, field='account'):
+    def scope(queryset, via, field='account'):
+        if development is not None:
+            queryset = queryset.filter(**{via: development})
         if unassigned:
             queryset = queryset.filter(**{f'{field}__isnull': True})
         elif accounts is not None:
@@ -85,34 +90,43 @@ def collect_entries(accounts=None, unassigned=False, confirmed=None):
 
     entries = []
 
-    for item in scope(CustomerPayment.objects.select_related('account', 'sale', 'customer', 'sale__flat')):
+    for item in scope(CustomerPayment.objects.select_related('account', 'sale', 'customer', 'sale__flat'), 'sale__project__development'):
         entries.append(Entry(
             f'cp:{item.pk}', item.payment_date, 1, 'Payment received', item.receipt_no,
             f'{item.customer.name} - {item.sale.flat.flat_no} ({item.sale.sale_no})',
             item.account, item.amount, ZERO, item.is_confirmed, item.sale.get_absolute_url(),
         ))
-    for item in scope(RefundPayment.objects.select_related('account', 'sale', 'sale__customer', 'sale__flat')):
+    for item in scope(RefundPayment.objects.select_related('account', 'sale', 'sale__customer', 'sale__flat'), 'sale__project__development'):
         entries.append(Entry(
             f'rf:{item.pk}', item.date, 2, 'Refund to customer', item.reference_no,
             f'{item.sale.customer.name} - {item.sale.flat.flat_no} ({item.sale.sale_no})',
             item.account, ZERO, item.amount, item.is_confirmed, item.sale.get_absolute_url(),
         ))
-    for item in scope(HonorariumPayment.objects.select_related('account', 'sale', 'sale__ref', 'sale__flat')):
+    for item in scope(HonorariumPayment.objects.select_related('account', 'sale', 'sale__ref', 'sale__flat'), 'sale__project__development'):
         who = item.sale.ref.name if item.sale.ref else 'reference'
         entries.append(Entry(
             f'hp:{item.pk}', item.date, 3, 'Honorarium paid', item.reference_no,
             f'{who} - {item.sale.flat.flat_no} ({item.sale.sale_no})',
             item.account, ZERO, item.amount, item.is_confirmed, item.sale.get_absolute_url(),
         ))
-    for item in scope(ProjectCost.objects.select_related('account', 'project', 'cost_category', 'supplier')):
-        who = item.supplier.name if item.supplier else (item.description or 'cost')
+    # Older costs that were paid in full when recorded. A cost with no account is an unpaid voucher, not a missing account.
+    for item in ([] if unassigned else scope(ProjectCost.objects.select_related('account', 'project', 'cost_category', 'supplier'), 'project__development')):
+        who = item.payee or item.description or 'cost'
         entries.append(Entry(
             f'pc:{item.pk}', item.date, 4, 'Cost payment', item.voucher_no,
             f'{item.cost_category} - {who} ({item.project.project_code})',
             item.account, ZERO, item.amount, item.is_confirmed, item.get_absolute_url(),
         ))
 
-    for item in scope(DirectorTransaction.objects.select_related('account', 'director', 'development')):
+    for item in scope(CostPayment.objects.select_related('account', 'cost', 'cost__project', 'cost__cost_category', 'cost__supplier'), 'cost__project__development'):
+        cost = item.cost
+        entries.append(Entry(
+            f'cx:{item.pk}', item.date, 4, 'Cost payment', item.payment_no,
+            f'{cost.cost_category} - {cost.payee or cost.description or "cost"} ({cost.project.project_code}) - {cost.voucher_no}',
+            item.account, ZERO, item.amount, item.is_confirmed, cost.get_absolute_url(),
+        ))
+
+    for item in scope(DirectorTransaction.objects.select_related('account', 'director', 'development'), 'development'):
         investing = item.kind == item.Kind.INVESTMENT
         entries.append(Entry(
             f'dt:{item.pk}', item.date, 3 if not investing else 1, f'Director {item.get_kind_display().lower()}',
@@ -121,7 +135,7 @@ def collect_entries(accounts=None, unassigned=False, confirmed=None):
             item.is_confirmed, item.get_absolute_url(),
         ))
 
-    if not unassigned:
+    if not unassigned and development is None:
         transfers = Transfer.objects.select_related('from_account', 'to_account')
         if confirmed is not None:
             transfers = transfers.filter(confirmed_at__isnull=not confirmed)
@@ -165,24 +179,28 @@ def lowest_balance(account):
     return lowest
 
 
-def account_summaries(accounts):
-    """Per account: opening balance, the balance of what is confirmed, and how many lines still wait."""
+def account_summaries(accounts, development=None):
+    """Per account: opening balance, the balance of what is confirmed, and how many lines still wait.
+
+    With a `development` only that project's lines count and the opening balance is left out (it belongs to the company),
+    so `balance` is then the project's net movement through the account."""
     accounts = list(accounts)
     confirmed = {account.pk: [] for account in accounts}
-    for entry in collect_entries(accounts, confirmed=True):
+    for entry in collect_entries(accounts, confirmed=True, development=development):
         confirmed[entry.account.pk].append(entry)
     waiting = {account.pk: 0 for account in accounts}
-    for entry in collect_entries(accounts, confirmed=False):
+    for entry in collect_entries(accounts, confirmed=False, development=development):
         waiting[entry.account.pk] += 1
     rows = []
     for account in accounts:
         entries = confirmed[account.pk]
         money_in = sum((e.money_in for e in entries), ZERO)
         money_out = sum((e.money_out for e in entries), ZERO)
+        opening = ZERO if development is not None else account.opening_balance
         rows.append({
             'account': account,
-            'opening': account.opening_balance,
-            'balance': account.opening_balance + money_in - money_out,
+            'opening': opening,
+            'balance': opening + money_in - money_out,
             'money_in': money_in,
             'money_out': money_out,
             'pending_count': waiting[account.pk],
@@ -190,24 +208,31 @@ def account_summaries(accounts):
     return rows
 
 
-def pending_count():
+def pending_count(development=None):
     """Lines waiting for confirmation, across every account (shown as a badge in the menu)."""
-    from costing.models import ProjectCost
+    from costing.models import CostPayment, ProjectCost
     from directors.models import DirectorTransaction
     from sales.models import CustomerPayment, HonorariumPayment, RefundPayment
 
     from .models import Transfer
 
-    models = (CustomerPayment, RefundPayment, HonorariumPayment, ProjectCost, DirectorTransaction)
-    total = sum(
-        model.objects.filter(confirmed_at__isnull=True, account__isnull=False).count() for model in models
-    )
+    models = {
+        CustomerPayment: 'sale__project__development', RefundPayment: 'sale__project__development',
+        HonorariumPayment: 'sale__project__development', ProjectCost: 'project__development',
+        CostPayment: 'cost__project__development', DirectorTransaction: 'development',
+    }
+    total = 0
+    for model, via in models.items():
+        waiting = model.objects.filter(confirmed_at__isnull=True, account__isnull=False)
+        total += (waiting.filter(**{via: development}) if development is not None else waiting).count()
+    if development is not None:
+        return total
     return total + Transfer.objects.filter(confirmed_at__isnull=True).count()
 
 
-def unassigned_count():
+def unassigned_count(development=None):
     """Records with no account yet (made before accounts existed)."""
-    return len(collect_entries(unassigned=True))
+    return len(collect_entries(unassigned=True, development=development))
 
 
 @transaction.atomic
@@ -255,7 +280,7 @@ def _accounts_gone_negative(item, kind):
 
 @transaction.atomic
 def assign_account(keys, account):
-    """Give an account to older payments/costs that were recorded before accounts existed.
+    """Give an account to older customer payments that were recorded before accounts existed.
 
     Only unconfirmed lines that have no account yet are touched. Returns how many were updated.
     """
@@ -264,7 +289,7 @@ def assign_account(keys, account):
     for key in set(keys):
         kind, _, pk = key.partition(':')
         model = models.get(kind)
-        if model is None or kind not in ('cp', 'pc') or not pk.isdigit():
+        if model is None or kind != 'cp' or not pk.isdigit():
             continue
         changes = {'account': account}
         if kind == 'cp':  # the payment method follows the account (an update() skips the model's save())

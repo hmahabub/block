@@ -150,7 +150,7 @@ class BookingMapTests(TestCase):
         FlatSale.objects.create(flat=flats[0], customer=customer, sale_date='2026-01-01', sale_value=1200)
         _, rows, _ = build_booking_map(project)
         sold, free = rows[0][1]
-        self.assertEqual((sold.status, sold.active_sale.customer), (Flat.Status.SOLD, customer))
+        self.assertEqual((sold.status, sold.active_sale.customer), (Flat.Status.BOOKED, customer))
         self.assertEqual((free.status, free.active_sale), (Flat.Status.AVAILABLE, None))
 
     def test_older_flats_without_a_unit_letter_are_kept_off_the_grid(self):
@@ -341,7 +341,7 @@ class FlatListOneProjectTests(TestCase):
     def test_search_and_status_stay_inside_the_project(self):
         _, flats = self.listed(project=self.alpha.pk, q='A1')
         self.assertEqual([f.flat_no for f in flats], ['A1'])
-        _, flats = self.listed(project=self.alpha.pk, status='SOLD')
+        _, flats = self.listed(project=self.alpha.pk, status='BOOKED')
         self.assertEqual(flats, [])
 
 

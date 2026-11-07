@@ -7,6 +7,7 @@ from django.views import View
 from django.views.generic import ListView, TemplateView
 
 from core.utils import int_or_none
+from core.workspace import current_development, in_workspace
 from customers.models import Customer
 from projects.models import Project
 from sales.models import FlatSale
@@ -25,13 +26,14 @@ class ReminderView(PermissionRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        customers = customers_with_dues()
+        development = current_development(self.request)
+        customers = customers_with_dues(development)
         last = {}
         for log in SmsLog.objects.filter(kind=SmsLog.Kind.REMINDER, customer__in=customers):
             last.setdefault(log.customer_id, log.created_at)
         for customer in customers:
             customer.last_reminder = last.get(customer.pk)
-            customer.preview = reminder_message(customer)
+            customer.preview = reminder_message(customer, development)
         context['customers'] = customers
         context['backend'] = backend_description()
         return context
@@ -47,7 +49,7 @@ class SendRemindersView(PermissionRequiredMixin, View):
         if not customers:
             messages.warning(request, 'Tick at least one customer first.')
             return redirect('sms:reminders')
-        sent, skipped = send_reminders(customers, request.user)
+        sent, skipped = send_reminders(customers, request.user, current_development(request))
         if sent:
             messages.success(request, f'{len(sent)} reminder(s) processed. See the SMS log for delivery status.')
         if skipped:
@@ -70,7 +72,7 @@ class WhatsAppInvoicesView(PermissionRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         project = Project.objects.filter(pk=int_or_none(self.request.GET.get('project'))).first()
-        sales = FlatSale.objects.exclude(status=FlatSale.Status.CANCELLED).select_related('customer', 'flat', 'project')
+        sales = in_workspace(FlatSale.objects.exclude(status=FlatSale.Status.CANCELLED), self.request, 'project__development').select_related('customer', 'flat', 'project')
         if project:
             sales = sales.filter(project=project)
         last_sent = {}
@@ -81,7 +83,8 @@ class WhatsAppInvoicesView(PermissionRequiredMixin, TemplateView):
             sale.last_share = last_sent.get(sale.pk)
             (ready if has_whatsapp(sale.customer) else missing).append(sale)
         context.update({
-            'ready': ready, 'missing': missing, 'projects': Project.objects.order_by('project_name'),
+            'ready': ready, 'missing': missing,
+            'projects': in_workspace(Project.objects.order_by('project_name'), self.request, 'development'),
             'selected_project': project,
         })
         return context
@@ -137,6 +140,9 @@ class SmsLogView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         queryset = super().get_queryset().select_related('customer')
+        development = current_development(self.request)
+        if development:
+            queryset = queryset.filter(customer__sales__project__development=development).distinct()
         customer = self.request.GET.get('customer')
         if customer and customer.isdigit():
             queryset = queryset.filter(customer_id=customer)

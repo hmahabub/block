@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% load core_tags %}
+
+{% block title %}Daily transactions{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 d-print-none">
+    <div>
+        <h2 class="mb-0"><i class="fas fa-clipboard-check"></i> Daily transactions</h2>
+        <p class="text-muted mb-0">Check every transaction of the day in {{ workspace_development.name }} and verify it.</p>
+    </div>
+    {% if not locked %}
+    <div>
+        <a href="?date_from={{ date_from|date:'Y-m-d' }}&amp;date_to={{ date_to|date:'Y-m-d' }}&amp;format=pdf" target="_blank" class="btn btn-danger"><i class="fas fa-file-pdf"></i> PDF</a>
+        <a href="?date_from={{ date_from|date:'Y-m-d' }}&amp;date_to={{ date_to|date:'Y-m-d' }}&amp;format=xlsx" class="btn btn-success"><i class="fas fa-file-excel"></i> Excel</a>
+        <button class="btn btn-info" onclick="window.print()"><i class="fas fa-print"></i> Print</button>
+    </div>
+    {% endif %}
+</div>
+
+{% if locked %}
+{% include "includes/locked_note.html" %}
+{% else %}
+<div class="card mb-3 d-print-none"><div class="card-body py-2">
+    <form method="get" class="row g-2 align-items-end">
+        <div class="col-auto"><a class="btn btn-outline-secondary" href="?date_from={{ previous_day|date:'Y-m-d' }}&amp;date_to={{ previous_day|date:'Y-m-d' }}" title="The day before"><i class="fas fa-chevron-left"></i></a></div>
+        <div class="col-md-2"><label class="form-label small text-muted mb-1">From</label><input type="date" name="date_from" class="form-control" value="{{ date_from|date:'Y-m-d' }}"></div>
+        <div class="col-md-2"><label class="form-label small text-muted mb-1">To</label><input type="date" name="date_to" class="form-control" value="{{ date_to|date:'Y-m-d' }}"></div>
+        <div class="col-auto"><button type="submit" class="btn btn-primary"><i class="fas fa-filter"></i> Show</button>
+            <a class="btn btn-outline-secondary" href="?date_from={{ today|date:'Y-m-d' }}&amp;date_to={{ today|date:'Y-m-d' }}">Today</a></div>
+        <div class="col-auto ms-auto"><a class="btn btn-outline-secondary" href="?date_from={{ next_day|date:'Y-m-d' }}&amp;date_to={{ next_day|date:'Y-m-d' }}" title="The day after"><i class="fas fa-chevron-right"></i></a></div>
+    </form>
+</div></div>
+
+<h5 class="mb-3">{{ period }}</h5>
+
+<div class="row text-center mb-3">
+    <div class="col-6 col-md-3 mb-2"><div class="card"><div class="card-body py-2"><strong>{{ book.entries|length }}</strong><br><small class="text-muted">Transactions</small></div></div></div>
+    <div class="col-6 col-md-3 mb-2"><div class="card"><div class="card-body py-2"><strong class="text-success">{{ book.money_in|taka }}</strong><br><small class="text-muted">Money in</small></div></div></div>
+    <div class="col-6 col-md-3 mb-2"><div class="card"><div class="card-body py-2"><strong class="text-danger">{{ book.money_out|taka }}</strong><br><small class="text-muted">Money out</small></div></div></div>
+    <div class="col-6 col-md-3 mb-2"><div class="card {% if book.pending %}border-warning{% else %}border-success{% endif %}"><div class="card-body py-2">
+        <strong>{{ book.verified }} verified</strong> &middot; <strong class="{% if book.pending %}text-warning{% else %}text-success{% endif %}">{{ book.pending }} not</strong><br><small class="text-muted">Verification</small></div></div></div>
+</div>
+
+{% if book.entries %}
+<div class="row mb-3">
+    <div class="col-lg-7 mb-3"><div class="card h-100"><div class="card-header"><strong>By kind of transaction</strong></div><div class="card-body p-0">
+        <table class="table table-sm mb-0">
+            <thead class="table-light"><tr><th>Kind</th><th class="text-end">Entries</th><th class="text-end">In</th><th class="text-end">Out</th><th class="text-end">Verified</th><th class="text-end">Not</th></tr></thead>
+            {% for name, row in book.by_source.items %}
+            <tr><td>{{ name }}</td><td class="text-end">{{ row.count }}</td><td class="text-end">{{ row.in|taka }}</td><td class="text-end">{{ row.out|taka }}</td><td class="text-end">{{ row.verified }}</td><td class="text-end {% if row.pending %}text-warning fw-bold{% endif %}">{{ row.pending }}</td></tr>
+            {% endfor %}
+        </table></div></div></div>
+    <div class="col-lg-5 mb-3"><div class="card h-100"><div class="card-header"><strong>By account</strong></div><div class="card-body p-0">
+        <table class="table table-sm mb-0">
+            <thead class="table-light"><tr><th>Account</th><th class="text-end">In</th><th class="text-end">Out</th><th class="text-end">Verified</th><th class="text-end">Not</th></tr></thead>
+            {% for name, row in book.by_account.items %}
+            <tr><td>{{ name }}</td><td class="text-end">{{ row.in|taka }}</td><td class="text-end">{{ row.out|taka }}</td><td class="text-end">{{ row.verified }}</td><td class="text-end {% if row.pending %}text-warning fw-bold{% endif %}">{{ row.pending }}</td></tr>
+            {% endfor %}
+        </table></div></div></div>
+</div>
+{% endif %}
+
+<form method="post" action="{% url 'books:confirm' %}">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <strong>Transactions</strong>
+            {% if can_verify and book.to_verify %}
+            <span class="d-print-none">
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.querySelectorAll('.verify-box').forEach(function (b) { b.checked = true; })">Tick all not verified</button>
+                <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('Verify the ticked entries? They are added to the book and this cannot be undone.');"><i class="fas fa-check-double"></i> Verify ticked</button>
+            </span>
+            {% endif %}
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead class="table-light"><tr>
+                        {% if can_verify %}<th class="d-print-none"></th>{% endif %}
+                        <th>Date</th><th>Kind</th><th>Ref.</th><th>Particulars</th><th>Account</th><th class="text-end">In</th><th class="text-end">Out</th><th>Status</th>
+                    </tr></thead>
+                    <tbody>
+                        {% for e in book.entries %}
+                        <tr>
+                            {% if can_verify %}<td class="d-print-none">{% if e.status == 'Pending' %}<input type="checkbox" class="verify-box form-check-input" name="entries" value="{{ e.key }}">{% endif %}</td>{% endif %}
+                            <td class="text-nowrap">{{ e.date|date:"j M Y" }}</td>
+                            <td>{{ e.source }}</td>
+                            <td>{{ e.reference }}</td>
+                            <td><a href="{{ e.url }}">{{ e.description }}</a></td>
+                            <td>{{ e.account.name|default:"-" }}</td>
+                            <td class="text-end">{% if e.money_in %}{{ e.money_in|taka }}{% endif %}</td>
+                            <td class="text-end">{% if e.money_out %}{{ e.money_out|taka }}{% endif %}</td>
+                            <td class="text-nowrap">
+                                {% if e.status == 'Verified' %}<span class="badge bg-success">Verified</span> <small class="text-muted">{{ e.verified_by }} {{ e.verified_at|date:"j M, H:i" }}</small>
+                                {% elif e.status == 'Pending' %}<span class="badge bg-warning text-dark">Not verified</span>
+                                {% else %}<span class="badge bg-secondary" title="Give it a bank or cash account on the Confirm entries page first">No account yet</span>{% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="9" class="text-center text-muted py-4">No transactions in this period.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                    {% if book.entries %}
+                    <tfoot class="table-light fw-bold"><tr>{% if can_verify %}<td class="d-print-none"></td>{% endif %}<td colspan="5">Total</td>
+                        <td class="text-end">{{ book.money_in|taka }}</td><td class="text-end">{{ book.money_out|taka }}</td><td></td></tr></tfoot>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+    </div>
+</form>
+<p class="small text-muted mt-2 d-print-none">Verified means confirmed on the books: the entry is in the book and counts towards the account balance. A verification cannot be undone, and one that would take an account below zero is refused.
+    Entries with no account yet get one on <a href="{% url 'books:to-confirm' %}">Confirm entries</a>.</p>
+{% endif %}
+{% endblock %}

@@ -18,6 +18,7 @@
                 <input type="text" name="q" class="form-control" placeholder="Search by name, code, location..."
                        value="{{ request.GET.q }}">
             </div>
+{% if not workspace_development %}
             <div class="col-md-3">
                 <select name="development" class="form-select">
                     <option value="">All Projects</option>
@@ -26,6 +27,7 @@
                     {% endfor %}
                 </select>
             </div>
+{% endif %}
             <div class="col-md-3">
                 <select name="status" class="form-select">
                     <option value="">All Statuses</option>

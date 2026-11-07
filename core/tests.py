@@ -205,7 +205,7 @@ class SeedDemoDataTests(TestCase):
         self.assertEqual(Customer.objects.count(), 4)
         self.assertEqual(FlatSale.objects.count(), 6)
         self.assertEqual(FlatSale.objects.values('customer').distinct().count(), 4)
-        self.assertEqual(Flat.objects.filter(status=Flat.Status.SOLD).count(), 6)
+        self.assertEqual(Flat.objects.filter(status=Flat.Status.BOOKED).count(), 6)
         self.assertEqual(FlatSale.objects.filter(flat__project__project_name='Tower 1').count(), 3)
         self.assertEqual(FlatSale.objects.filter(flat__project__project_name='Tower 2').count(), 3)
         self.assertEqual(
@@ -223,7 +223,7 @@ class SeedDemoDataTests(TestCase):
         for sale in FlatSale.objects.select_related('flat__project'):
             expected = 2_300_000 if sale.flat.project.project_name == 'Tower 1' else 2_100_000
             self.assertEqual(sale.received_amount, expected)
-            self.assertEqual(sale.status, FlatSale.Status.SOLD)
+            self.assertEqual(sale.status, FlatSale.Status.BOOKED)
             self.assertEqual(sale.receivable_amount, sale.net_value - expected)
             self.assertGreaterEqual(sale.sale_value, sale.total_base_price)
 
@@ -298,7 +298,7 @@ from django.http import HttpResponse
 from django.urls import resolve
 
 from core import reauth
-from core.testing import make_request, unlock_client
+from core.testing import enter_project, make_request, unlock_client
 from core.views import ConfirmPasswordView
 
 
@@ -379,6 +379,7 @@ class ReauthMiddlewareTests(TestCase):
 
     def test_pdf_endpoint_is_unreachable_until_unlocked(self):
         self.client.force_login(self.user)
+        enter_project(self.client)
         self.assertEqual(self.client.get('/costing/report/pdf/').status_code, 302)
         unlock_client(self.client)
         # Past the lock: the user still lacks nothing here, the report view itself just needs a login.
@@ -417,6 +418,7 @@ class ConfirmPasswordViewTests(TestCase):
 
     def test_a_successful_confirm_through_the_real_url_works_end_to_end(self):
         self.client.force_login(self.user)
+        enter_project(self.client)
         response = self.client.post('/confirm-password/', {'password': 'right-pass', 'next': '/costing/report/pdf/'})
         self.assertEqual(response['Location'], '/costing/report/pdf/')
         self.assertEqual(self.client.get('/costing/report/pdf/').status_code, 200)
@@ -485,5 +487,6 @@ class TemplateContextCopyTests(TestCase):
     def test_the_normal_pages_also_work_through_the_test_client_now(self):
         admin = User.objects.create_superuser('boss', 'b@example.com', 'pw')
         self.client.force_login(admin)
+        enter_project(self.client)
         for url in ('/', '/customers/', '/projects/', '/sales/', '/admin/'):
             self.assertEqual(self.client.get(url).status_code, 200, url)

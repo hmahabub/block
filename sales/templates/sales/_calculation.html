@@ -1,0 +1,39 @@
+{% load core_tags %}
+{# The whole sale value calculation. `calc` ids are filled live on the booking form; on the sale page the figures are rendered. #}
+<div class="table-responsive">
+<table class="table table-sm table-bordered align-middle mb-0 calc-table">
+    <thead class="table-light">
+        <tr><th></th><th class="text-end">Base price</th><th class="text-end">Sale value</th><th class="text-end">Honorarium <small class="text-muted">(sale &minus; base)</small></th></tr>
+    </thead>
+    <tbody>
+        <tr>
+            <th>Flat</th>
+            <td class="text-end" id="pv-base">{% if sale %}{{ sale.base_price|taka }}{% else %}-{% endif %}</td>
+            <td class="text-end" id="pv-flat-sale">{% if sale %}{{ sale.flat_sale_value|taka }}{% else %}-{% endif %}</td>
+            <td class="text-end" id="pv-flat-hon">{% if sale %}{{ sale.flat_honorarium|taka }}{% else %}-{% endif %}</td>
+        </tr>
+        <tr>
+            <th>Parking</th>
+            <td class="text-end" id="pv-parking">{% if sale %}{% if sale.with_parking %}{{ sale.parking_price|taka }}{% else %}not taken{% endif %}{% else %}-{% endif %}</td>
+            <td class="text-end" id="pv-parking-sale">{% if sale %}{% if sale.with_parking %}{{ sale.parking_sale_value|taka }}{% else %}not taken{% endif %}{% else %}-{% endif %}</td>
+            <td class="text-end" id="pv-parking-hon">{% if sale %}{% if sale.with_parking %}{{ sale.parking_honorarium|taka }}{% else %}not taken{% endif %}{% else %}-{% endif %}</td>
+        </tr>
+        <tr class="table-light">
+            <th>Total <small class="text-muted">(flat + parking)</small></th>
+            <th class="text-end" id="pv-total">{% if sale %}{{ sale.total_base_price|taka }}{% else %}-{% endif %}</th>
+            <th class="text-end" id="pv-sale">{% if sale %}{{ sale.sale_value|taka }}{% else %}-{% endif %}</th>
+            <th class="text-end" id="pv-honorarium">{% if sale %}{{ sale.honorarium|taka }}{% else %}-{% endif %}</th>
+        </tr>
+        <tr>
+            <td colspan="2">Reg value <small class="text-muted">(registration cost, paid by the customer)</small></td>
+            <td class="text-end" id="pv-reg">{% if sale %}{{ sale.reg_value|taka }}{% else %}-{% endif %}</td>
+            <td></td>
+        </tr>
+        <tr class="table-light">
+            <th colspan="2">Net value <small class="text-muted">(sale value + reg value)</small></th>
+            <th class="text-end" id="pv-net">{% if sale %}{{ sale.net_value|taka }}{% else %}-{% endif %}</th>
+            <td></td>
+        </tr>
+    </tbody>
+</table>
+</div>

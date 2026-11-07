@@ -23,6 +23,7 @@
 <div class="card mb-3 d-print-none">
     <div class="card-body py-2">
         <form method="get" class="row g-2 align-items-end">
+            {% if not workspace_development %}
             <div class="col-md-3">
                 <label class="form-label small text-muted mb-1">Project</label>
                 <select name="development" class="form-select">
@@ -32,6 +33,7 @@
                     {% endfor %}
                 </select>
             </div>
+            {% endif %}
             <div class="col-md-3">
                 <label class="form-label small text-muted mb-1">Building</label>
                 <select name="project" class="form-select">

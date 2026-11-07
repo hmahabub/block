@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% load core_tags %}
+
+{% block title %}Voucher payments{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h2 class="mb-0"><i class="fas fa-money-bill-wave"></i> Voucher payments</h2>
+        <p class="text-muted mb-0">{{ workspace_development.name }}: every cost is a voucher. Payments are made from here: press <em>Pay</em> on a voucher.</p>
+    </div>
+    <a href="{% url 'costing:cost-create-shared' %}" class="btn btn-outline-primary"><i class="fas fa-plus"></i> New cost voucher</a>
+</div>
+
+<div class="card mb-3"><div class="card-body py-2">
+    <form method="get" class="row g-2 align-items-end">
+        <div class="col-md-4"><input type="text" name="q" class="form-control" placeholder="Voucher no. / paid to / description / head..." value="{{ q }}"></div>
+        <div class="col-md-2"><select name="show" class="form-select">
+            <option value="due" {% if show == 'due' %}selected{% endif %}>Still due</option>
+            <option value="paid" {% if show == 'paid' %}selected{% endif %}>Paid in full</option>
+            <option value="all" {% if show == 'all' %}selected{% endif %}>All</option></select></div>
+        <div class="col-auto"><button type="submit" class="btn btn-primary"><i class="fas fa-filter"></i> Filter</button>
+            <a href="{% url 'costing:voucher-payments' %}" class="btn btn-outline-secondary">Clear</a></div>
+        <div class="col-auto ms-auto text-muted small">{{ rows|length }} voucher{{ rows|length|pluralize }} &middot; due {{ total_due|taka }}</div>
+    </form>
+</div></div>
+
+<div class="card mb-4"><div class="card-header"><strong>Vouchers</strong></div><div class="card-body p-0">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light"><tr><th>Voucher</th><th>Date</th><th>Paid to</th><th>Cost head</th><th>Building</th>
+                <th class="text-end">Amount</th><th class="text-end">Paid</th><th class="text-end">Due</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+                {% for cost in rows %}
+                <tr>
+                    <td><a href="{{ cost.get_absolute_url }}">{{ cost.voucher_no }}</a></td>
+                    <td class="text-nowrap">{{ cost.date|date:"j M Y" }}</td>
+                    <td>{{ cost.payee|default:"-" }}</td>
+                    <td>{{ cost.cost_category }}</td>
+                    <td>{{ cost.project.project_name }}</td>
+                    <td class="text-end">{{ cost.amount|taka }}</td><td class="text-end">{{ cost.paid_amount|taka }}</td><td class="text-end">{{ cost.due_amount|taka }}</td>
+                    <td><span class="badge {% if cost.payment_status == 'Paid' %}bg-success{% elif cost.payment_status == 'Part paid' %}bg-info text-dark{% else %}bg-warning text-dark{% endif %}">{{ cost.payment_status }}</span></td>
+                    <td class="text-nowrap text-end">
+                        <a href="{% url 'costing:cost-voucher' cost.pk %}" target="_blank" class="btn btn-sm btn-outline-secondary" title="Print voucher"><i class="fas fa-print"></i></a>
+                        {% if cost.due_amount > 0 and can_pay %}<a href="{% url 'costing:cost-pay' cost.pk %}" class="btn btn-sm btn-primary"><i class="fas fa-money-bill-wave"></i> Pay</a>{% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="10" class="text-center text-muted py-4">No voucher found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div></div>
+
+<div class="card"><div class="card-header"><strong>Payments made</strong> <small class="text-muted">(the latest 30)</small></div><div class="card-body p-0">
+    <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+            <thead class="table-light"><tr><th>Payment</th><th>Date</th><th>Voucher</th><th>Paid to</th><th>Paid from</th><th>Reference</th><th class="text-end">Amount</th><th></th></tr></thead>
+            <tbody>
+                {% for payment in payments %}
+                <tr><td>{{ payment.payment_no }}</td><td>{{ payment.date|date:"j M Y" }}</td>
+                    <td><a href="{{ payment.cost.get_absolute_url }}">{{ payment.cost.voucher_no }}</a></td><td>{{ payment.cost.payee|default:"-" }}</td>
+                    <td>{{ payment.account }}</td><td>{{ payment.reference_no|default:"-" }}</td><td class="text-end">{{ payment.amount|taka }}</td>
+                    <td>{% if payment.is_confirmed %}<i class="fas fa-check-circle text-success" title="Confirmed in the books"></i>{% else %}<i class="far fa-clock text-muted" title="Waiting to be confirmed"></i>{% endif %}</td></tr>
+                {% empty %}
+                <tr><td colspan="8" class="text-center text-muted py-3">No payment made yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div></div>
+{% endblock %}

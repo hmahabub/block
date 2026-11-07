@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Issue an installment{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header"><h3 class="mb-0">Issue an installment <small class="text-muted">- {{ development.name }}</small></h3></div>
+    <div class="card-body">
+        <p class="text-muted">The amount is added as due on the account of every customer who booked a flat in this project (cancelled bookings are left out).
+            You will see exactly who is charged before anything is saved.</p>
+        <form method="post">
+            {% csrf_token %}
+            <div class="row">
+                <div class="col-md-6">{{ form.title|as_crispy_field }}{{ form.due_date|as_crispy_field }}{{ form.building|as_crispy_field }}</div>
+                <div class="col-md-6">{{ form.basis|as_crispy_field }}{{ form.value|as_crispy_field }}{{ form.notes|as_crispy_field }}</div>
+            </div>
+            {{ form.send_sms|as_crispy_field }}
+            <button type="submit" class="btn btn-primary"><i class="fas fa-eye"></i> Review who will be charged</button>
+            <a href="{% url 'installments:list' %}" class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -11,6 +11,7 @@ from django.views.generic import CreateView, DeleteView, DetailView, FormView, L
 
 from core.mixins import CreateAuditMixin, DeleteAuditMixin, UpdateAuditMixin
 from core.utils import int_or_none
+from core.workspace import WorkspaceMixin, in_workspace
 
 from .forms import DecisionNoteForm, DevelopmentForm, FlatDeletionRequestForm, FlatForm, GenerateFlatsForm, ProjectForm
 from .models import Development, Flat, FlatDeletionRequest, Project
@@ -97,9 +98,10 @@ class DevelopmentDeleteView(PermissionRequiredMixin, DeleteAuditMixin, DeleteVie
     permission_required = 'projects.delete_development'
 
 
-class ProjectListView(LoginRequiredMixin, ListView):
+class ProjectListView(WorkspaceMixin, LoginRequiredMixin, ListView):
     """The buildings."""
     model = Project
+    workspace_lookup = 'development'
     template_name = 'projects/project_list.html'
     context_object_name = 'object_list'
     paginate_by = 15
@@ -124,8 +126,9 @@ class ProjectListView(LoginRequiredMixin, ListView):
         return context
 
 
-class ProjectDetailView(LoginRequiredMixin, DetailView):
+class ProjectDetailView(WorkspaceMixin, LoginRequiredMixin, DetailView):
     model = Project
+    workspace_lookup = 'development'
     template_name = 'projects/project_detail.html'
     context_object_name = 'object'
 
@@ -139,7 +142,7 @@ class ProjectDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
-class ProjectCreateView(PermissionRequiredMixin, CreateAuditMixin, CreateView):
+class ProjectCreateView(WorkspaceMixin, PermissionRequiredMixin, CreateAuditMixin, CreateView):
     model = Project
     form_class = ProjectForm
     template_name = 'projects/project_form.html'
@@ -156,8 +159,9 @@ class ProjectCreateView(PermissionRequiredMixin, CreateAuditMixin, CreateView):
         return reverse_lazy('projects:detail', kwargs={'pk': self.object.pk})
 
 
-class ProjectUpdateView(PermissionRequiredMixin, UpdateAuditMixin, UpdateView):
+class ProjectUpdateView(WorkspaceMixin, PermissionRequiredMixin, UpdateAuditMixin, UpdateView):
     model = Project
+    workspace_lookup = 'development'
     form_class = ProjectForm
     template_name = 'projects/project_form.html'
     permission_required = 'projects.change_project'
@@ -166,8 +170,9 @@ class ProjectUpdateView(PermissionRequiredMixin, UpdateAuditMixin, UpdateView):
         return reverse_lazy('projects:detail', kwargs={'pk': self.object.pk})
 
 
-class ProjectDeleteView(PermissionRequiredMixin, DeleteAuditMixin, DeleteView):
+class ProjectDeleteView(WorkspaceMixin, PermissionRequiredMixin, DeleteAuditMixin, DeleteView):
     model = Project
+    workspace_lookup = 'development'
     template_name = 'projects/project_confirm_delete.html'
     success_url = reverse_lazy('projects:list')
     permission_required = 'projects.delete_project'
@@ -181,7 +186,7 @@ class GenerateFlatsView(PermissionRequiredMixin, FormView):
     permission_required = 'projects.add_flat'
 
     def dispatch(self, request, *args, **kwargs):
-        self.project = get_object_or_404(Project, pk=kwargs['project_pk'])
+        self.project = get_object_or_404(in_workspace(Project.objects.all(), request, 'development'), pk=kwargs['project_pk'])
         return super().dispatch(request, *args, **kwargs)
 
     def get_form_kwargs(self):
@@ -222,7 +227,7 @@ class FlatListView(LoginRequiredMixin, ListView):
     def get_project(self):
         """Flats are listed one project at a time: the one asked for, else the first project."""
         if not hasattr(self, '_project'):
-            projects = Project.objects.order_by('project_name')
+            projects = in_workspace(Project.objects.order_by('project_name'), self.request, 'development')
             self._project = projects.filter(pk=int_or_none(self.request.GET.get('project'))).first() or projects.first()
         return self._project
 
@@ -242,15 +247,16 @@ class FlatListView(LoginRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['projects'] = Project.objects.order_by('project_name')
+        context['projects'] = in_workspace(Project.objects.order_by('project_name'), self.request, 'development')
         context['project'] = self.get_project()
         context['status_choices'] = Flat.Status.choices
         attach_active_sales(context['object_list'])
         return context
 
 
-class FlatDetailView(LoginRequiredMixin, DetailView):
+class FlatDetailView(WorkspaceMixin, LoginRequiredMixin, DetailView):
     model = Flat
+    workspace_lookup = 'project__development'
     template_name = 'projects/flat_detail.html'
     context_object_name = 'object'
 
@@ -272,7 +278,7 @@ class FlatCreateView(PermissionRequiredMixin, CreateAuditMixin, CreateView):
     permission_required = 'projects.add_flat'
 
     def dispatch(self, request, *args, **kwargs):
-        self.project = get_object_or_404(Project, pk=kwargs['project_pk'])
+        self.project = get_object_or_404(in_workspace(Project.objects.all(), request, 'development'), pk=kwargs['project_pk'])
         return super().dispatch(request, *args, **kwargs)
 
     def get_form_kwargs(self):
@@ -293,8 +299,9 @@ class FlatCreateView(PermissionRequiredMixin, CreateAuditMixin, CreateView):
         return reverse_lazy('projects:detail', kwargs={'pk': self.project.pk})
 
 
-class FlatUpdateView(PermissionRequiredMixin, UpdateAuditMixin, UpdateView):
+class FlatUpdateView(WorkspaceMixin, PermissionRequiredMixin, UpdateAuditMixin, UpdateView):
     model = Flat
+    workspace_lookup = 'project__development'
     form_class = FlatForm
     template_name = 'projects/flat_form.html'
     permission_required = 'projects.change_flat'

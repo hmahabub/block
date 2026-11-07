@@ -1,0 +1,62 @@
+{% extends "print_base.html" %}
+{% load core_tags %}
+
+{% block doc_title %}Invoice{% endblock %}
+{% block doc_no %}{{ invoice.number }}{% endblock %}
+{% block back_url %}{% url 'sales:detail' sale.pk %}{% endblock %}
+{% block doc_heading %}INVOICE{% endblock %}
+{% block toolbar_extra %}<a class="btn btn-danger" href="?format=pdf" target="_blank"><i class="fas fa-file-pdf"></i> PDF</a>
+{% if invoice.due > 0 and perms.sales.add_customerpayment %}<a class="btn btn-success" href="{% url 'sales:payment-create' %}?invoice={{ invoice.pk }}"><i class="fas fa-money-bill-wave"></i> Record payment</a>{% endif %}{% endblock %}
+{% block doc_meta %}
+    <div><strong>Invoice No:</strong> {{ invoice.number }}</div>
+    <div><strong>Issued:</strong> {{ invoice.issued_on|date:"j M Y" }}</div>
+    {% if invoice.due_date %}<div><strong>Pay by:</strong> {{ invoice.due_date|date:"j M Y" }}</div>{% endif %}
+    {% if invoice.status == 'Paid' %}<div class="stamp">PAID</div>{% elif invoice.status == 'Cancelled' %}<div class="stamp" style="color:#dc3545;border-color:#dc3545;">CANCELLED</div>
+    {% elif invoice.status == 'Overdue' %}<div class="stamp" style="color:#dc3545;border-color:#dc3545;">OVERDUE</div>{% endif %}
+{% endblock %}
+
+{% block body %}
+<div class="row mt-4 mb-3">
+    <div class="col-6">
+        <div class="section-label">Bill to</div>
+        <div class="fs-5 fw-semibold">{{ sale.customer.name }}</div>
+        <div class="text-muted small">Customer ID: {{ sale.customer.customer_code }}</div>
+        <div class="text-muted small">Phone: {{ sale.customer.phone }}</div>
+    </div>
+    <div class="col-6">
+        <div class="section-label">Property</div>
+        <div class="fw-semibold">{{ sale.project.project_name }} &mdash; Flat {{ sale.flat.flat_no }}</div>
+        <div class="text-muted small">Booking {{ sale.sale_no }}</div>
+    </div>
+</div>
+
+<table class="doc mb-3">
+    <thead><tr><th>Description</th><th class="text-end" style="width:32%">Amount</th></tr></thead>
+    <tbody>
+        <tr><td>{{ invoice.label }}: flat {{ sale.flat.flat_no }}{% if invoice.kind == 'BOOKING' %} <small class="text-muted">(net value of the booking, less the installments issued)</small>{% endif %}</td>
+            <td class="text-end">{{ invoice.total|taka }}</td></tr>
+    </tbody>
+</table>
+<div class="in-words mb-4"><span class="section-label">Amount in words</span><br><strong>{{ invoice.total|taka_words }}</strong></div>
+
+<div class="section-label">Payments received under this invoice</div>
+<table class="doc mb-3">
+    <thead><tr><th>Receipt</th><th>Date</th><th>Paid into</th><th>Reference</th><th class="text-end">Amount</th></tr></thead>
+    <tbody>
+        {% for payment in payments %}
+        <tr><td>{{ payment.receipt_no }}</td><td>{{ payment.payment_date|date:"j M Y" }}</td>
+            <td>{{ payment.account|default:payment.get_payment_method_display }}</td><td>{{ payment.reference_no|default:"—" }}</td>
+            <td class="text-end">{{ payment.amount|taka }}</td></tr>
+        {% empty %}
+        <tr><td colspan="5" class="text-center text-muted">No payment received under this invoice yet</td></tr>
+        {% endfor %}
+        <tr><th colspan="4" class="text-end">Total paid</th><th class="text-end">{{ invoice.paid|taka }}</th></tr>
+        <tr><th colspan="4" class="text-end">Balance due</th><th class="text-end {% if invoice.due > 0 %}text-danger{% endif %}">{{ invoice.due|taka }}</th></tr>
+    </tbody>
+</table>
+
+<div class="signatures">
+    <div>Customer signature</div>
+    <div>Authorized signatory<br><small class="text-muted">{{ company.display_name }}</small></div>
+</div>
+{% endblock %}

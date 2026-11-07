@@ -27,7 +27,7 @@ class CostCategory(models.Model):
         POST = 'POST', 'Post-development'
         EITHER = 'EITHER', 'Either (chosen on each entry)'
 
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=150)
     parent_category = models.ForeignKey(
         'self', null=True, blank=True, on_delete=models.CASCADE, related_name='subcategories'
     )
@@ -112,6 +112,10 @@ class ProjectCost(ConfirmableModel):
     supplier = models.ForeignKey(
         'suppliers.Supplier', null=True, blank=True, on_delete=models.SET_NULL, related_name='project_costs'
     )
+    paid_to = models.CharField(
+        'Paid to', max_length=150, blank=True,
+        help_text='Who the payment was given to, typed in when the payee is not a listed supplier.',
+    )
     flat = models.ForeignKey(
         'projects.Flat', null=True, blank=True, on_delete=models.SET_NULL, related_name='project_costs',
         help_text='Leave blank for a shared project cost, borne equally by every flat in the project. '
@@ -119,7 +123,7 @@ class ProjectCost(ConfirmableModel):
     )
     account = models.ForeignKey(
         'books.Account', null=True, blank=True, on_delete=models.PROTECT, related_name='costs',
-        verbose_name='Paid from', help_text='The bank or cash account the money was paid from.',
+        verbose_name='Paid in full from', help_text='Only on older costs, which were paid in full when recorded. New costs are paid under the voucher.',
     )
     date = models.DateField()
     reference_no = models.CharField('Reference / Bill No.', max_length=100, blank=True)
@@ -144,6 +148,35 @@ class ProjectCost(ConfirmableModel):
     def voucher_no(self):
         return f'CV-{self.pk:05d}'
 
+    # --- the voucher and its payments ------------------------------------------------
+    # A cost is a voucher: what is owed. Payments are made under it (CostPayment), any number of them. Older costs were
+    # paid in full when recorded and carry the account directly; they count as paid in full.
+    @property
+    def paid_amount(self):
+        if self.account_id:
+            return self.amount
+        return min(sum((p.amount for p in self.payments.all()), Decimal('0')), self.amount)
+
+    @property
+    def due_amount(self):
+        return self.amount - self.paid_amount
+
+    @property
+    def payment_status(self):
+        if self.due_amount <= 0:
+            return 'Paid'
+        return 'Part paid' if self.paid_amount > 0 else 'Unpaid'
+
+    @property
+    def is_confirmed(self):
+        """Confirmed in the books: the older whole-cost line, or any payment made under the voucher."""
+        return self.confirmed_at is not None or any(p.is_confirmed for p in self.payments.all())
+
+    @property
+    def payee(self):
+        """Who the payment went to: the supplier, else the name typed in."""
+        return self.supplier.name if self.supplier_id else self.paid_to
+
     @property
     def is_shared(self):
         return self.flat_id is None
@@ -164,3 +197,32 @@ class ProjectCost(ConfirmableModel):
         if self.flat_id:
             self.phase = Phase.POST  # a cost that belongs to one flat is always a flat-owner cost
         super().save(*args, **kwargs)
+
+
+class CostPayment(ConfirmableModel):
+    """Money paid under a cost voucher. A voucher can be paid in one go or in parts; each payment is a line in the book."""
+
+    cost = models.ForeignKey(ProjectCost, on_delete=models.PROTECT, related_name='payments')
+    date = models.DateField()
+    amount = models.DecimalField(max_digits=14, decimal_places=2, validators=[MinValueValidator(0.01)])
+    account = models.ForeignKey(
+        'books.Account', on_delete=models.PROTECT, related_name='cost_payments', verbose_name='Paid from',
+        help_text='The bank or cash account the money was paid from.',
+    )
+    reference_no = models.CharField('Cheque / transaction ref.', max_length=100, blank=True)
+    notes = models.CharField(max_length=300, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['date', 'id']
+        verbose_name = 'Cost Payment'
+
+    def __str__(self):
+        return f'{self.payment_no}: {self.amount} under {self.cost.voucher_no}'
+
+    @property
+    def payment_no(self):
+        return f'CP-{self.pk:05d}'
+
+    def get_absolute_url(self):
+        return self.cost.get_absolute_url()

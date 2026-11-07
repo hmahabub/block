@@ -167,7 +167,16 @@ class Project(models.Model):
 
     @property
     def sold_flat_count(self):
-        return self.flats.filter(status=Flat.Status.SOLD).count()
+        """Flats that are no longer for sale: booked, or registered to the owner."""
+        return self.flats.exclude(status=Flat.Status.AVAILABLE).count()
+
+    @property
+    def booked_flat_count(self):
+        return self.flats.filter(status=Flat.Status.BOOKED).count()
+
+    @property
+    def registered_flat_count(self):
+        return self.flats.filter(status=Flat.Status.REGISTERED).count()
 
     @property
     def available_flat_count(self):
@@ -252,7 +261,8 @@ class Flat(models.Model):
 
     class Status(models.TextChoices):
         AVAILABLE = 'AVAILABLE', 'Available'
-        SOLD = 'SOLD', 'Sold'
+        BOOKED = 'BOOKED', 'Booked'
+        REGISTERED = 'REGISTERED', 'Registered'
 
     project = models.ForeignKey(Project, on_delete=models.PROTECT, related_name='flats')
     unit = models.CharField(max_length=1, blank=True, validators=[unit_validator], help_text='Flat unit letter, e.g. A')

@@ -10,6 +10,7 @@ from django.views.generic import CreateView, DeleteView, DetailView, TemplateVie
 from core.formatting import DATE, MONEY, PERCENT
 from core.mixins import CreateAuditMixin, DeleteAuditMixin, UpdateAuditMixin
 from core.utils import int_or_none
+from core.workspace import WorkspaceMixin
 from projects.models import Development
 from reports.excel import XLSX_CONTENT_TYPE, build_xlsx
 from reports.tables import Column, ReportTable
@@ -138,7 +139,7 @@ class DirectorUpdateView(PermissionRequiredMixin, UpdateAuditMixin, UpdateView):
     permission_required = 'directors.change_director'
 
 
-class TransactionCreateView(PermissionRequiredMixin, CreateAuditMixin, CreateView):
+class TransactionCreateView(WorkspaceMixin, PermissionRequiredMixin, CreateAuditMixin, CreateView):
     model = DirectorTransaction
     form_class = DirectorTransactionForm
     template_name = 'directors/transaction_form.html'

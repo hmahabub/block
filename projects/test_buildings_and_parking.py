@@ -154,10 +154,10 @@ class ParkingPricePerFlatTests(TestCase):
         flat.parking_price = D('500')
         flat.save()
         data = {'flat': flat.pk, 'customer': self.customer.pk, 'sale_date': '2026-02-01', 'with_parking': 'on', 'reg_value': '0'}
-        self.assertFalse(FlatSaleForm(data={**data, 'sale_value': '1400'}).is_valid())   # needs at least 1000 + 500
-        self.assertTrue(FlatSaleForm(data={**data, 'sale_value': '1500'}).is_valid())
+        self.assertFalse(FlatSaleForm(data={**data, 'flat_sale_value': '1000', 'parking_sale_value': '400'}).is_valid())  # parking needs 500
+        self.assertTrue(FlatSaleForm(data={**data, 'flat_sale_value': '1000', 'parking_sale_value': '500'}).is_valid())
         other = {**data, 'flat': self.flats[1].pk}
-        self.assertTrue(FlatSaleForm(data={**other, 'sale_value': '1100'}).is_valid())   # the building default, 100
+        self.assertTrue(FlatSaleForm(data={**other, 'flat_sale_value': '1000', 'parking_sale_value': '100'}).is_valid())  # the building default, 100
 
     def test_the_live_preview_data_has_each_flats_own_price(self):
         flat = self.flats[0]

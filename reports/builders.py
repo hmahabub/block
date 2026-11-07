@@ -76,8 +76,9 @@ def finance_report(project=None, development=None):
         hon_due = _sum(s.honorarium_due for s in active)
         refund_due = _sum(s.refund_due for s in all_sales)
         pre, post = item.cost_total(Phase.PRE), item.cost_total(Phase.POST)
+        cost_due = _sum(c.due_amount for c in item.costs.prefetch_related('payments'))
         cost_rows.append([
-            f'{item.project_code} {item.project_name}', pre, post, pre + post, hon_due, refund_due, hon_due + refund_due,
+            f'{item.project_code} {item.project_name}', pre, post, pre + post, cost_due, hon_due, refund_due, cost_due + hon_due + refund_due,
         ])
 
     def totals(rows, first=1):
@@ -94,10 +95,10 @@ def finance_report(project=None, development=None):
     cost_table = ReportTable(
         'Cost and payable',
         [Column('Building'), Column('Pre-development cost', MONEY), Column('Post-development cost', MONEY),
-         Column('Total cost', MONEY), Column('Honorarium payable', MONEY), Column('Refunds payable', MONEY),
+         Column('Total cost', MONEY), Column('Cost vouchers unpaid', MONEY), Column('Honorarium payable', MONEY), Column('Refunds payable', MONEY),
          Column('Total payable', MONEY)],
         cost_rows, totals(cost_rows),
-        note='Cost entries are paid when recorded, so the only amounts payable are honorarium to references and refunds to customers.',
+        note='Payable = what is still owed on cost vouchers, honorarium to references and refunds to customers.',
     )
     tables = [sales_table, cost_table]
 

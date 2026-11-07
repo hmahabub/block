@@ -1,9 +1,10 @@
 from django import forms
 from django.db.models import Q
+from django.utils import timezone
 
 from books.models import Account
 
-from .models import CostCategory, Phase, ProjectBudget, ProjectCost
+from .models import CostCategory, CostPayment, Phase, ProjectBudget, ProjectCost
 
 
 class CostCategoryForm(forms.ModelForm):
@@ -43,7 +44,7 @@ COST_WIDGETS = {
 class _CostFormBase(forms.ModelForm):
     """Common behaviour of both cost forms.
 
-    * the money must say which bank/cash account it was paid from (it feeds the books);
+    * a cost is a voucher: what is owed. The money is paid under the voucher afterwards, from a bank or cash account;
     * the phase follows the category, except for "either" categories (administration) where the
       person entering the cost chooses it;
     * a cost that has been confirmed in the books is part of the book and can no longer be changed.
@@ -59,12 +60,23 @@ class _CostFormBase(forms.ModelForm):
         if 'project' in self.fields:
             self.fields['project'].label = 'Building'
         self.fields['supplier'].required = False
-        self.fields['account'].required = True
-        self.fields['account'].queryset = Account.objects.filter(is_active=True)
+        self.fields['paid_to'].label = 'Paid to (if not a listed supplier)'
+        self.fields['paid_to'].help_text = 'No supplier chosen? Type who the payment was given to.'
         self.fields['cost_category'].queryset = self.category_queryset()
         self.fields['cost_category'].label_from_instance = self.category_label
         if self.instance.pk:
             self.fields['phase'].initial = self.instance.phase
+
+    def check_payee(self, cleaned):
+        """Every cost says who was paid: a supplier, or a name typed in."""
+        if cleaned.get('supplier'):
+            cleaned['paid_to'] = ''          # the supplier is the payee: one source of truth
+        elif not (cleaned.get('paid_to') or '').strip():
+            # A new cost must say who was paid. An older cost that never had a payee can still be edited as it is.
+            if not self.instance.pk or self.instance.payee:
+                self.add_error('paid_to', 'Choose a supplier, or type who the payment was given to.')
+        else:
+            cleaned['paid_to'] = cleaned['paid_to'].strip()
 
     def category_queryset(self):
         return CostCategory.objects.filter(active=True).select_related('parent_category')
@@ -80,7 +92,11 @@ class _CostFormBase(forms.ModelForm):
     def clean(self):
         cleaned = super().clean()
         if self.instance.pk and self.instance.is_confirmed:
-            raise forms.ValidationError('This cost is confirmed in the books and can no longer be changed.')
+            raise forms.ValidationError('This cost has a payment confirmed in the books and can no longer be changed.')
+        amount = cleaned.get('amount')
+        if self.instance.pk and amount is not None and amount < self.instance.paid_amount:
+            self.add_error('amount', f'{self.instance.paid_amount:,.2f} has already been paid under this voucher: the amount cannot be less.')
+        self.check_payee(cleaned)
         category = cleaned.get('cost_category')
         if category:
             fixed = category.effective_phase
@@ -110,7 +126,7 @@ class SharedCostForm(_CostFormBase):
         model = ProjectCost
         widgets = COST_WIDGETS
         fields = [
-            'project', 'cost_category', 'phase', 'supplier', 'account', 'date',
+            'project', 'cost_category', 'phase', 'supplier', 'paid_to', 'date',
             'reference_no', 'description', 'amount', 'notes',
         ]
 
@@ -126,7 +142,7 @@ class DirectCostForm(_CostFormBase):
         model = ProjectCost
         widgets = COST_WIDGETS
         fields = [
-            'flat', 'cost_category', 'supplier', 'account', 'date',
+            'flat', 'cost_category', 'supplier', 'paid_to', 'date',
             'reference_no', 'description', 'amount', 'notes',
         ]
 
@@ -144,7 +160,9 @@ class DirectCostForm(_CostFormBase):
         )
 
     def clean(self):
-        return super(_CostFormBase, self).clean()
+        cleaned = super(_CostFormBase, self).clean()
+        self.check_payee(cleaned)
+        return cleaned
 
     def save(self, commit=True):
         instance = super().save(commit=False)
@@ -154,3 +172,35 @@ class DirectCostForm(_CostFormBase):
             instance.save()
         return instance
 
+
+
+class CostPaymentForm(forms.ModelForm):
+    """A payment made under a cost voucher: no more than what is still due on it."""
+
+    class Meta:
+        model = CostPayment
+        fields = ['date', 'amount', 'account', 'reference_no', 'notes']
+        widgets = {'date': COST_WIDGETS.get('date', forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d')), 'notes': forms.TextInput()}
+
+    def __init__(self, *args, cost=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.cost = cost
+        self.fields['account'].queryset = Account.objects.filter(is_active=True)
+        self.fields['date'].initial = timezone.localdate()
+        self.fields['amount'].initial = cost.due_amount if cost else None
+
+    def clean_amount(self):
+        amount = self.cleaned_data['amount']
+        due = self.cost.due_amount
+        if due <= 0:
+            raise forms.ValidationError('This voucher is already paid in full.')
+        if amount > due:
+            raise forms.ValidationError(f'Only {due:,.2f} is still due on {self.cost.voucher_no}.')
+        return amount
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        instance.cost = self.cost
+        if commit:
+            instance.save()
+        return instance

@@ -31,6 +31,7 @@
                     <li><i class="fas fa-building"></i> {{ item.buildings.all|length }} building{{ item.buildings.all|length|pluralize }}</li>
                     <li><i class="fas fa-door-open"></i> {{ item.flat_count }} flats &middot; {{ item.sold_flat_count }} sold</li>
                 </ul>
+                <form method="post" action="{% url 'enter-project' item.pk %}" class="d-inline">{% csrf_token %}<button type="submit" class="btn btn-success btn-sm"><i class="fas fa-door-open"></i> Open project</button></form>
                 <a href="{{ item.get_absolute_url }}" class="btn btn-outline-primary btn-sm">View Details</a>
             </div>
         </div>

@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% load core_tags %}
+
+{% block title %}Honorarium vouchers{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-hand-holding-dollar"></i> Honorarium vouchers</h2>
+    {% if not locked %}
+    <a href="?{{ request.GET.urlencode }}{% if request.GET %}&amp;{% endif %}format=xlsx" class="btn btn-outline-success"><i class="fas fa-file-excel"></i> Excel</a>
+    {% endif %}
+</div>
+
+{% if locked %}
+{% include "includes/locked_note.html" %}
+{% else %}
+<p class="text-muted">The extra the customer pays above the total base price goes to the reference. Each sale shows what was paid to the ref and what is still due.</p>
+
+<div class="card mb-3"><div class="card-body py-2">
+    <form method="get" class="row g-2 align-items-end">
+        <div class="col-md-3">
+            <label class="form-label small text-muted mb-1">Ref</label>
+            <select name="ref" class="form-select">
+                <option value="">All refs</option>
+                {% for item in references %}<option value="{{ item.pk }}" {% if reference and reference.pk == item.pk %}selected{% endif %}>{{ item.name }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2"><label class="form-label small text-muted mb-1">Paid from</label><input type="date" name="date_from" class="form-control" value="{{ date_from|date:'Y-m-d' }}"></div>
+        <div class="col-md-2"><label class="form-label small text-muted mb-1">Paid to</label><input type="date" name="date_to" class="form-control" value="{{ date_to|date:'Y-m-d' }}"></div>
+        <div class="col-md-2">
+            <div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="only_due" value="1" id="only_due" {% if only_due %}checked{% endif %}>
+                <label class="form-check-label" for="only_due">Only what is still due</label></div>
+        </div>
+        <div class="col-md-3"><button type="submit" class="btn btn-primary"><i class="fas fa-filter"></i> Filter</button>
+            <a href="{% url 'costing:honorarium-list' %}" class="btn btn-outline-secondary">Clear</a></div>
+    </form>
+</div></div>
+
+<div class="row mb-3 text-center">
+    <div class="col-md-4"><div class="card"><div class="card-body py-2"><strong>{{ total_honorarium|taka }}</strong><br><small class="text-muted">Honorarium</small></div></div></div>
+    <div class="col-md-4"><div class="card"><div class="card-body py-2"><strong class="text-success">{{ total_paid|taka }}</strong><br><small class="text-muted">Paid ({{ payment_count }} payment{{ payment_count|pluralize }})</small></div></div></div>
+    <div class="col-md-4"><div class="card"><div class="card-body py-2"><strong class="text-danger">{{ total_due|taka }}</strong><br><small class="text-muted">Still due</small></div></div></div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead class="table-light">
+                    <tr><th>Ref</th><th>Voucher / sale / flat</th><th>Customer</th><th class="text-end">Honorarium</th><th class="text-end">Paid</th><th class="text-end">Due</th><th></th></tr>
+                </thead>
+                <tbody>
+                    {% for row in rows %}
+                    <tr class="table-light">
+                        <td>{% if row.sale.ref %}<a href="{{ row.sale.ref.get_absolute_url }}">{{ row.sale.ref.name }}</a>{% else %}<span class="text-warning">no ref chosen</span>{% endif %}</td>
+                        <td><strong>{{ row.sale.honorarium_voucher_no }}</strong> &middot; <a href="{{ row.sale.get_absolute_url }}">{{ row.sale.sale_no }}</a> &middot; {{ row.sale.project.project_name }} / {{ row.sale.flat.flat_no }}
+                            {% if row.sale.status == 'CANCELLED' %}<span class="badge {{ row.sale.status|status_badge }}">Cancelled</span>{% endif %}</td>
+                        <td>{{ row.sale.customer.name }}</td>
+                        <td class="text-end">{{ row.honorarium|taka }}</td>
+                        <td class="text-end">{{ row.paid|taka }}</td>
+                        <td class="text-end {% if row.due > 0 %}text-danger fw-bold{% endif %}">{% if row.due > 0 %}{{ row.due|taka }}{% else %}<span class="badge bg-success">Paid in full</span>{% endif %}</td>
+                        <td class="text-end">{% if row.due > 0 and perms.sales.add_honorariumpayment %}<a href="{% url 'costing:honorarium-pay' row.sale.pk %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-hand-holding-dollar"></i> Pay</a>{% endif %}</td>
+                    </tr>
+                    {% for p in row.payments %}
+                    <tr class="small">
+                        <td></td>
+                        <td colspan="2"><span class="text-muted">{{ p.date|date:"j M Y" }}</span> &middot;
+                            <a href="{% url 'costing:honorarium-voucher' p.pk %}" target="_blank" title="Print voucher">{{ p.reference_no }}</a> &middot; paid from {{ p.account }}
+                            {% if p.notes %}&middot; <em>{{ p.notes }}</em>{% endif %}</td>
+                        <td></td>
+                        <td class="text-end">{{ p.amount|taka }}</td>
+                        <td>{% if p.is_confirmed %}<i class="fas fa-check-circle text-success" title="Confirmed in the books"></i>{% else %}<i class="far fa-clock text-muted" title="Waiting to be confirmed"></i>{% endif %}</td>
+                        <td class="text-end"><a href="{% url 'costing:honorarium-voucher' p.pk %}" target="_blank" class="btn btn-sm btn-outline-secondary" title="Print voucher"><i class="fas fa-print"></i></a></td>
+                    </tr>
+                    {% endfor %}
+                    {% empty %}
+                    <tr><td colspan="7" class="text-center py-4 text-muted">No honorarium found{% if request.GET %} for these filters{% endif %}.</td></tr>
+                    {% endfor %}
+                </tbody>
+                {% if rows %}
+                <tfoot class="table-light fw-bold">
+                    <tr><td colspan="3">Total</td><td class="text-end">{{ total_honorarium|taka }}</td><td class="text-end">{{ total_paid|taka }}</td><td class="text-end">{{ total_due|taka }}</td><td></td></tr>
+                </tfoot>
+                {% endif %}
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

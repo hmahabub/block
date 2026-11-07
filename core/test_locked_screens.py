@@ -1,4 +1,5 @@
 """Money figures must stay off the screens shown to buyers while the sensitive screens are locked."""
+import re
 import time
 
 from django.contrib.auth.models import User
@@ -6,9 +7,11 @@ from django.contrib.messages import get_messages
 from django.test import TestCase, override_settings
 
 from core.testing import make_account, make_project, make_request
+from core.workspace import SESSION_KEY
 from costing.models import CostCategory, ProjectCost
 from customers.models import Customer
 from dashboard.views import HomeView
+from projects.models import Development
 from projects.views import FlatDetailView, FlatListView, ProjectDetailView, ProjectListView
 from sales.models import CustomerPayment, FlatSale, Reference
 from sales.views import (
@@ -27,7 +30,9 @@ UNLOCKED = dict(session={'reauth_until': time.time() + 600, 'reauth_token': 'tok
 class LockedScreenTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_superuser('boss', 'b@example.com', 'pw')
-        self.project, self.flats = make_project('Tower', base=13_500_123, quoted=15_100_000, parking=500_000)
+        self.development = Development.objects.create(name='Estate')
+        self.project, self.flats = make_project(
+            'Tower', base=13_500_123, quoted=15_100_000, parking=500_000, development=self.development)
         self.customer = Customer.objects.create(name='Rahim', phone='01711111111')
         self.ref = Reference.objects.create(name='Ref')
         self.account = make_account()
@@ -42,7 +47,8 @@ class LockedScreenTests(TestCase):
 
     def page(self, view, locked=True, path='/', **kwargs):
         extra = {} if locked else UNLOCKED
-        response = view.as_view()(make_request(self.user, path, **extra), **kwargs)
+        session = {**extra.get('session', {}), SESSION_KEY: self.development.pk}
+        response = view.as_view()(make_request(self.user, path, **{**extra, 'session': session}), **kwargs)
         response.render()
         return response.content.decode()
 
@@ -78,7 +84,7 @@ class LockedScreenTests(TestCase):
         self.check(FlatSaleListView, ['15,300,000.00', '2,222,222.00', '13,077,778.00'], [self.sale.sale_no])
 
     def test_sale_page_hides_breakdown_honorarium_and_payment_amounts(self):
-        self.check(FlatSaleDetailView, ['Sale Breakdown', '15,300,000.00', '2,222,222.00', 'Honorarium to'], [self.sale.sale_no], pk=self.sale.pk)
+        self.check(FlatSaleDetailView, ['Sale Breakdown', '15,300,000.00', '2,222,222.00', 'HV-0'], [self.sale.sale_no], pk=self.sale.pk)
 
     def test_payment_list_hides_amounts(self):
         self.check(CustomerPaymentListView, ['2,222,222.00'], ['Rahim'])
@@ -93,6 +99,7 @@ class LockedScreenTests(TestCase):
 
     def test_the_booking_form_keeps_the_base_price_out_of_the_page_while_locked(self):
         locked, unlocked = self.page(FlatSaleCreateView, True), self.page(FlatSaleCreateView, False)
+        locked, unlocked = (re.sub(r'<nav.*?</nav>', '', text, flags=re.S) for text in (locked, unlocked))  # the menu names Honorarium
         self.assertNotIn('13500123', locked)
         self.assertNotIn('Honorarium', locked)
         self.assertNotIn('Base price', locked)
@@ -106,7 +113,7 @@ class LockedScreenTests(TestCase):
 
     def test_closing_the_browser_hides_the_figures_again(self):
         # session still inside its window, but the browser dropped the unlock cookie
-        request = make_request(self.user, '/', session=UNLOCKED['session'], cookies={})
+        request = make_request(self.user, '/', session={**UNLOCKED['session'], SESSION_KEY: self.development.pk}, cookies={})
         response = HomeView.as_view()(request)
         response.render()
         self.assertNotIn('15,300,000.00', response.content.decode())
@@ -121,7 +128,7 @@ class PaymentSmsMessageTests(TestCase):
         self.account = make_account()
 
     def pay(self):
-        data = {'sale': self.sale.pk, 'payment_date': '2026-02-01', 'amount': '500', 'account': self.account.pk}
+        data = {'invoice': self.sale.booking_invoice.pk, 'payment_date': '2026-02-01', 'amount': '500', 'account': self.account.pk}
         request = make_request(self.user, '/', 'post', data)
         CustomerPaymentCreateView.as_view()(request)
         return [str(m) for m in get_messages(request)]

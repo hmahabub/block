@@ -4,7 +4,7 @@ from django.contrib.auth.models import AnonymousUser, User
 from django.test import RequestFactory, TestCase
 from django.urls import reverse
 
-from core.testing import make_account, make_project, unlock_client
+from core.testing import enter_project, make_account, make_project, unlock_client
 
 from .filters import filter_project_costs
 from .forms import CostCategoryForm, DirectCostForm, SharedCostForm
@@ -69,18 +69,15 @@ class SharedCostFormTests(CostTestCase):
     def data(self, cat, **extra):
         return {
             'project': self.project.pk, 'cost_category': cat.pk, 'date': '2026-01-01', 'amount': '500',
-            'account': self.account.pk, **extra,
+            'account': self.account.pk, 'paid_to': 'Local vendor', **extra,
         }
 
     def test_shared_form_has_no_flat_field(self):
         self.assertNotIn('flat', SharedCostForm().fields)
 
-    def test_the_account_is_required(self):
-        data = self.data(self.civil)
-        del data['account']
-        form = SharedCostForm(data=data)
-        self.assertFalse(form.is_valid())
-        self.assertIn('account', form.errors)
+    def test_a_cost_is_a_voucher_so_the_form_has_no_account(self):
+        self.assertNotIn('account', SharedCostForm().fields)
+        self.assertTrue(SharedCostForm(data=self.data(self.civil)).is_valid())
 
     def test_phase_is_taken_from_the_category(self):
         form = SharedCostForm(data=self.data(self.land, phase='POST'))
@@ -120,7 +117,7 @@ class DirectCostFormTests(CostTestCase):
     def data(self, cat, **extra):
         return {
             'flat': self.flats[0].pk, 'cost_category': cat.pk, 'date': '2026-01-01', 'amount': '700',
-            'account': self.account.pk, **extra,
+            'account': self.account.pk, 'paid_to': 'Local vendor', **extra,
         }
 
     def test_requires_a_flat(self):
@@ -296,6 +293,7 @@ class CostingViewTests(CostTestCase):
     def test_cost_pdf_through_the_real_url(self):
         self.client.force_login(User.objects.create_superuser('admin', 'a@example.com', 'pw'))
         unlock_client(self.client)
+        enter_project(self.client)
         self.cost(self.civil)
         response = self.client.get(reverse('costing:cost-report-pdf'))
         self.assertEqual(response.status_code, 200)

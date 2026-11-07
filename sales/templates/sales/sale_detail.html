@@ -7,7 +7,7 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
         <h3 class="mb-0"><i class="fas fa-dollar-sign"></i> {{ object.sale_no }}
-            <span class="badge {% if object.status == 'SOLD' %}bg-primary{% else %}bg-danger{% endif %}">
+            <span class="badge {{ object.status|status_badge }}">
                 {{ object.get_status_display }}
             </span>
         </h3>
@@ -19,7 +19,8 @@
     </div>
     <div>
         <a href="{% url 'activity_log:list' %}?app=sales&amp;model=FlatSale&amp;object={{ object.pk }}" class="btn btn-outline-secondary" title="Who changed this, and when"><i class="fas fa-clock-rotate-left"></i> History</a>
-        <a href="{% url 'sales:invoice' object.pk %}" target="_blank" class="btn btn-success"><i class="fas fa-print"></i> Print Invoice</a>
+        <a href="{% url 'sales:invoice' object.pk %}" target="_blank" class="btn btn-success"><i class="fas fa-print"></i> Statement</a>
+        <a href="{% url 'sales:invoice' object.pk %}?format=pdf" target="_blank" class="btn btn-danger"><i class="fas fa-file-pdf"></i> Statement PDF</a>
         {% if whatsapp_enabled and object.status != 'CANCELLED' and perms.sms.add_whatsappshare %}
         {% if object.customer.whatsapp_no %}
         <form method="post" action="{% url 'sms:whatsapp-send' object.pk %}" target="_blank" class="d-inline">
@@ -35,7 +36,7 @@
         {% endif %}
         {% if object.status != 'CANCELLED' %}
         <a href="{% url 'sales:update' object.pk %}" class="btn btn-warning"><i class="fas fa-edit"></i> Edit</a>
-        {% if perms.sales.change_flatsale %}<a href="{% url 'sales:cancel' object.pk %}" class="btn btn-outline-danger"><i class="fas fa-ban"></i> Cancel sale</a>{% endif %}
+        {% if perms.sales.change_flatsale and object.status != 'REGISTERED' %}<a href="{% url 'sales:cancel' object.pk %}" class="btn btn-outline-danger"><i class="fas fa-ban"></i> Cancel sale</a>{% endif %}
         {% endif %}
         <a href="{% url 'sales:list' %}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Back to List</a>
     </div>
@@ -53,23 +54,47 @@
 </div>
 {% endif %}
 
+{% if object.status != 'CANCELLED' %}
+<div class="card mb-3">
+    <div class="card-body py-2 d-flex flex-wrap align-items-center gap-3">
+        <span><strong>Registry</strong></span>
+        {% if object.status == 'REGISTERED' %}
+        <span><span class="badge bg-danger">Registered</span> completed on {{ object.registered_on|date:"j M Y" }}</span>
+        {% if perms.sales.change_flatsale %}
+        <form method="post" action="{% url 'sales:registry' object.pk %}" class="ms-auto" onsubmit="return confirm('Undo the registry? The flat goes back to Booked.');">
+            {% csrf_token %}<input type="hidden" name="action" value="undo">
+            <button type="submit" class="btn btn-sm btn-outline-secondary"><i class="fas fa-rotate-left"></i> Undo registry</button>
+        </form>
+        {% endif %}
+        {% else %}
+        <span><span class="badge bg-warning text-dark">Booked</span> registry not completed yet</span>
+        {% if perms.sales.change_flatsale %}
+        <form method="post" action="{% url 'sales:registry' object.pk %}" class="ms-auto d-flex gap-2 align-items-center">
+            {% csrf_token %}
+            <label class="small text-muted mb-0" for="registered_on">Registry completed on</label>
+            <input type="date" id="registered_on" name="registered_on" class="form-control form-control-sm w-auto" value="{% now 'Y-m-d' %}">
+            <button type="submit" class="btn btn-sm btn-danger"><i class="fas fa-stamp"></i> Mark registered</button>
+        </form>
+        {% endif %}
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
 <div class="row">
     {% if money_visible %}
     <div class="col-md-6 mb-3">
         <div class="card h-100">
             <div class="card-header">Sale Breakdown</div>
             <div class="card-body">
-                <table class="table table-bordered mb-0">
+                <table class="table table-bordered mb-3">
                     <tr><th width="45%">Sale Date</th><td>{{ object.sale_date }}</td></tr>
                     <tr><th>Flat no.</th><td>{{ object.flat.flat_no }}{% if object.with_parking %} + parking {{ object.flat.parking_lot }}{% endif %}</td></tr>
-                    <tr><th>Base price</th><td>{{ object.base_price|taka }}</td></tr>
-                    <tr><th>Parking</th><td>{% if object.with_parking %}{{ object.parking_price|taka }}{% else %}not taken{% endif %}</td></tr>
-                    <tr><th>Total base price</th><td>{{ object.total_base_price|taka }}</td></tr>
-                    <tr><th>Sale value</th><td><strong>{{ object.sale_value|taka }}</strong></td></tr>
-                    <tr><th>Honorarium <small class="text-muted">(to ref)</small></th><td>{{ object.honorarium|taka }}</td></tr>
-                    <tr><th>Reg value</th><td>{{ object.reg_value|taka }}</td></tr>
-                    <tr><th>Net value</th><td><strong>{{ object.net_value|taka }}</strong></td></tr>
-                    <tr><th>Received</th><td>{{ object.received_amount|taka }}</td></tr>
+                </table>
+                <div class="fw-bold mb-1">Sale value calculation <small class="text-muted fw-normal">(honorarium goes to the ref)</small></div>
+                {% include "sales/_calculation.html" with sale=object %}
+                <table class="table table-bordered mt-3 mb-0">
+                    <tr><th width="45%">Received</th><td>{{ object.received_amount|taka }}</td></tr>
                     <tr><th>Receivable</th><td class="text-danger">{{ object.receivable_amount|taka }}</td></tr>
                     {% if object.customer_balance %}<tr><th>Customer balance (paid in excess)</th><td class="text-success">{{ object.customer_balance|taka }}</td></tr>{% endif %}
                 </table>
@@ -83,20 +108,16 @@
         <div class="card mb-3">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span>Payments received</span>
-                {% if object.status != 'CANCELLED' %}
-                <a href="{% url 'sales:payment-create' %}?sale={{ object.pk }}" class="btn btn-sm btn-primary">
-                    <i class="fas fa-plus"></i> Record Payment
-                </a>
-                {% endif %}
             </div>
             <div class="card-body">
                 {% if payments %}
                 <table class="table table-sm mb-0">
-                    <thead class="table-light"><tr><th>Date</th><th>Into</th>{% if money_visible %}<th>Amount</th>{% endif %}<th></th></tr></thead>
+                    <thead class="table-light"><tr><th>Date</th><th>For</th><th>Into</th>{% if money_visible %}<th>Amount</th>{% endif %}<th></th></tr></thead>
                     <tbody>
                         {% for payment in payments %}
                         <tr>
                             <td>{{ payment.payment_date }}</td>
+                            <td><a href="{{ payment.invoice.get_absolute_url }}">{{ payment.invoice.number }}</a> <small class="text-muted">{{ payment.purpose_text }}</small></td>
                             <td>{{ payment.account|default:payment.get_payment_method_display }}</td>
                             {% if money_visible %}<td>{{ payment.amount|taka }}</td>{% endif %}
                             <td class="text-nowrap">
@@ -113,13 +134,53 @@
             </div>
         </div>
 
+        {% if money_visible and invoices %}
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Invoices <small class="text-muted">(the customer pays under an invoice)</small></span>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light"><tr><th>Invoice</th><th>For</th><th>Deadline</th><th class="text-end">Amount</th><th class="text-end">Paid</th><th class="text-end">Due</th><th></th></tr></thead>
+                    <tbody>
+                        {% for invoice in invoices %}
+                        <tr><td><a href="{{ invoice.get_absolute_url }}">{{ invoice.number }}</a></td><td>{{ invoice.label }}</td>
+                            <td class="text-nowrap">{{ invoice.due_date|date:"j M Y"|default:"-" }}</td>
+                            <td class="text-end">{{ invoice.total|taka }}</td><td class="text-end">{{ invoice.paid|taka }}</td><td class="text-end">{{ invoice.due|taka }}</td>
+                            <td><span class="badge {% if invoice.status == 'Paid' %}bg-success{% elif invoice.status == 'Overdue' %}bg-danger{% elif invoice.status == 'Partly paid' %}bg-info text-dark{% elif invoice.status == 'Cancelled' %}bg-secondary{% else %}bg-warning text-dark{% endif %}">{{ invoice.status }}</span></td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if installment_rows and money_visible %}
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Installments</span>
+                <span class="small">due now <strong>{{ installment_due|taka }}</strong>{% if installment_overdue %} &middot; <span class="text-danger">overdue {{ installment_overdue|taka }}</span>{% endif %}</span>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light"><tr><th>Installment</th><th>Deadline</th><th class="text-end">Amount</th><th class="text-end">Paid</th><th class="text-end">Due</th><th></th></tr></thead>
+                    <tbody>
+                        {% for row in installment_rows %}
+                        <tr><td><a href="{{ row.installment.get_absolute_url }}">{{ row.installment.title }}</a></td><td class="text-nowrap">{{ row.installment.due_date|date:"j M Y" }}</td>
+                            <td class="text-end">{{ row.charge.amount|taka }}</td><td class="text-end">{{ row.paid|taka }}</td><td class="text-end">{{ row.due|taka }}</td>
+                            <td><span class="badge {% if row.status == 'Paid' %}bg-success{% elif row.status == 'Overdue' %}bg-danger{% elif row.status == 'Partly paid' %}bg-info text-dark{% else %}bg-warning text-dark{% endif %}">{{ row.status }}</span></td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
         {% if object.status != 'CANCELLED' and money_visible %}
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <span>Honorarium to {{ object.ref.name|default:"ref" }}</span>
-                {% if object.honorarium_due > 0 and perms.sales.add_honorariumpayment %}
-                <a href="{% url 'sales:honorarium-create' object.pk %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-hand-holding-dollar"></i> Pay</a>
-                {% endif %}
+                <span>Honorarium voucher <strong>{{ object.honorarium_voucher_no }}</strong> &middot; to {{ object.ref.name|default:"ref" }}</span>
+                <a href="{% url 'costing:honorarium-list' %}?ref={{ object.ref_id|default:'' }}" class="small">Honorarium vouchers &raquo;</a>
             </div>
             <div class="card-body">
                 <p class="mb-2">Honorarium {{ object.honorarium|taka }} &middot; paid {{ object.honorarium_paid|taka }} &middot;
@@ -127,10 +188,12 @@
                     {% if not object.ref and object.honorarium > 0 %}<br><small class="text-warning">No Ref chosen for this sale. Edit the sale to set one.</small>{% endif %}</p>
                 {% if honorarium_payments %}
                 <table class="table table-sm mb-0">
-                    <thead class="table-light"><tr><th>Date</th><th>From</th><th>Amount</th><th></th></tr></thead>
+                    <thead class="table-light"><tr><th>Date</th><th>Voucher</th><th>From</th><th>Amount</th><th></th></tr></thead>
                     <tbody>
                         {% for item in honorarium_payments %}
-                        <tr><td>{{ item.date }}</td><td>{{ item.account }}</td><td>{{ item.amount|taka }}</td>
+                        <tr><td>{{ item.date }}</td>
+                            <td><a href="{% url 'costing:honorarium-voucher' item.pk %}" target="_blank" title="Print voucher">{{ item.reference_no }}</a></td>
+                            <td>{{ item.account }}</td><td>{{ item.amount|taka }}</td>
                             <td>{% if item.is_confirmed %}<i class="fas fa-check-circle text-success"></i>{% endif %}</td></tr>
                         {% endfor %}
                     </tbody>

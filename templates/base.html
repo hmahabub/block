@@ -62,6 +62,21 @@
         #base.navbar.bg-dark {
             background-color: var(--block-navbar) !important;
         }
+        /* Inside a project the menu bar gets an amber edge and the project name shows as a pill. */
+        #base.navbar.in-project {
+            border-bottom: 4px solid var(--block-primary);
+        }
+        #base .workspace-pill {
+            background: var(--block-primary);
+            color: #fff !important;
+            border-radius: 2rem;
+            padding: 0.2rem 0.8rem;
+            margin: 0.3rem 0.5rem 0.3rem 0;
+            font-weight: 600;
+        }
+        #base .workspace-pill:hover {
+            background: var(--block-primary-dark);
+        }
         #base .dropdown-menu {
             --bs-dropdown-link-active-bg: var(--block-primary);
         }
@@ -75,6 +90,24 @@
         }
         #base .navbar-nav .nav-link {
             color: rgba(255, 255, 255, 0.88) !important;
+        }
+        /* Compact menu so every item fits on one line at normal desktop widths. */
+        @media (min-width: 1200px) {
+            #base .navbar-brand { font-size: 0.95rem; margin-right: 0.6rem; }
+            #base .navbar-brand small { font-size: 0.5rem; }
+            #base .navbar-nav { gap: 0; }
+            #base .navbar-nav .nav-link {
+                font-size: 0.78rem;
+                padding-left: 0.4rem;
+                padding-right: 0.4rem;
+                white-space: nowrap;
+            }
+            #base .navbar-nav .dropdown-toggle::after { margin-left: 0.2em; border-width: 0.25em 0.25em 0; }
+            #base .navbar-nav .nav-link i { margin-right: 0.1rem; }
+            #base .workspace-pill { font-size: 0.74rem; padding: 0.15rem 0.6rem; margin: 0.35rem 0.3rem 0.35rem 0; }
+            #base .dropdown-menu { font-size: 0.8rem; }
+            #base .navbar-nav:last-child > li:last-child > .nav-link { max-width: 9rem; overflow: hidden; text-overflow: ellipsis; }
+            #base .workspace-pill { max-width: 12rem; overflow: hidden; text-overflow: ellipsis; }
         }
         #base .navbar-nav .nav-link:hover,
         #base .navbar-nav .nav-link:focus {
@@ -148,7 +181,7 @@
 </head>
 <body>
     <div class="container">
-        <nav class="navbar navbar-expand-lg navbar-dark bg-dark rounded mb-4" id="base">
+        <nav class="navbar navbar-expand-xl navbar-dark bg-dark rounded mb-4{% if workspace_development and user.is_authenticated %} in-project{% endif %}" id="base">
             <div class="container-fluid">
                 <a class="navbar-brand" href="{% url 'home' %}">
                     <i class="fas fa-city"></i> DAR AL JANNAH
@@ -172,12 +205,25 @@
                                 <li><a class="dropdown-item" href="{% url 'projects:flat-list' %}">All Flats</a></li>
                                 <li><a class="dropdown-item" href="{% url 'projects:deletion-requests' %}">Flat deletion requests
                                     {% if flat_deletions_waiting %}<span class="badge bg-warning text-dark">{{ flat_deletions_waiting }}</span>{% endif %}</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><h6 class="dropdown-header"><i class="fas fa-chart-line"></i> Reports</h6></li>
+                                <li><a class="dropdown-item" href="{% url 'reports:flat-wise' %}">Flat-Wise Report</a></li>
+                                <li><a class="dropdown-item" href="{% url 'reports:finance' %}">Finance Report</a></li>
+                                <li><a class="dropdown-item" href="{% url 'reports:profitability' %}">Profitability Analysis</a></li>
                             </ul>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'customers:list' %}">
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="fas fa-users"></i> Customers
                             </a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{% url 'customers:list' %}">Customers</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><h6 class="dropdown-header"><i class="fas fa-chart-line"></i> Reports</h6></li>
+                                <li><a class="dropdown-item" href="{% url 'reports:customer-wise' %}">Customer-Wise Report</a></li>
+                                <li><a class="dropdown-item" href="{% url 'reports:customers' %}">Customer Balance &amp; Cost</a></li>
+                                <li><a class="dropdown-item" href="{% url 'reports:dues' %}">Receivables (dues)</a></li>
+                            </ul>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'suppliers:list' %}">
@@ -189,9 +235,14 @@
                                 <i class="fas fa-coins"></i> Costing
                             </a>
                             <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="{% url 'costing:cost-list' %}">Costs</a></li>
+                                <li><a class="dropdown-item" href="{% url 'costing:cost-list' %}">Costs (vouchers)</a></li>
+                                <li><a class="dropdown-item" href="{% url 'costing:voucher-payments' %}">Voucher payments</a></li>
+                                <li><a class="dropdown-item" href="{% url 'costing:honorarium-list' %}">Honorarium vouchers</a></li>
                                 <li><a class="dropdown-item" href="{% url 'costing:budget-list' %}">Building Budget</a></li>
                                 <li><a class="dropdown-item" href="{% url 'costing:category-list' %}">Cost Categories</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><h6 class="dropdown-header"><i class="fas fa-chart-line"></i> Reports</h6></li>
+                                <li><a class="dropdown-item" href="{% url 'reports:daily-costs' %}">Daily Cost Report (pre / post)</a></li>
                             </ul>
                         </li>
                         <li class="nav-item dropdown">
@@ -200,12 +251,26 @@
                             </a>
                             <ul class="dropdown-menu">
                                 <li><a class="dropdown-item" href="{% url 'sales:list' %}">Flat Sales</a></li>
+                                <li><a class="dropdown-item" href="{% url 'sales:invoice-list' %}">Invoices</a></li>
                                 <li><a class="dropdown-item" href="{% url 'sales:payment-list' %}">Customer Payments</a></li>
+                                <li><a class="dropdown-item" href="{% url 'installments:list' %}">Installments</a></li>
                                 <li><a class="dropdown-item" href="{% url 'sales:reference-list' %}">References</a></li>
                                 <li><hr class="dropdown-divider"></li>
-                                {% if whatsapp_enabled %}<li><a class="dropdown-item" href="{% url 'sms:whatsapp-invoices' %}"><i class="fab fa-whatsapp"></i> Send invoices on WhatsApp</a></li>{% endif %}
-                                <li><a class="dropdown-item" href="{% url 'sms:reminders' %}">Balance reminders (SMS)</a></li>
+                                <li><h6 class="dropdown-header"><i class="fas fa-chart-line"></i> Reports</h6></li>
+                                <li><a class="dropdown-item" href="{% url 'reports:collection' %}">Periodic Payment Collection</a></li>
+                                <li><a class="dropdown-item" href="{% url 'reports:profit-loss' %}">Profit, Loss, Collection &amp; Due</a></li>
+                            </ul>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-sms"></i> SMS
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{% url 'sms:reminders' %}">Balance reminders</a></li>
                                 <li><a class="dropdown-item" href="{% url 'sms:log' %}">SMS log</a></li>
+                                {% if perms.sms.add_smslog %}<li><a class="dropdown-item" href="{% url 'sms:balance' %}">Check SMS balance</a></li>{% endif %}
+                                {% if whatsapp_enabled %}<li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{% url 'sms:whatsapp-invoices' %}"><i class="fab fa-whatsapp"></i> Send invoices on WhatsApp</a></li>{% endif %}
                             </ul>
                         </li>
                         <li class="nav-item dropdown">
@@ -229,9 +294,12 @@
                                 <li><a class="dropdown-item" href="{% url 'books:to-confirm' %}">Confirm entries
                                     {% if entries_to_confirm %}<span class="badge bg-warning text-dark">{{ entries_to_confirm }}</span>{% endif %}</a></li>
                                 {% endif %}
-                                <li><a class="dropdown-item" href="{% url 'books:transfers' %}">Internal Transfers</a></li>
+                                {% if not workspace_development %}<li><a class="dropdown-item" href="{% url 'books:transfers' %}">Internal Transfers</a></li>{% endif %}
                                 <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item" href="{% url 'books:accounts' %}">Accounts</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><h6 class="dropdown-header"><i class="fas fa-chart-line"></i> Reports</h6></li>
+                                <li><a class="dropdown-item" href="{% url 'reports:daily' %}">Daily Transactions (verify)</a></li>
                             </ul>
                         </li>
                         <li class="nav-item dropdown">
@@ -241,7 +309,11 @@
                             <ul class="dropdown-menu">
                                 <li><a class="dropdown-item" href="{% url 'reports:index' %}">Report Center</a></li>
                                 <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{% url 'reports:daily' %}">Daily Transactions (verify)</a></li>
+                                <li><a class="dropdown-item" href="{% url 'reports:daily-costs' %}">Daily Cost Report (pre / post)</a></li>
+                                <li><a class="dropdown-item" href="{% url 'reports:profitability' %}">Profitability Analysis</a></li>
                                 <li><a class="dropdown-item" href="{% url 'reports:finance' %}">Finance Report</a></li>
+                                <li><a class="dropdown-item" href="{% url 'reports:customer-wise' %}">Customer-Wise Report</a></li>
                                 <li><a class="dropdown-item" href="{% url 'reports:flat-wise' %}">Flat-Wise Report</a></li>
                                 <li><a class="dropdown-item" href="{% url 'reports:dues' %}">Receivables</a></li>
                                 <li><hr class="dropdown-divider"></li>
@@ -255,6 +327,7 @@
                         {% endif %}
                     </ul>
                     <ul class="navbar-nav">
+                        {% include "includes/workspace_bar.html" %}
                         {% if user.is_authenticated %}
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">

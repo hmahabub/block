@@ -68,26 +68,26 @@ class SaleMoneyTests(SaleTestCase):
     def test_a_new_sale_is_sold_and_so_is_its_flat(self):
         sale = self.make_sale()
         self.flat.refresh_from_db()
-        self.assertEqual((sale.status, self.flat.status), (FlatSale.Status.SOLD, Flat.Status.SOLD))
+        self.assertEqual((sale.status, self.flat.status), (FlatSale.Status.BOOKED, Flat.Status.BOOKED))
 
     def test_a_sale_is_sold_whether_or_not_it_has_been_paid_for(self):
         sale = self.make_sale(sale_value=1200, reg_value=300)
-        self.assertEqual(sale.status, FlatSale.Status.SOLD)
+        self.assertEqual(sale.status, FlatSale.Status.BOOKED)
         self.pay(sale, 600)
         sale.refresh_from_db()
         self.flat.refresh_from_db()
-        self.assertEqual((sale.status, self.flat.status), (FlatSale.Status.SOLD, Flat.Status.SOLD))
+        self.assertEqual((sale.status, self.flat.status), (FlatSale.Status.BOOKED, Flat.Status.BOOKED))
         self.assertEqual(sale.receivable_amount, 900)  # what is still to be collected is tracked separately
         self.pay(sale, 900)
         sale.refresh_from_db()
-        self.assertEqual((sale.status, sale.receivable_amount), (FlatSale.Status.SOLD, 0))
+        self.assertEqual((sale.status, sale.receivable_amount), (FlatSale.Status.BOOKED, 0))
 
     def test_paying_more_than_the_net_value_becomes_customer_balance(self):
         sale = self.make_sale(sale_value=1200, reg_value=100)
         self.pay(sale, 1500)
         sale.refresh_from_db()
         self.assertEqual((sale.receivable_amount, sale.customer_balance), (0, 200))
-        self.assertEqual(sale.status, FlatSale.Status.SOLD)
+        self.assertEqual(sale.status, FlatSale.Status.BOOKED)
 
     def test_removing_a_payment_does_not_unsell_the_flat(self):
         sale = self.make_sale()
@@ -95,13 +95,13 @@ class SaleMoneyTests(SaleTestCase):
         payment.delete()
         sale.refresh_from_db()
         self.flat.refresh_from_db()
-        self.assertEqual((sale.status, self.flat.status), (FlatSale.Status.SOLD, Flat.Status.SOLD))
+        self.assertEqual((sale.status, self.flat.status), (FlatSale.Status.BOOKED, Flat.Status.BOOKED))
         self.assertEqual(sale.receivable_amount, 1200)
 
     def test_flat_status_is_not_editable(self):
         self.assertFalse(Flat._meta.get_field('status').editable)
-        self.assertEqual([c[0] for c in Flat.Status.choices], ['AVAILABLE', 'SOLD'])
-        self.assertEqual([c[0] for c in FlatSale.Status.choices], ['SOLD', 'CANCELLED'])
+        self.assertEqual([c[0] for c in Flat.Status.choices], ['AVAILABLE', 'BOOKED', 'REGISTERED'])
+        self.assertEqual([c[0] for c in FlatSale.Status.choices], ['BOOKED', 'REGISTERED', 'CANCELLED'])
 
     def test_payment_method_follows_the_account(self):
         cash = make_account('Petty cash', account_type=Account.AccountType.CASH)
@@ -173,14 +173,14 @@ class CancellationTests(SaleTestCase):
         sale = self.make_sale()
         self.cancel(sale, 100)
         again = self.make_sale()
-        self.assertEqual(again.status, FlatSale.Status.SOLD)
+        self.assertEqual(again.status, FlatSale.Status.BOOKED)
 
 
 class FlatSaleFormTests(SaleTestCase):
     def data(self, flat, **extra):
         return {
             'flat': flat.pk, 'customer': self.customer.pk, 'sale_date': '2026-02-01',
-            'sale_value': '1200', 'reg_value': '0', **extra,
+            'flat_sale_value': '1200', 'reg_value': '0', **extra,
         }
 
     def test_only_available_flats_are_offered(self):
@@ -199,18 +199,18 @@ class FlatSaleFormTests(SaleTestCase):
         form = FlatSaleForm(data=self.data(self.flat, ref=self.ref.pk))
         self.assertTrue(form.is_valid(), form.errors)
         sale = form.save()
-        self.assertEqual((sale.status, sale.ref), (FlatSale.Status.SOLD, self.ref))
+        self.assertEqual((sale.status, sale.ref), (FlatSale.Status.BOOKED, self.ref))
 
     def test_sale_value_cannot_be_below_the_base_price(self):
-        form = FlatSaleForm(data=self.data(self.flat, sale_value='999'))
+        form = FlatSaleForm(data=self.data(self.flat, flat_sale_value='999'))
         self.assertFalse(form.is_valid())
-        self.assertIn('sale_value', form.errors)
+        self.assertIn('flat_sale_value', form.errors)
 
     def test_taking_parking_raises_the_minimum_sale_value(self):
-        self.assertTrue(FlatSaleForm(data=self.data(self.flat, sale_value='1050')).is_valid())
-        dearer = FlatSaleForm(data=self.data(self.flat, sale_value='1050', with_parking='on'))
-        self.assertFalse(dearer.is_valid())
-        self.assertIn('sale_value', dearer.errors)
+        self.assertTrue(FlatSaleForm(data=self.data(self.flat, flat_sale_value='1050')).is_valid())
+        cheap = FlatSaleForm(data=self.data(self.flat, flat_sale_value='1050', with_parking='on', parking_sale_value='40'))
+        self.assertFalse(cheap.is_valid())
+        self.assertIn('parking_sale_value', cheap.errors)
 
     def test_ref_is_optional(self):
         self.assertTrue(FlatSaleForm(data=self.data(self.flat)).is_valid())
@@ -227,11 +227,11 @@ class FlatSaleFormTests(SaleTestCase):
         sale = self.make_sale()
         sale.cancel(100)
         sale.save()
-        self.assertNotIn(sale, list(CustomerPaymentForm().fields['sale'].queryset))
+        self.assertNotIn(sale.booking_invoice, list(CustomerPaymentForm().fields['invoice'].queryset))
 
     def test_payment_form_requires_an_account(self):
         sale = self.make_sale()
-        form = CustomerPaymentForm(data={'sale': sale.pk, 'payment_date': '2026-02-01', 'amount': '10'})
+        form = CustomerPaymentForm(data={'invoice': sale.booking_invoice.pk, 'payment_date': '2026-02-01', 'amount': '10'})
         self.assertFalse(form.is_valid())
         self.assertIn('account', form.errors)
 
@@ -264,7 +264,7 @@ class HonorariumTests(SaleTestCase):
 class PaymentViewTests(SaleTestCase):
     def post_payment(self, sale, amount='500', **extra):
         user = User.objects.create_superuser(f'u{User.objects.count()}', 'u@example.com', 'pw')
-        data = {'sale': sale.pk, 'payment_date': '2026-02-01', 'amount': amount, 'account': self.account.pk, **extra}
+        data = {'invoice': sale.booking_invoice.pk, 'payment_date': '2026-02-01', 'amount': amount, 'account': self.account.pk, **extra}
         return CustomerPaymentCreateView.as_view()(make_request(user, '/sales/payments/create/', 'post', data))
 
     def test_payment_is_recorded_and_the_customer_gets_an_sms(self):

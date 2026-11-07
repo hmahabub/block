@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% load core_tags %}
+
+{% block title %}{{ object.title }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h2 class="mb-0"><i class="fas fa-calendar-check"></i> {{ object.title }}</h2>
+        <p class="text-muted mb-0">{{ object.development.name }}{% if object.building %} &middot; {{ object.building.project_name }} only{% endif %}
+            &middot; {{ object.get_basis_display }}: {{ object.amount_text }} &middot; issued {{ object.issued_on|date:"j M Y" }}{% if object.issued_by %} by {{ object.issued_by.get_full_name|default:object.issued_by.username }}{% endif %}</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="?format=xlsx{% if show %}&amp;show={{ show }}{% endif %}" class="btn btn-success"><i class="fas fa-file-excel"></i> Excel</a>
+        {% if can_send and unpaid_count %}
+        <form method="post" action="{% url 'installments:send-sms' object.pk %}" onsubmit="return confirm('Send the SMS again to the {{ unpaid_count }} customer(s) who have not paid in full?');">
+            {% csrf_token %}<button type="submit" class="btn btn-outline-primary"><i class="fas fa-sms"></i> Send SMS again to {{ unpaid_count }} unpaid</button>
+        </form>
+        {% endif %}
+        {% if can_withdraw %}
+        <form method="post" action="{% url 'installments:withdraw' object.pk %}" onsubmit="return confirm('Withdraw this installment? It is removed from every customer account.');">
+            {% csrf_token %}<button type="submit" class="btn btn-outline-danger"><i class="fas fa-rotate-left"></i> Withdraw</button>
+        </form>
+        {% endif %}
+        <a href="{% url 'installments:list' %}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Installments</a>
+    </div>
+</div>
+
+<div class="alert {% if object.due_date < today %}alert-danger{% else %}alert-warning{% endif %} py-2">
+    <i class="fas fa-calendar-day"></i> Payment deadline <strong>{{ object.due_date|date:"l, j F Y" }}</strong>
+</div>
+
+<div class="row text-center mb-3">
+    <div class="col-6 col-md-3 mb-2"><div class="card"><div class="card-body py-2"><strong>{{ total|taka }}</strong><br><small class="text-muted">Charged</small></div></div></div>
+    <div class="col-6 col-md-3 mb-2"><div class="card"><div class="card-body py-2"><strong class="text-success">{{ paid|taka }}</strong><br><small class="text-muted">Paid</small></div></div></div>
+    <div class="col-6 col-md-3 mb-2"><div class="card"><div class="card-body py-2"><strong class="text-warning">{{ due|taka }}</strong><br><small class="text-muted">Still due</small></div></div></div>
+    <div class="col-6 col-md-3 mb-2"><div class="card"><div class="card-body py-2"><strong class="text-danger">{{ overdue|taka }}</strong><br><small class="text-muted">Past the deadline</small></div></div></div>
+</div>
+
+<div class="mb-2">
+    Show:
+    <a class="btn btn-sm {% if not show %}btn-primary{% else %}btn-outline-primary{% endif %}" href="?">Everyone</a>
+    <a class="btn btn-sm {% if show == 'unpaid' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="?show=unpaid">Not paid in full</a>
+    <a class="btn btn-sm {% if show == 'overdue' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="?show=overdue">Overdue</a>
+    <a class="btn btn-sm {% if show == 'paid' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="?show=paid">Paid</a>
+</div>
+
+<div class="card"><div class="card-body">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light"><tr><th>Customer</th><th>Invoice</th><th>Building / flat</th><th class="text-end">Amount</th><th class="text-end">Paid</th><th class="text-end">Due</th><th>Status</th><th>SMS</th><th></th></tr></thead>
+            <tbody>
+                {% for row in rows %}
+                <tr>
+                    <td><a href="{{ row.sale.customer.get_absolute_url }}">{{ row.sale.customer.name }}</a><br><small class="text-muted">{{ row.sale.customer.phone }}</small></td>
+                    <td><a href="{{ row.invoice.get_absolute_url }}">{{ row.invoice.number }}</a></td>
+                    <td><a href="{{ row.sale.get_absolute_url }}">{{ row.sale.project.project_name }} / {{ row.sale.flat.flat_no }}</a></td>
+                    <td class="text-end">{{ row.charge.amount|taka }}</td>
+                    <td class="text-end">{{ row.paid|taka }}</td>
+                    <td class="text-end {% if row.due %}fw-bold{% endif %}">{{ row.due|taka }}</td>
+                    <td><span class="badge {% if row.status == 'Paid' %}bg-success{% elif row.status == 'Overdue' %}bg-danger{% elif row.status == 'Partly paid' %}bg-info text-dark{% else %}bg-warning text-dark{% endif %}">{{ row.status }}</span></td>
+                    <td class="small text-nowrap">{% if row.charge.notified_at %}<i class="fas fa-check text-success"></i> {{ row.charge.notified_at|date:"j M, H:i" }}{% else %}<span class="text-muted">not sent</span>{% endif %}</td>
+                    <td></td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="9" class="text-center text-muted py-4">Nobody to show.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <p class="small text-muted mt-2 mb-0">Each customer has an invoice for this installment; what has been paid under that invoice is what is paid here. Payments under the flat booking invoice are not counted.</p>
+</div></div>
+{% endblock %}

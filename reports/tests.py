@@ -82,14 +82,14 @@ class FinanceReportTests(ReportData):
 
     def test_cost_and_payable(self):
         _, tables = builders.finance_report(self.project)
-        _, pre, post, total, honorarium_due, refund_due, payable = self.rows(tables, 'Cost and payable')[0]
+        _, pre, post, total, cost_due, honorarium_due, refund_due, payable = self.rows(tables, 'Cost and payable')[0]
         self.assertEqual((pre, post, total), (700, 400, 1100))
-        self.assertEqual((honorarium_due, refund_due, payable), (400, 300, 700))
+        self.assertEqual((cost_due, honorarium_due, refund_due, payable), (0, 400, 300, 700))
 
     def test_payable_falls_as_honorarium_and_refunds_are_paid(self):
         HonorariumPayment.objects.create(sale=self.sale_a, date='2026-03-01', amount=150, account=self.bank)
         _, tables = builders.finance_report(self.project)
-        self.assertEqual(self.rows(tables, 'Cost and payable')[0][4], 250)
+        self.assertEqual(self.rows(tables, 'Cost and payable')[0][5], 250)
 
     def test_totals_row_adds_the_projects(self):
         other, other_flats = make_project('Other')

@@ -1,4 +1,4 @@
-"""SMS wording lives in .env (SMS_TEMPLATE_PAYMENT, SMS_TEMPLATE_BOOKING, SMS_TEMPLATE_REMINDER), so it can be changed
+"""SMS wording lives in .env (SMS_TEMPLATE_PAYMENT, SMS_TEMPLATE_BOOKING, SMS_TEMPLATE_REMINDER, SMS_TEMPLATE_INSTALLMENT), so it can be changed
 without touching the code. A template is plain text with {placeholders}; each message type has its own set.
 
 Only {name}-style placeholders are substituted. Anything else is left exactly as written (an unknown {typo} shows up
@@ -32,13 +32,21 @@ SALE = {
 PLACEHOLDERS = {
     'PAYMENT': {**COMMON, **SALE, 'amount': 'the amount just received', 'date': 'the payment date, dd-mm-yyyy',
                 'receipt_no': 'the money receipt number',
+                'purpose': 'what the payment was for: Flat booking, or the installment it paid',
                 'total_paid': 'same as {received}',
                 'balance_note': 'a ready sentence: ", balance due Tk X." or "; fully paid." or "; your credit balance is Tk X."'},
     'BOOKING': {**COMMON, **SALE, 'sale_date': 'the booking date, dd-mm-yyyy'},
     'REMINDER': {**COMMON, 'total_due': 'everything the customer owes across all flats',
                  'details': 'each flat with what is due on it, e.g. "flat A1 (Tower 1): Tk 1,200.00"'},
+    'INSTALLMENT': {**COMMON, **SALE, 'installment': 'the installment title, e.g. Installment 3',
+                    'amount': 'the amount added as due, e.g. Tk 500,000.00',
+                    'deadline': 'the payment deadline, dd-mm-yyyy',
+                    'installment_due': 'everything now due on this flat in installments, including this one'},
 }
-SETTING_NAMES = {'PAYMENT': 'SMS_TEMPLATE_PAYMENT', 'BOOKING': 'SMS_TEMPLATE_BOOKING', 'REMINDER': 'SMS_TEMPLATE_REMINDER'}
+SETTING_NAMES = {
+    'PAYMENT': 'SMS_TEMPLATE_PAYMENT', 'BOOKING': 'SMS_TEMPLATE_BOOKING', 'REMINDER': 'SMS_TEMPLATE_REMINDER',
+    'INSTALLMENT': 'SMS_TEMPLATE_INSTALLMENT',
+}
 
 
 def money(value):
@@ -46,7 +54,7 @@ def money(value):
 
 
 def render(kind, values):
-    """Fill the template for `kind` ('PAYMENT', 'BOOKING' or 'REMINDER') with `values`."""
+    """Fill the template for `kind` ('PAYMENT', 'BOOKING', 'REMINDER' or 'INSTALLMENT') with `values`."""
     template = getattr(settings, SETTING_NAMES[kind])
     return _PLACEHOLDER.sub(lambda match: str(values.get(match.group(1), match.group(0))), template).strip()
 

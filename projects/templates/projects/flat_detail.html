@@ -7,10 +7,7 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
         <h3 class="mb-0"><i class="fas fa-door-open"></i> {{ object.flat_no }}
-            <span class="badge
-                {% if object.status == 'AVAILABLE' %}bg-success
-                {% elif object.status == 'SOLD' %}bg-primary
-                {% endif %}">
+            <span class="badge {{ object.status|status_badge }}">
                 {{ object.get_status_display }}
             </span>
         </h3>
@@ -164,7 +161,7 @@
                         <td>{{ sale.sale_date }}</td>
                         {% if money_visible %}<td>{{ sale.sale_value|taka }}</td>{% endif %}
                         {% if money_visible %}<td>{{ sale.received_amount|taka }}</td>{% endif %}
-                        <td>{{ sale.get_status_display }}</td>
+                        <td><span class="badge {{ sale.status|status_badge }}">{{ sale.get_status_display }}</span></td>
                     </tr>
                     {% endfor %}
                 </tbody>

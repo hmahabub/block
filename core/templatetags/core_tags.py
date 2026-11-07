@@ -24,6 +24,14 @@ def taka(value, decimals=2):
     return f"{settings.CURRENCY_SYMBOL}{formatted}"
 
 
+@register.filter(name='status_badge')
+def status_badge(status):
+    """Bootstrap badge colours of a flat or sale status: Available green, Booked yellow, Registered red."""
+    return {
+        'AVAILABLE': 'bg-success', 'BOOKED': 'bg-warning text-dark', 'REGISTERED': 'bg-danger', 'CANCELLED': 'bg-secondary',
+    }.get(status, 'bg-secondary')
+
+
 @register.filter(name='subtract')
 def subtract(value, arg):
     try:

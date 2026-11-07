@@ -7,6 +7,7 @@ from django.contrib.auth.models import User
 from django.contrib.messages import get_messages
 from django.test import TestCase, override_settings
 
+from core.workspace import SESSION_KEY
 from core.testing import make_account, make_project, make_request
 from customers.models import Customer
 from projects.models import Development
@@ -146,7 +147,7 @@ class TemplateConsistencyTests(SmsTemplateTestCase):
 
 class BookingSmsTests(SmsTemplateTestCase):
     def post_booking(self, flat, **extra):
-        data = {'flat': flat.pk, 'customer': self.customer.pk, 'sale_date': '2026-05-01', 'sale_value': '1300', 'reg_value': '0', **extra}
+        data = {'flat': flat.pk, 'customer': self.customer.pk, 'sale_date': '2026-05-01', 'flat_sale_value': '1300', 'reg_value': '0', **extra}
         request = make_request(self.user, '/sales/create/', 'post', data)
         response = FlatSaleCreateView.as_view()(request)
         return response, [str(m) for m in get_messages(request)]
@@ -205,19 +206,19 @@ class BookingSmsTests(SmsTemplateTestCase):
 
     def test_a_refused_booking_form_sends_nothing(self):
         SmsLog.objects.all().delete()
-        self.post_booking(self.flats[1], sale_value='1')      # below the base price: the form is invalid
+        self.post_booking(self.flats[1], flat_sale_value='1')      # below the base price: the form is invalid
         self.assertEqual(SmsLog.objects.count(), 0)
 
     def test_editing_a_sale_does_not_send_another_booking_sms(self):
         SmsLog.objects.all().delete()
-        data = {'flat': self.sale.flat_id, 'customer': self.customer.pk, 'sale_date': '2026-03-05', 'sale_value': '1600', 'reg_value': '50'}
+        data = {'flat': self.sale.flat_id, 'customer': self.customer.pk, 'sale_date': '2026-03-05', 'flat_sale_value': '1600', 'reg_value': '50'}
         FlatSaleUpdateView.as_view()(make_request(self.user, '/', 'post', data), pk=self.sale.pk)
         self.assertEqual(SmsLog.objects.filter(kind='BOOKING').count(), 0)
 
     def test_the_payment_sms_still_goes_out_automatically_with_its_own_wording(self):
         SmsLog.objects.all().delete()
-        data = {'sale': self.sale.pk, 'payment_date': '2026-04-02', 'amount': '400', 'account': self.account.pk}
-        CustomerPaymentCreateView.as_view()(make_request(self.user, '/', 'post', data))
+        data = {'invoice': self.sale.booking_invoice.pk, 'payment_date': '2026-04-02', 'amount': '400', 'account': self.account.pk}
+        CustomerPaymentCreateView.as_view()(make_request(self.user, '/', 'post', data, session={SESSION_KEY: self.estate.pk}))
         log = SmsLog.objects.get()
         self.assertEqual(log.kind, SmsLog.Kind.PAYMENT)
         self.assertIn('Tk 400.00', log.message)

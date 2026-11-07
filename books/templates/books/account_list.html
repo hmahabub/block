@@ -16,6 +16,13 @@
     </div>
 </div>
 
+{% if workspace_development %}
+<div class="alert alert-info">
+    <i class="fas fa-folder-open"></i> Showing only <strong>{{ workspace_development.name }}</strong>: its confirmed entries in each account.
+    The account's opening balance and internal transfers belong to the company, so they are not counted here.
+</div>
+{% endif %}
+
 {% if unassigned %}
 <div class="alert alert-warning">
     <i class="fas fa-triangle-exclamation"></i> {{ unassigned }} older record{{ unassigned|pluralize }} have no bank/cash account yet,
@@ -25,7 +32,8 @@
 
 <div class="card">
     <div class="card-body">
-        <p class="text-muted small">The balance counts confirmed entries only. Open an account to see its book.</p>
+        {% if workspace_development %}<p class="text-muted small">The balance counts confirmed entries only. Open an account to see its book.</p>
+        {% else %}<p class="text-muted small">Open a project to see what each account holds for it and to open its book.</p>{% endif %}
         <div class="table-responsive">
             <table class="table table-hover align-middle">
                 <thead class="table-light">
@@ -33,9 +41,11 @@
                         <th>Account</th>
                         <th>Type</th>
                         <th>Details</th>
+                        {% if workspace_development %}
                         <th class="text-end">Opening</th>
                         <th class="text-end">Balance</th>
                         <th class="text-center">To confirm</th>
+                        {% endif %}
                         <th></th>
                     </tr>
                 </thead>
@@ -46,6 +56,7 @@
                             {% if not row.account.is_active %}<span class="badge bg-secondary">Inactive</span>{% endif %}</td>
                         <td>{{ row.account.get_account_type_display }}</td>
                         <td>{{ row.account.detail }}</td>
+                        {% if workspace_development %}
                         <td class="text-end">{{ row.opening|taka }}</td>
                         <td class="text-end"><strong>{{ row.balance|taka }}</strong></td>
                         <td class="text-center">
@@ -54,8 +65,9 @@
                             {% else %}<span class="badge bg-warning text-dark">{{ row.pending_count }}</span>{% endif %}
                             {% else %}<i class="fas fa-check text-success"></i>{% endif %}
                         </td>
+                        {% endif %}
                         <td class="text-nowrap">
-                            <a href="{% url 'books:ledger' row.account.pk %}" class="btn btn-sm btn-info"><i class="fas fa-list"></i> Book</a>
+                            {% if workspace_development %}<a href="{% url 'books:ledger' row.account.pk %}" class="btn btn-sm btn-info"><i class="fas fa-list"></i> Book</a>{% endif %}
                             <a href="{% url 'books:account-update' row.account.pk %}" class="btn btn-sm btn-warning"><i class="fas fa-edit"></i></a>
                         </td>
                     </tr>

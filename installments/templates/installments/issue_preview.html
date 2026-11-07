@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% load core_tags %}
+
+{% block title %}Confirm the installment{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header"><h3 class="mb-0">Confirm: {{ form.cleaned_data.title }} <small class="text-muted">- {{ development.name }}</small></h3></div>
+    <div class="card-body">
+        <p>Payment deadline <strong>{{ form.cleaned_data.due_date|date:"j F Y" }}</strong> &middot;
+            {% if form.cleaned_data.basis == 'PERCENT' %}{{ form.cleaned_data.value }}% of each sale value{% else %}Tk {{ form.cleaned_data.value|floatformat:2 }} per flat{% endif %}
+            &middot; {% if form.cleaned_data.building %}{{ form.cleaned_data.building.project_name }} only{% else %}every building{% endif %}
+            &middot; {% if form.cleaned_data.send_sms %}SMS will be sent{% else %}no SMS{% endif %}</p>
+
+        {% if rows %}
+        <div class="alert alert-info"><strong>{{ rows|length }} customer account{{ rows|length|pluralize }}</strong> will get <strong>{{ total|taka }}</strong> added as due.
+            {% if capped %}{{ capped }} amount{{ capped|pluralize }} reduced to what is left to charge.{% endif %}</div>
+        <div class="table-responsive" style="max-height: 55vh; overflow:auto">
+            <table class="table table-sm align-middle">
+                <thead class="table-light"><tr><th>Customer</th><th>Building / flat</th><th class="text-end">Sale value</th><th class="text-end">Will be due</th><th></th></tr></thead>
+                <tbody>
+                    {% for sale, amount, was_capped in rows %}
+                    <tr><td>{{ sale.customer.name }}</td><td>{{ sale.project.project_name }} / {{ sale.flat.flat_no }}</td>
+                        <td class="text-end">{{ sale.sale_value|taka }}</td><td class="text-end"><strong>{{ amount|taka }}</strong></td>
+                        <td>{% if was_capped %}<span class="badge bg-warning text-dark" title="Reduced to what is left to charge on this booking">reduced</span>{% endif %}</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-warning">Nobody would be charged. Go back and change the amount or the building.</div>
+        {% endif %}
+
+        {% if skipped %}
+        <details class="mb-3"><summary class="text-muted">{{ skipped|length }} booking{{ skipped|length|pluralize }} left out</summary>
+            <ul class="small mb-0">{% for sale, reason in skipped %}<li>{{ sale.customer.name }} - {{ sale.flat }}: {{ reason }}</li>{% endfor %}</ul></details>
+        {% endif %}
+
+        <form method="post" class="d-flex gap-2">
+            {% csrf_token %}
+            {% for name, value in hidden %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
+            <input type="hidden" name="confirm" value="1">
+            {% if rows %}<button type="submit" class="btn btn-success"><i class="fas fa-paper-plane"></i> Issue the installment{% if form.cleaned_data.send_sms %} and send the SMS{% endif %}</button>{% endif %}
+            <button type="submit" name="confirm" value="0" class="btn btn-outline-secondary">Change it</button>
+            <a href="{% url 'installments:list' %}" class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

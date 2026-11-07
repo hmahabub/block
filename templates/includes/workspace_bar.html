@@ -1,0 +1,24 @@
+{% if user.is_authenticated and workspace_development %}
+<li class="nav-item dropdown" id="workspace-bar">
+    <a class="nav-link dropdown-toggle workspace-pill" href="#" role="button" data-bs-toggle="dropdown"
+       title="Working in this project: only its buildings, flats, costs, sales and payments are shown">
+        <i class="fas fa-folder-open"></i> {{ workspace_development.name }}
+    </a>
+    <ul class="dropdown-menu dropdown-menu-end">
+        <li><h6 class="dropdown-header">Switch project</h6></li>
+        {% for item in workspace_choices %}
+        <li>
+            <form method="post" action="{% url 'enter-project' item.pk %}">{% csrf_token %}
+                <button type="submit" class="dropdown-item{% if item.pk == workspace_development.pk %} active{% endif %}">{{ item.name }} <small class="text-muted">{{ item.code }}</small></button>
+            </form>
+        </li>
+        {% endfor %}
+        <li><hr class="dropdown-divider"></li>
+        <li>
+            <form method="post" action="{% url 'exit-project' %}">{% csrf_token %}
+                <button type="submit" class="dropdown-item"><i class="fas fa-right-from-bracket"></i> Exit project</button>
+            </form>
+        </li>
+    </ul>
+</li>
+{% endif %}

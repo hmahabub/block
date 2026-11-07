@@ -74,7 +74,7 @@ def build_cost_report_pdf(target, costs, applied, user):
         Spacer(1, 6),
     ]
 
-    header = [Paragraph(h, head) for h in ('Date', 'Voucher', 'Building', 'Cost head', 'Phase', 'Supplier', 'Charged to', 'Paid from', 'Description / Ref', 'Amount (BDT)')]
+    header = [Paragraph(h, head) for h in ('Date', 'Voucher', 'Building', 'Cost head', 'Phase', 'Paid to', 'Charged to', 'Paid from', 'Description / Ref', 'Amount (BDT)')]
     rows = [header]
     for cost in costs:
         detail = cost.description or ''
@@ -86,7 +86,7 @@ def build_cost_report_pdf(target, costs, applied, user):
             cost.project.project_code,
             Paragraph(str(cost.cost_category), cell),
             'Pre' if cost.phase == 'PRE' else 'Post',
-            Paragraph(cost.supplier.name if cost.supplier else '-', cell),
+            Paragraph(cost.payee or '-', cell),
             f'Flat {cost.flat.flat_no}' if cost.flat else ('Company' if cost.phase == 'PRE' else 'All flats'),
             Paragraph(str(cost.account) if cost.account else '-', cell),
             Paragraph(detail or '-', cell),
@@ -148,12 +148,12 @@ def cost_report_table(costs):
             detail = f'{detail} (Ref: {cost.reference_no})'.strip()
         rows.append([
             cost.date, cost.voucher_no, cost.project.project_code, str(cost.cost_category), cost.get_phase_display(),
-            cost.supplier.name if cost.supplier else None,
+            cost.payee or None,
             f'Flat {cost.flat.flat_no}' if cost.flat else ('Company' if cost.phase == 'PRE' else 'All flats'),
             str(cost.account) if cost.account else None, detail or None, cost.amount,
         ])
     columns = [Column('Date', DATE), Column('Voucher'), Column('Building'), Column('Cost head'), Column('Phase'),
-               Column('Supplier'), Column('Charged to'), Column('Paid from'), Column('Description / Ref'),
+               Column('Paid to'), Column('Charged to'), Column('Paid from'), Column('Description / Ref'),
                Column('Amount', MONEY)]
     totals = ['Total'] + [''] * 8 + [sum((c.amount for c in costs), 0)]
     return ReportTable('Costs', columns, rows, totals)

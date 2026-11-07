@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load crispy_forms_tags %}
+{% load crispy_forms_tags core_tags %}
 
 {% block title %}{% if object %}Update{% else %}New{% endif %} Flat Sale{% endblock %}
 
@@ -21,30 +21,30 @@
                     {{ form.with_parking|as_crispy_field }}
                 </div>
                 <div class="col-md-6">
-                    {% if money_visible %}
-                    <div class="card bg-light mb-3">
-                        <div class="card-body py-2">
-                            <table class="table table-sm table-borderless mb-0">
-                                <tr><td>Base price</td><td class="text-end" id="pv-base">-</td></tr>
-                                <tr><td>Parking price</td><td class="text-end" id="pv-parking">-</td></tr>
-                                <tr><td><strong>Total base price</strong></td><td class="text-end"><strong id="pv-total">-</strong></td></tr>
-                            </table>
-                        </div>
-                    </div>
-                    {% endif %}
-                    {{ form.sale_value|as_crispy_field }}
+                    {{ form.flat_sale_value|as_crispy_field }}
+                    <div id="parking-value-row">{{ form.parking_sale_value|as_crispy_field }}</div>
                     {{ form.reg_value|as_crispy_field }}
-                    {% if money_visible %}
+                </div>
+            </div>
+            <div class="row mt-2">
+                <div class="col-12">
                     <div class="card bg-light">
+                        <div class="card-header py-1"><strong>Sale value calculation</strong></div>
                         <div class="card-body py-2">
+                            {% if money_visible %}
+                            {% include "sales/_calculation.html" with sale=None %}
+                            <div id="pv-warning" class="text-danger small d-none mt-1"></div>
+                            {% else %}
                             <table class="table table-sm table-borderless mb-0">
-                                <tr><td>Honorarium <small class="text-muted">(sale value &minus; total base price)</small></td><td class="text-end" id="pv-honorarium">-</td></tr>
+                                <tr><td>Flat sale value</td><td class="text-end" id="pv-flat-sale">-</td></tr>
+                                <tr><td>Parking sale value</td><td class="text-end" id="pv-parking-sale">-</td></tr>
+                                <tr><td><strong>Sale value</strong> <small class="text-muted">(flat + parking)</small></td><td class="text-end"><strong id="pv-sale">-</strong></td></tr>
+                                <tr><td>Reg value</td><td class="text-end" id="pv-reg">-</td></tr>
                                 <tr><td><strong>Net value</strong> <small class="text-muted">(sale value + reg value)</small></td><td class="text-end"><strong id="pv-net">-</strong></td></tr>
                             </table>
-                            <div id="pv-warning" class="text-danger small d-none">The sale value is below the total base price.</div>
+                            {% endif %}
                         </div>
                     </div>
-                    {% endif %}
                 </div>
             </div>
             <div class="row mt-2">
@@ -53,8 +53,8 @@
                 </div>
             </div>
             <div class="alert alert-info">
-                <i class="fas fa-info-circle"></i> The flat becomes <strong>Sold</strong> as soon as the sale is saved. Record what the customer pays through
-                <a href="{% url 'sales:payment-create' %}">Customer Payments</a>. Anything paid beyond the net value is kept
+                <i class="fas fa-info-circle"></i> The flat becomes <strong>Sold</strong> as soon as the sale is saved. The booking gets an invoice; record what the customer pays from
+                <a href="{% url 'sales:invoice-list' %}">Invoices</a>. Anything paid beyond the net value is kept
                 as the customer's balance. The reg value is the registration cost, paid by the customer.
             </div>
             <div class="mt-3">
@@ -78,35 +78,53 @@
         var prices = JSON.parse(document.getElementById('price-map').textContent);
         var flat = document.getElementById('id_flat');
         var parking = document.getElementById('id_with_parking');
-        var saleValue = document.getElementById('id_sale_value');
+        var flatValue = document.getElementById('id_flat_sale_value');
+        var parkingValue = document.getElementById('id_parking_sale_value');
+        var parkingRow = document.getElementById('parking-value-row');
         var regValue = document.getElementById('id_reg_value');
-        var touched = saleValue.value !== '' && Number(saleValue.value) > 0;
+        var flatTouched = flatValue.value !== '' && Number(flatValue.value) > 0;
+        var parkingTouched = parkingValue.value !== '' && Number(parkingValue.value) > 0;
         var isEdit = {{ object|yesno:"true,false" }};
 
         function money(n) { return 'Tk ' + n.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}); }
         function setText(id, text) { var el = document.getElementById(id); if (el) { el.textContent = text; } }
         function num(el) { var v = parseFloat(el.value); return isNaN(v) ? 0 : v; }
 
-        function quotedWithParking(p) { return Number(p.quoted) + (parking.checked ? Number(p.parking) : 0); }
+        var ids = ['pv-base', 'pv-flat-sale', 'pv-flat-hon', 'pv-parking', 'pv-parking-sale', 'pv-parking-hon',
+                   'pv-total', 'pv-sale', 'pv-honorarium', 'pv-reg', 'pv-net'];
 
         function refresh(resetValue) {
+            parkingRow.classList.toggle('d-none', !parking.checked);
             var p = prices[flat.value];
-            if (!p) { ['pv-base', 'pv-parking', 'pv-total', 'pv-honorarium', 'pv-net'].forEach(function (id) { setText(id, '-'); }); return; }
-            var base = Number(p.base), park = parking.checked ? Number(p.parking) : 0, total = base + park;
-            if (resetValue && !touched) { saleValue.value = quotedWithParking(p).toFixed(2); }
-            var sale = num(saleValue), reg = num(regValue);
-            setText('pv-base', money(base));
-            setText('pv-parking', parking.checked ? money(park) : 'not taken');
-            setText('pv-total', money(total));
-            setText('pv-honorarium', money(Math.max(sale - total, 0)));
+            if (!p) { ids.forEach(function (id) { setText(id, '-'); }); return; }
+            var parkPrice = Number(p.parking);
+            if (resetValue && !flatTouched) { flatValue.value = Number(p.quoted).toFixed(2); }
+            if (parking.checked && resetValue && !parkingTouched) { parkingValue.value = parkPrice.toFixed(2); }
+            var flatSale = num(flatValue), parkSale = parking.checked ? num(parkingValue) : 0;
+            var sale = flatSale + parkSale, reg = num(regValue);
+            setText('pv-flat-sale', money(flatSale));
+            setText('pv-parking-sale', parking.checked ? money(parkSale) : 'not taken');
+            setText('pv-sale', money(sale));
+            setText('pv-reg', money(reg));
             setText('pv-net', money(sale + reg));
-            var warning = document.getElementById('pv-warning');
-            if (warning) { warning.classList.toggle('d-none', sale >= total); }
+            if (p.base === undefined) { return; }     // base prices are not in the page while the screens are locked
+            var base = Number(p.base), total = base + (parking.checked ? parkPrice : 0);
+            setText('pv-base', money(base));
+            setText('pv-parking', parking.checked ? money(parkPrice) : 'not taken');
+            setText('pv-total', money(total));
+            setText('pv-flat-hon', money(Math.max(flatSale - base, 0)));
+            setText('pv-parking-hon', parking.checked ? money(Math.max(parkSale - parkPrice, 0)) : 'not taken');
+            setText('pv-honorarium', money(Math.max(sale - total, 0)));
+            var warning = document.getElementById('pv-warning'), problems = [];
+            if (flatSale < base) { problems.push('The flat sale value is below the flat base price.'); }
+            if (parking.checked && parkSale < parkPrice) { problems.push('The parking sale value is below the parking price.'); }
+            if (warning) { warning.textContent = problems.join(' '); warning.classList.toggle('d-none', !problems.length); }
         }
 
-        flat.addEventListener('change', function () { touched = false; refresh(true); });
+        flat.addEventListener('change', function () { flatTouched = false; parkingTouched = false; refresh(true); });
         parking.addEventListener('change', function () { refresh(true); });
-        saleValue.addEventListener('input', function () { touched = true; refresh(false); });
+        flatValue.addEventListener('input', function () { flatTouched = true; refresh(false); });
+        parkingValue.addEventListener('input', function () { parkingTouched = true; refresh(false); });
         regValue.addEventListener('input', function () { refresh(false); });
         refresh(!isEdit);
     })();

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% load core_tags %}
+
+{% block title %}Installments{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h2 class="mb-0"><i class="fas fa-calendar-check"></i> Installments</h2>
+        <p class="text-muted mb-0">{{ workspace_development.name }}: after construction starts, customers pay in installments. Issuing one adds the amount as due on every customer's account and tells them the deadline by SMS.</p>
+    </div>
+    {% if can_issue %}<a href="{% url 'installments:issue' %}" class="btn btn-primary"><i class="fas fa-plus"></i> Issue an installment</a>{% endif %}
+</div>
+
+<div class="row text-center mb-3">
+    <div class="col-6 col-md-4 mb-2"><div class="card"><div class="card-body py-2"><strong>{{ items|length }}</strong><br><small class="text-muted">Installments issued</small></div></div></div>
+    <div class="col-6 col-md-4 mb-2"><div class="card"><div class="card-body py-2"><strong class="text-warning">{{ total_due|taka }}</strong><br><small class="text-muted">Due from customers now</small></div></div></div>
+    <div class="col-12 col-md-4 mb-2"><div class="card {% if total_overdue %}border-danger{% endif %}"><div class="card-body py-2"><strong class="text-danger">{{ total_overdue|taka }}</strong><br><small class="text-muted">Of which past the deadline</small></div></div></div>
+</div>
+
+<div class="card"><div class="card-body">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light"><tr>
+                <th>#</th><th>Installment</th><th>Deadline</th><th>Amount</th><th class="text-end">Customers</th>
+                <th class="text-end">Charged</th><th class="text-end">Paid</th><th class="text-end">Due</th><th></th>
+            </tr></thead>
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    <td>{{ item.installment.number }}</td>
+                    <td><a href="{{ item.installment.get_absolute_url }}">{{ item.installment.title }}</a>
+                        {% if item.installment.building %}<br><small class="text-muted">{{ item.installment.building.project_name }} only</small>{% endif %}</td>
+                    <td class="text-nowrap">{{ item.installment.due_date|date:"j M Y" }}
+                        {% if item.overdue %}<span class="badge bg-danger">Overdue</span>{% endif %}</td>
+                    <td>{{ item.installment.get_basis_display }}: {{ item.installment.amount_text }}</td>
+                    <td class="text-end">{{ item.customers }}</td>
+                    <td class="text-end">{{ item.amount|taka }}</td>
+                    <td class="text-end">{{ item.paid|taka }}</td>
+                    <td class="text-end {% if item.due %}fw-bold{% endif %}">{% if item.due %}{{ item.due|taka }} <small class="text-muted">({{ item.unpaid }})</small>{% else %}<span class="badge bg-success">All paid</span>{% endif %}</td>
+                    <td class="text-end"><a href="{{ item.installment.get_absolute_url }}" class="btn btn-sm btn-outline-primary">Open</a></td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="9" class="text-center text-muted py-4">No installment has been issued in this project yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div></div>
+{% endblock %}

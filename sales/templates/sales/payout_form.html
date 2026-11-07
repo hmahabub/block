@@ -21,7 +21,7 @@
             {% csrf_token %}
             {{ form|crispy }}
             <button type="submit" class="btn btn-primary" {% if not due %}disabled{% endif %}><i class="fas fa-save"></i> Save</button>
-            <a href="{% url 'sales:detail' sale.pk %}" class="btn btn-secondary">Cancel</a>
+            <a href="{% if title == 'Pay honorarium' %}{% url 'costing:honorarium-list' %}{% else %}{% url 'sales:detail' sale.pk %}{% endif %}" class="btn btn-secondary">Cancel</a>
         </form>
     </div>
 </div>

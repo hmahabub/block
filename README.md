@@ -48,26 +48,89 @@ need a look afterwards:
 | Base price | what the company needs per flat share (set once on the project) |
 | Parking | optional; its price is added to the base price when the buyer takes the parking lot |
 | Total base price | base price + parking price |
-| Sale value | what the buyer agrees to pay, never below the total base price |
-| **Honorarium** | sale value − total base price, paid to the reference (the "Ref") |
+| Flat sale value | what the buyer pays for the flat itself, never below the flat's base price |
+| Parking sale value | what the buyer pays for the parking lot (when taken), never below the parking price |
+| Sale value | flat sale value + parking sale value |
+| **Honorarium** | sale value − total base price, paid to the reference (the "Ref"); worked out for the flat and the parking lot separately and added |
+| Honorarium payments | *Costing → Honorarium vouchers* lists every sale's honorarium with its payments (date, voucher no., account), what is paid and what is still due; filter by ref, payment date or only-due, download as Excel, and print a payment voucher |
 | Reg value | registration cost, borne by the customer |
 | Net value | sale value + reg value: everything the customer owes |
 
-A flat is **Sold** as soon as a sale is saved (there is no separate "Booked" status), and **Available** again if the sale is
-cancelled. Paying more than the net value is kept as the **customer balance**. Cancelling a booking returns a **refund percentage** of everything received (it can
+A flat has three statuses, each with its colour everywhere (lists, flat page, booking map): **Available** (green), **Booked**
+(yellow) as soon as a sale is saved, and **Registered** (red) once the registry is completed. On the sale page press
+*Mark registered* with the registry date (and *Undo registry* to correct a mistake). A registered sale cannot be cancelled until
+its registry is undone; a cancelled sale is grey and the flat is **Available** again. Paying more than the net value is kept as the **customer balance**. Cancelling a booking returns a **refund percentage** of everything received (it can
 be below 100%); the company keeps the rest. Pre-development profit = base price earned from share sales (+ money kept on
 cancellations) − land, marketing and pre-development administrative costs.
 
 **Post-development (after construction starts).** All costs are borne **equally by the owners of every flat, sold or not**
 (per flat, not by area). The cost screens, books and reports keep the two phases apart.
 
-| Cost category | Phase |
+| Cost head (loaded by `seed_cost_categories`) | Phase |
 |---|---|
-| Land, Marketing | Pre-development |
-| Administration | Either: chosen on each entry |
-| Everything else | Post-development |
+| Land Related Costs; Operating Costs (Pre-Construction) | Pre-development (Pre-Construction) |
+| Structural & Materials Cost; Building / Project Specifications & Unit Budgeting; Approvals & Site Setup; Operating Costs (Post-Construction) | Post-development (Post-Construction) |
+| Any head you add yourself | Pre, post, or *Either* (chosen on each entry) |
+
+`manage.py seed_cost_categories` loads these heads (safe to repeat); add `--replace` to delete the existing heads first
+(refused while any recorded cost or budget still uses one). Some heads are information rather than money (total land area,
+estimated sales duration, floors and units, unit size): record them in the description of a cost, or leave them unused.
 
 A cost recorded against a single flat (a *direct* cost) is always post-development and is added to that flat only.
+
+**A cost is a voucher** (`CV-00001`): it says what is owed, and **the money is paid under the voucher, from Costing → Voucher payments
+only**. That page lists every voucher with what is paid and due (showing what is still due by default) and the latest payments made;
+press *Pay* on a voucher to open its payment page (date, amount, account, reference; each payment is `CP-00001`), in one payment or
+in parts. The cost list and the cost's own page show the payments but do not take them. A payment can be no more than what is still due on the voucher. Every payment is a line in the book, to be verified like any other,
+and a voucher with a confirmed payment can no longer be edited or deleted. The cost list shows what is due on each voucher; the
+supplier ledger, daily cost report, finance report (cost vouchers unpaid) and cash position all use what was actually paid.
+Older costs, recorded as paid in full from an account, count as paid.
+
+Every booking also has an **honorarium voucher** (`HV-00001`): the honorarium due to the reference. Its payments are made under it
+(Costing → Honorarium vouchers, where it is paid), and each payment has its own printable voucher.
+
+Every cost says **who was paid**: choose a *supplier*, or, when the payee is not a listed supplier, type the name in **Paid to**
+(the box is hidden while a supplier is chosen). The name shows on the cost page, the list (searchable), the voucher, the Excel and
+PDF downloads, the book and the daily reports. An older cost that never had a payee can still be edited as it is.
+
+## Installments (Sales → Installments)
+
+After construction starts, the customers who booked flats in a project pay in installments. *Issue an installment* (title,
+**payment deadline**, and either the same amount for every flat or a percentage of each sale value; all buildings or just one):
+
+1. You first see exactly **who will be charged how much**; nothing is saved until you confirm.
+2. The amount is **added as due on every customer's account**: on the installment's page, on each sale, and as "Installments due
+   now" on the customer page.
+3. Every customer gets an **SMS with the amount and the deadline** (tick box on the form; wording in `.env` as
+   `SMS_TEMPLATE_INSTALLMENT`, with `{installment}`, `{amount}`, `{deadline}`, `{installment_due}` and the usual flat/customer
+   placeholders). Customers excluded from SMS are skipped. *Send SMS again* on the installment's page goes only to those who have
+   not paid in full.
+
+An installment never charges more than what the booking has left (net value − paid under the booking invoice − already
+charged); cancelled bookings are left out. An installment nobody has paid towards can be **withdrawn** (its invoices go with
+it). The installment page downloads as Excel. Issuing, re-sending and withdrawing need the installments permissions.
+
+## Invoices and customer payments (Sales → Invoices, Customer Payments)
+
+**Every flat booking has an invoice, and every installment issued on it has an invoice of its own** (numbered `INV-00001`...).
+The booking invoice is the net value less the installments carved out of it, so a booking's invoices always add up to its net
+value. Each invoice can be printed or downloaded as a PDF (the installment ones show the **deadline**), and Sales → Invoices lists
+them with what is paid and due, and filters for what is still due or overdue.
+
+**Customers pay under an invoice, and a payment is recorded from the invoice only**: press *Pay* on the invoice in Sales → Invoices
+(or *Record payment* on the invoice's own page). The payment page is for that one invoice: it shows the customer, flat, amount, paid
+and due, and asks for the date, amount (no more than is still due), and the bank/cash account. No other page (sale, installment,
+customer, payment list) records payments, so there is one way in. What was paid under an installment's invoice is what is paid on
+that installment; a payment under the booking invoice never pays an installment. The invoice shows on the receipt, the payment list,
+the sale page, and in the payment SMS as `{purpose}`. The older sale-level document is now the **statement** of the booking
+(*Statement* and *Statement PDF* on the sale page): it lists every payment.
+
+## Reports sit with their module
+
+Each module's menu has its own reports: **Projects** (flat-wise, finance, profitability), **Customers** (customer-wise, customer
+balance and cost, receivables), **Costing** (daily cost report), **Sales** (periodic collection, profit / loss / collection / due),
+**Books** (daily transactions to verify) and **Directors** (investment by project). The **Reports** menu and Report Center still
+list all of them together.
 
 ## The book
 
@@ -96,6 +159,26 @@ A **Project** is a piece of land developed into one or more **Buildings** (Proje
 flat specification and prices; the flats list shows one building at a time. A project adds up its buildings, and the reports
 can be filtered by project (all its buildings), by building, or not at all.
 (In the code a building is still the class `Project` and a project is `Development`: only the screens use the new names.)
+
+### Working inside a project
+
+**Customers, suppliers and directors are shared by every project.** Everything else belongs to one project at a time, and
+no screen adds several projects together.
+
+Press **Open project** (home page, Projects menu or a project's page) to work inside one project. A bar under the menu says
+which one. Inside it the buildings, flats, budgets, costs, sales, payments, invoices and receipts, the book and the entries
+waiting for confirmation, reports, SMS reminders and the home-page figures cover only that project. With no project open
+those screens are closed and send you to the home page, which lists the projects to open (it shows only the number of
+customers, suppliers and directors). Records of another project cannot be opened even by typing their address, and forms
+offer only this project's buildings, flats and sales. **Switch project** or **Exit project** in the bar changes or leaves
+the project. The choice is kept per user in the session and is forgotten at logout.
+
+Open without a project (company-level set-up): the project list itself, customers, suppliers, directors and their
+investment pages, cost categories, references, the SMS log, and bank/cash accounts with internal transfers (the account
+list shows names only; its balances and book appear inside a project, counting only that project's confirmed entries and
+leaving out the account's opening balance). The audit trail covers everything.
+
+A building must belong to a project to be reachable: give any older building a project on its edit form.
 
 Flat **parking price** is not fixed: the building has a default parking price, and any flat can be given its own on the flat
 form (leave it blank to use the default). A sale freezes the flat's parking price at the time it is made.
@@ -135,7 +218,7 @@ count as paid when recorded, so the ledger is the list of payments.
 
 All flats in a project are identical, so type, area, rooms and prices are set **once on the project**. Flats are numbered
 **unit letter + floor** (A1 = unit A, floor 1) and each has a linked parking lot (default `P-A1`). *Generate flats*
-creates every unit on every floor in one step. The project page has a bus-seat style **booking map** (free / sold,
+creates every unit on every floor in one step. The project page has a bus-seat style **booking map** (available / booked / registered,
 parking lot and customer on each seat); click a free flat to book it.
 
 The all-flats list shows **one project at a time**. Flats cannot be deleted directly. An admin (superuser, or a user with `projects.delete_flat`) **requests** the deletion with
@@ -157,9 +240,9 @@ flat, sales, payment and customer pages. Change which areas are guarded with `SE
   app, done. `{placeholders}` such as `{customer}`, `{flat}`, `{amount}` and `{balance_due}` are replaced with the real values
   (the full list is in `.env.example`); anything else is sent as written, so a mistyped `{placeholder}` shows up in the SMS log.
   The booking SMS never includes the base price or honorarium.
-- **Balance reminders** are only sent when a user does it: Sales → Balance reminders → tick customers → Send.
+- **Balance reminders** are only sent when a user does it: SMS → Balance reminders → tick customers → Send.
 - Tick **Send SMS** off on a customer to exclude them from everything.
-- Every message is recorded in Sales → SMS log.
+- Every message is recorded in SMS → SMS log.
 
 `SMS_BACKEND=log` (the default) only records messages in the SMS log. To really send, choose a gateway:
 
@@ -170,14 +253,14 @@ flat, sales, payment and customer pages. Change which areas are guarded with `SE
 - `SMS_BACKEND=zendsms`: [ZendSMS](https://api.zendsms.com). Set `SMS_API_KEY` and `SMS_SENDER_ID`.
 
 Each gateway has its own settings, so switching is a one-line change of `SMS_BACKEND`. Put API keys in `.env` only, never in
-`.env.example` or git. Sales → SMS log → **Check SMS balance** asks the gateway what is left, and every log line shows the gateway's
+`.env.example` or git. SMS → **Check SMS balance** (or the SMS log) asks the gateway what is left, and every log line shows the gateway's
 request/message id or the reason it refused. A gateway failure never stops a payment or booking from saving.
 
 ## Invoices on WhatsApp
 
 **Switched off by default.** Set `WHATSAPP_ENABLED=True` in `.env` and restart to show it; until then the menu item, the sale-page button and the pages are hidden (invoice links already sent keep working).
 
-Sales → **Send invoices on WhatsApp** lists every customer with a **WhatsApp number** and an active sale (customers
+SMS → **Send invoices on WhatsApp** lists every customer with a **WhatsApp number** and an active sale (customers
 without one are listed separately with an "Add WhatsApp no." link). **Send** opens WhatsApp (app or web) with the
 customer's number and the message already typed; you press send there. The sale page has the same **Send on WhatsApp**
 button. Each time WhatsApp is opened it is recorded.
@@ -196,7 +279,43 @@ approved message templates. This version does not use it.
 - **Periodic payment collection** (pre-development): by month, customer and account, for any period
 - **Profit, loss, collection and due** (pre-development)
 - **Customer balance, cost, receivable and payable** (post-development)
+- **Customer-wise report** (Reports → Customer-Wise Report): only the customers who booked a flat in the project, each with their
+  booking details (flat, floor, type, area, parking lot, status, registry date), sale value split into flat and parking, registration
+  cost, net value, what was received and what is receivable, their share of the post-development cost, every installment with its
+  deadline, paid and due, and the customer's credit. Cancelled bookings are listed in a table of their own. PDF and Excel.
 - Flat-wise report and Receivables
+- **Daily transactions** (Reports → Daily Transactions): every payment, refund, honorarium, cost and director transaction of a day (or
+  a period) in the open project, with its account and whether it is **verified**. Verified means confirmed on the books (see *The
+  book*): it then counts towards the account balance. Tick the entries that are still waiting and press *Verify ticked* (needs
+  the *confirm book entries* permission; a verification is final and one that would take an account below zero is refused). Entries
+  with no account yet are listed too and get an account on *Confirm entries*. Download the day as PDF or Excel. Dates are the
+  transaction dates.
+- **Daily cost report** (Reports → Daily Cost Report): the costs of a day (opens on today; pick another day or a period), with
+  **pre-development** (the company's cost) and **post-development** (shared by the flat owners) kept apart: the totals of each phase,
+  a day-by-day table with a running total when you choose a period, every voucher under its phase (cost head, supplier,
+  building, who it is charged to, account, verified or not), and the cost heads with their share. PDF and Excel.
+- **Profitability analysis**: per building, the company's profit (base price earned from share sales + money kept on cancellations
+  − pre-development cost), margin, return on cost, what the unsold flats would add at base price, cost by head, and the cash
+  position (received − refunds − honorarium − costs). Post-development cost is the flat owners' cost, so it is not deducted
+  from the company's profit.
+- **Invoice as PDF**: *Invoice PDF* on a sale, or *PDF* on the printable invoice (also works on the private invoice link).
+
+### Automatic daily reports
+
+```
+venv\Scripts\python manage.py generate_daily_reports              today, every project
+venv\Scripts\python manage.py generate_daily_reports --date 2026-11-01 --project AB-PRJ-001
+```
+
+For each project it writes the daily transactions report (PDF and Excel), the daily cost report (PDF, pre- and post-development apart) and the profitability analysis to
+`generated_reports/<project code>/<date>/` (folder set by `REPORTS_DIR`), skipping projects with no transactions that day
+(`--include-empty` to write them anyway, `--skip-profitability`, `--no-email`). Set `REPORT_RECIPIENTS` in `.env` (and the
+e-mail settings) to have the files e-mailed too. To run it every evening, schedule it:
+
+```
+schtasks /Create /SC DAILY /ST 21:00 /TN "DAJ daily reports" /TR "C:\Projects\block\venv\Scripts\python.exe C:\Projects\block\manage.py generate_daily_reports"
+0 21 * * *  cd /path/to/block && venv/bin/python manage.py generate_daily_reports        (Linux cron)
+```
 
 The book and the project cost list download as Excel too (real numbers and dates, not text). The dashboard shows quick cost statistics (pre/post/total, per-flat share, this month, biggest heads) once unlocked.
 

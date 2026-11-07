@@ -65,6 +65,7 @@ INSTALLED_APPS = [
     'projects',
     'costing',
     'sales',
+    'installments',
     'books',
     'directors',
     'sms',
@@ -89,6 +90,7 @@ MIDDLEWARE = [
     'activity_log.middleware.AuditContextMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'core.reauth.ReauthMiddleware',
+    'core.workspace.WorkspaceGateMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
@@ -109,6 +111,7 @@ TEMPLATES = [
                 'core.context_processors.flat_deletion_pending',
                 'core.context_processors.reauth_state',
                 'core.context_processors.features',
+                'core.context_processors.workspace',
             ],
         },
     },
@@ -176,7 +179,7 @@ MESSAGE_TAGS = {
 # Screens (URL namespaces) that ask for the password again before opening, and for how long they
 # then stay unlocked while the user keeps working.
 # Director money and the audit trail are always behind the password prompt, whatever .env says.
-ALWAYS_SENSITIVE = ['directors', 'activity_log']
+ALWAYS_SENSITIVE = ['directors', 'activity_log', 'installments']
 SENSITIVE_NAMESPACES = list(dict.fromkeys(
     env.list('SENSITIVE_NAMESPACES', default=['costing', 'books', 'reports']) + ALWAYS_SENSITIVE
 ))
@@ -203,6 +206,10 @@ EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
 DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='DAR AL JANNAH <noreply@example.com>')
 
+# Automatic reports (manage.py generate_daily_reports): where the files go, and who they are e-mailed to (optional).
+REPORTS_DIR = env('REPORTS_DIR', default=str(BASE_DIR / 'generated_reports'))
+REPORT_RECIPIENTS = env.list('REPORT_RECIPIENTS', default=[])
+
 # Customer SMS. 'log' only records messages in the SMS log; 'zendsms' really sends them (see sms/backends.py).
 SMS_BACKEND = env('SMS_BACKEND', default='log')
 SMS_API_URL = env('SMS_API_URL', default='https://api.zendsms.com/api/v1/send-sms')
@@ -223,6 +230,10 @@ SMS_TEMPLATE_PAYMENT = env('SMS_TEMPLATE_PAYMENT', default=(
 SMS_TEMPLATE_BOOKING = env('SMS_TEMPLATE_BOOKING', default=(
     'Congratulations {customer}! Flat {flat}, {building} is now booked for you (sale {sale_no}). '
     'Sale value {sale_value}, net value {net_value}. Welcome to the family. - {company}'
+))
+SMS_TEMPLATE_INSTALLMENT = env('SMS_TEMPLATE_INSTALLMENT', default=(
+    'Dear {customer}, installment {installment} of {amount} for flat {flat}, {building} is now due. '
+    'Please pay by {deadline}. Total due on this flat {installment_due} - {company}'
 ))
 SMS_TEMPLATE_REMINDER = env('SMS_TEMPLATE_REMINDER', default=(
     'Dear {customer}, a friendly reminder: balance due {total_due} - {details}. '

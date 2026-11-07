@@ -4,6 +4,7 @@ from django.urls import reverse_lazy
 from django.views.generic import CreateView, DetailView, ListView, UpdateView
 
 from core.mixins import CreateAuditMixin, UpdateAuditMixin
+from core.workspace import in_workspace
 
 from .forms import CustomerForm
 from .models import Customer
@@ -37,7 +38,13 @@ class CustomerDetailView(LoginRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['sales'] = self.object.sales.select_related('flat', 'project').all()
+        context['sales'] = in_workspace(self.object.sales.select_related('flat', 'project').all(), self.request, 'project__development')
+        from core.reauth import money_visible
+        from core.workspace import current_development
+        from installments.services import customer_due
+
+        if money_visible(self.request):
+            context['installment_due'], context['installment_overdue'] = customer_due(self.object, current_development(self.request))
         return context
 
 

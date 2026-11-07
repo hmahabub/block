@@ -45,11 +45,11 @@ REFERENCES = [
 
 # (parent category, category, amount, description): 7,500,000 per tower, 15,000,000 in total
 COSTS = [
-    ('Land', 'Land Purchase', 4_000_000, 'Land purchase'),
-    ('Development', 'Architect', 800_000, 'Architectural design fees'),
-    ('Development', 'Approval', 500_000, 'Building plan approval fees'),
-    ('Construction', 'Civil', 1_700_000, 'Foundation and civil work - stage 1'),
-    ('Construction', 'Cement', 500_000, 'Cement purchase'),
+    ('Land Related Costs', 'Land Value / Actual Land Payment', 4_000_000, 'Land purchase'),
+    ('Approvals & Site Setup', 'Architect, Soil Test & Legal Fees', 800_000, 'Architectural design fees'),
+    ('Approvals & Site Setup', 'CDA Cost / LUC / Final Approval Costs', 500_000, 'Building plan approval fees'),
+    ('Structural & Materials Cost', 'Civil Cost', 1_700_000, 'Foundation and civil work - stage 1'),
+    ('Structural & Materials Cost', 'Cement', 500_000, 'Cement purchase'),
 ]
 COST_DATES = {
     'Tower 1': ['2026-05-10', '2026-06-05', '2026-06-20', '2026-08-15', '2026-09-05'],

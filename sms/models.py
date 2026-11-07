@@ -9,6 +9,7 @@ class SmsLog(models.Model):
         PAYMENT = 'PAYMENT', 'Payment confirmation'
         BOOKING = 'BOOKING', 'Booking confirmation'
         REMINDER = 'REMINDER', 'Balance reminder'
+        INSTALLMENT = 'INSTALLMENT', 'Installment due'
 
     class Status(models.TextChoices):
         SENT = 'SENT', 'Sent'
@@ -17,7 +18,7 @@ class SmsLog(models.Model):
 
     customer = models.ForeignKey('customers.Customer', null=True, on_delete=models.SET_NULL, related_name='sms_logs')
     phone = models.CharField(max_length=20)
-    kind = models.CharField(max_length=10, choices=Kind.choices)
+    kind = models.CharField(max_length=12, choices=Kind.choices)
     message = models.TextField()
     status = models.CharField(max_length=10, choices=Status.choices)
     error = models.CharField(max_length=300, blank=True)

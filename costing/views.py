@@ -3,21 +3,24 @@ import datetime
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
-from django.db.models import Sum
+from decimal import Decimal
+
+from django.db.models import Q, Sum
 from django.http import HttpResponse
-from django.shortcuts import redirect
+from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.views import View
-from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
+from django.views.generic import CreateView, DeleteView, DetailView, FormView, ListView, TemplateView, UpdateView
 
 from core.mixins import CreateAuditMixin, DeleteAuditMixin, UpdateAuditMixin
 from core.utils import int_or_none
+from core.workspace import WorkspaceMixin, in_workspace
 from projects.models import Flat, Project
 from reports.excel import XLSX_CONTENT_TYPE, build_xlsx
 
 from .filters import filter_project_costs
-from .forms import CostCategoryForm, DirectCostForm, ProjectBudgetForm, SharedCostForm
-from .models import CostCategory, ProjectBudget, ProjectCost
+from .forms import CostCategoryForm, CostPaymentForm, DirectCostForm, ProjectBudgetForm, SharedCostForm
+from .models import CostCategory, CostPayment, ProjectBudget, ProjectCost
 from .reports import build_cost_report_pdf, cost_report_table, describe_filters
 
 
@@ -46,8 +49,9 @@ class CostCategoryUpdateView(PermissionRequiredMixin, UpdateAuditMixin, UpdateVi
     permission_required = 'costing.change_costcategory'
 
 
-class ProjectBudgetListView(LoginRequiredMixin, ListView):
+class ProjectBudgetListView(WorkspaceMixin, LoginRequiredMixin, ListView):
     model = ProjectBudget
+    workspace_lookup = 'project__development'
     template_name = 'costing/budget_list.html'
     context_object_name = 'object_list'
     paginate_by = 30
@@ -61,11 +65,11 @@ class ProjectBudgetListView(LoginRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['projects'] = Project.objects.all()
+        context['projects'] = in_workspace(Project.objects.all(), self.request, 'development')
         return context
 
 
-class ProjectBudgetCreateView(PermissionRequiredMixin, CreateAuditMixin, CreateView):
+class ProjectBudgetCreateView(WorkspaceMixin, PermissionRequiredMixin, CreateAuditMixin, CreateView):
     model = ProjectBudget
     form_class = ProjectBudgetForm
     template_name = 'costing/budget_form.html'
@@ -73,36 +77,39 @@ class ProjectBudgetCreateView(PermissionRequiredMixin, CreateAuditMixin, CreateV
     permission_required = 'costing.add_projectbudget'
 
 
-class ProjectBudgetUpdateView(PermissionRequiredMixin, UpdateAuditMixin, UpdateView):
+class ProjectBudgetUpdateView(WorkspaceMixin, PermissionRequiredMixin, UpdateAuditMixin, UpdateView):
     model = ProjectBudget
+    workspace_lookup = 'project__development'
     form_class = ProjectBudgetForm
     template_name = 'costing/budget_form.html'
     success_url = reverse_lazy('costing:budget-list')
     permission_required = 'costing.change_projectbudget'
 
 
-class ProjectBudgetDeleteView(PermissionRequiredMixin, DeleteAuditMixin, DeleteView):
+class ProjectBudgetDeleteView(WorkspaceMixin, PermissionRequiredMixin, DeleteAuditMixin, DeleteView):
     model = ProjectBudget
+    workspace_lookup = 'project__development'
     template_name = 'costing/budget_confirm_delete.html'
     success_url = reverse_lazy('costing:budget-list')
     permission_required = 'costing.delete_projectbudget'
 
 
-class ProjectCostListView(LoginRequiredMixin, ListView):
+class ProjectCostListView(WorkspaceMixin, LoginRequiredMixin, ListView):
     model = ProjectCost
+    workspace_lookup = 'project__development'
     template_name = 'costing/cost_list.html'
     context_object_name = 'object_list'
     paginate_by = 30
 
     def get_queryset(self):
-        queryset = super().get_queryset().select_related('project', 'cost_category', 'supplier', 'flat', 'account')
+        queryset = super().get_queryset().select_related('project', 'cost_category', 'supplier', 'flat', 'account').prefetch_related('payments')
         queryset, self.applied = filter_project_costs(queryset, self.request.GET)
         return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         params = self.request.GET
-        context['projects'] = Project.objects.all()
+        context['projects'] = in_workspace(Project.objects.all(), self.request, 'development')
         context['total_amount'] = self.get_queryset().aggregate(total=Sum('amount'))['total'] or 0
         context['month'] = params.get('month', '')
         context['date_from'] = params.get('date_from', '')
@@ -115,8 +122,9 @@ class ProjectCostListView(LoginRequiredMixin, ListView):
         return context
 
 
-class ProjectCostDetailView(LoginRequiredMixin, DetailView):
+class ProjectCostDetailView(WorkspaceMixin, LoginRequiredMixin, DetailView):
     model = ProjectCost
+    workspace_lookup = 'project__development'
     template_name = 'costing/cost_detail.html'
     context_object_name = 'object'
 
@@ -126,7 +134,7 @@ class ProjectCostDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
-class _ProjectCostCreateView(PermissionRequiredMixin, CreateAuditMixin, CreateView):
+class _ProjectCostCreateView(WorkspaceMixin, PermissionRequiredMixin, CreateAuditMixin, CreateView):
     model = ProjectCost
     template_name = 'costing/cost_form.html'
     permission_required = 'costing.add_projectcost'
@@ -171,15 +179,16 @@ class _ConfirmedCostLock:
 
     def dispatch(self, request, *args, **kwargs):
         if request.user.has_perm(self.permission_required):
-            cost = ProjectCost.objects.filter(pk=kwargs['pk'], confirmed_at__isnull=False).first()
-            if cost:
-                messages.error(request, f'{cost.voucher_no} is confirmed in the books and cannot be changed or deleted.')
+            cost = ProjectCost.objects.filter(pk=kwargs['pk']).first()
+            if cost and cost.is_confirmed:
+                messages.error(request, f'{cost.voucher_no} has a payment confirmed in the books and cannot be changed or deleted.')
                 return redirect(cost)
         return super().dispatch(request, *args, **kwargs)
 
 
-class ProjectCostUpdateView(_ConfirmedCostLock, PermissionRequiredMixin, UpdateAuditMixin, UpdateView):
+class ProjectCostUpdateView(_ConfirmedCostLock, WorkspaceMixin, PermissionRequiredMixin, UpdateAuditMixin, UpdateView):
     model = ProjectCost
+    workspace_lookup = 'project__development'
     template_name = 'costing/cost_form.html'
     permission_required = 'costing.change_projectcost'
 
@@ -197,16 +206,107 @@ class ProjectCostUpdateView(_ConfirmedCostLock, PermissionRequiredMixin, UpdateA
         return reverse_lazy('costing:cost-detail', kwargs={'pk': self.object.pk})
 
 
-class ProjectCostDeleteView(_ConfirmedCostLock, PermissionRequiredMixin, DeleteAuditMixin, DeleteView):
+class ProjectCostDeleteView(_ConfirmedCostLock, WorkspaceMixin, PermissionRequiredMixin, DeleteAuditMixin, DeleteView):
     model = ProjectCost
+
+    def dispatch(self, request, *args, **kwargs):
+        cost = ProjectCost.objects.filter(pk=kwargs['pk']).first()
+        if cost and request.user.has_perm(self.permission_required) and cost.payments.exists():
+            messages.error(request, f'{cost.voucher_no} has payments under it: remove them first, then the voucher can be deleted.')
+            return redirect(cost)
+        return super().dispatch(request, *args, **kwargs)
+
+    workspace_lookup = 'project__development'
     template_name = 'costing/cost_confirm_delete.html'
     success_url = reverse_lazy('costing:cost-list')
     permission_required = 'costing.delete_projectcost'
 
 
 
-class ProjectCostVoucherView(LoginRequiredMixin, DetailView):
+class VoucherPaymentsView(LoginRequiredMixin, TemplateView):
+    """Every cost voucher with what is paid and due, and the payments made. A voucher is paid from here: press Pay."""
+
+    template_name = 'costing/voucher_payments.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        params = self.request.GET
+        costs = (
+            in_workspace(ProjectCost.objects.all(), self.request, 'project__development')
+            .select_related('project', 'cost_category', 'supplier').prefetch_related('payments').order_by('-date', '-id')
+        )
+        q = (params.get('q') or '').strip()
+        if q:
+            costs = costs.filter(Q(supplier__name__icontains=q) | Q(paid_to__icontains=q) | Q(description__icontains=q) | Q(reference_no__icontains=q)
+                                 | Q(cost_category__name__icontains=q) | Q(pk__in=[int(''.join(ch for ch in q if ch.isdigit()))] if q.upper().startswith('CV') and any(ch.isdigit() for ch in q) else []))
+        show = params.get('show') if params.get('show') in ('due', 'paid', 'all') else 'due'
+        rows = list(costs)
+        if show == 'due':
+            rows = [c for c in rows if c.due_amount > 0]
+        elif show == 'paid':
+            rows = [c for c in rows if c.due_amount <= 0]
+        payments = (
+            in_workspace(CostPayment.objects.all(), self.request, 'cost__project__development')
+            .select_related('cost', 'cost__supplier', 'account').order_by('-date', '-id')[:30]
+        )
+        context.update({
+            'rows': rows, 'show': show, 'q': q, 'payments': payments,
+            'total_due': sum((c.due_amount for c in rows), Decimal('0')),
+            'can_pay': self.request.user.has_perm('costing.add_costpayment'),
+        })
+        return context
+
+
+class CostPaymentCreateView(PermissionRequiredMixin, FormView):
+    """Pay a cost voucher, wholly or in part. This is where cost payments are made: under the voucher."""
+
+    form_class = CostPaymentForm
+    template_name = 'costing/payment_form.html'
+    permission_required = 'costing.add_costpayment'
+
+    def dispatch(self, request, *args, **kwargs):
+        self.cost = get_object_or_404(in_workspace(ProjectCost.objects.select_related('project', 'cost_category', 'supplier'), request, 'project__development'), pk=kwargs['pk'])
+        if request.user.is_authenticated and request.user.has_perm(self.permission_required) and self.cost.due_amount <= 0:
+            messages.info(request, f'{self.cost.voucher_no} is already paid in full.')
+            return redirect('costing:voucher-payments')
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['cost'] = self.cost
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['cost'] = self.cost
+        return context
+
+    def form_valid(self, form):
+        payment = form.save()
+        messages.success(self.request, f'{payment.payment_no}: {payment.amount:,.2f} paid under {self.cost.voucher_no}.')
+        return redirect('costing:voucher-payments')
+
+
+class CostPaymentDeleteView(PermissionRequiredMixin, View):
+    """POST-only: remove a payment that has not been confirmed in the books yet."""
+
+    http_method_names = ['post']
+    permission_required = 'costing.delete_costpayment'
+
+    def post(self, request, pk):
+        payment = get_object_or_404(in_workspace(CostPayment.objects.select_related('cost'), request, 'cost__project__development'), pk=pk)
+        number, cost = payment.payment_no, payment.cost
+        if payment.is_confirmed:
+            messages.error(request, f'{number} is confirmed in the books and cannot be removed.')
+        else:
+            payment.delete()
+            messages.success(request, f'{number} was removed.')
+        return redirect(cost)
+
+
+class ProjectCostVoucherView(WorkspaceMixin, LoginRequiredMixin, DetailView):
     model = ProjectCost
+    workspace_lookup = 'project__development'
     template_name = 'costing/cost_voucher.html'
     context_object_name = 'cost'
 
@@ -215,7 +315,7 @@ class ProjectCostReportExcelView(LoginRequiredMixin, View):
     """Excel file of the project cost list, honouring the same filters as the on-screen list."""
 
     def get(self, request):
-        costs, applied = filter_project_costs(ProjectCost.objects.all(), request.GET)
+        costs, applied = filter_project_costs(in_workspace(ProjectCost.objects.all(), request, 'project__development'), request.GET)
         stamp = f'{applied["date_from"] or "start"}_to_{applied["date_to"] or "end"}' if (applied['date_from'] or applied['date_to']) else 'all'
         response = HttpResponse(content_type=XLSX_CONTENT_TYPE)
         response['Content-Disposition'] = f'attachment; filename="project_costs_{stamp}.xlsx"'
@@ -227,7 +327,7 @@ class ProjectCostReportPDFView(LoginRequiredMixin, View):
     """PDF of the project cost list, honouring the same filters as the on-screen list."""
 
     def get(self, request):
-        costs, applied = filter_project_costs(ProjectCost.objects.all(), request.GET)
+        costs, applied = filter_project_costs(in_workspace(ProjectCost.objects.all(), request, 'project__development'), request.GET)
         date_from, date_to = applied['date_from'], applied['date_to']
         stamp = f'{date_from or "start"}_to_{date_to or "end"}' if (date_from or date_to) else 'all'
         response = HttpResponse(content_type='application/pdf')

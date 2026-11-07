@@ -21,7 +21,9 @@
     .seat .parking-free { border: 1px solid currentColor; opacity: .85; }
     .seat .seat-customer { font-size: .72rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .seat-available { background: #2f9e6b; }
-    .seat-sold { background: #0b3d3a; }
+    .seat-booked { background: #f6c23e; }
+    .seat.seat-booked { color: #2b2100 !important; }
+    .seat-registered { background: #d6333f; }
     .seat-empty { display: block; width: 118px; height: 74px; border: 2px dashed #dee2e6; border-radius: 8px; }
     .legend-dot { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 4px; vertical-align: middle; }
 </style>
@@ -147,8 +149,9 @@
     <div class="card-body tab-content">
         <div class="tab-pane fade show active" id="tab-map">
             <div class="mb-2 small">
-                <span class="me-3"><span class="legend-dot" style="background:#2f9e6b"></span>Free</span>
-                <span class="me-3"><span class="legend-dot" style="background:#0b3d3a"></span>Sold</span>
+                <span class="me-3"><span class="legend-dot" style="background:#2f9e6b"></span>Available</span>
+                <span class="me-3"><span class="legend-dot" style="background:#f6c23e"></span>Booked</span>
+                <span class="me-3"><span class="legend-dot" style="background:#d6333f"></span>Registered</span>
                 <span class="me-3"><i class="fas fa-car-side"></i> <strong>BOOKED</strong> / <strong>FREE</strong> = parking lot taken or not</span>
                 <span class="text-muted">Each flat shows its linked parking lot. Click a free flat to book it.</span>
             </div>
@@ -219,10 +222,7 @@
                             <td>{% if flat.active_sale %}{% if flat.active_sale.with_parking %}<span class="badge bg-dark">Booked</span>{% else %}<span class="badge bg-light text-dark border">Not taken</span>{% endif %}{% else %}<span class="badge bg-light text-dark border">Free</span>{% endif %}</td>
                             <td>{{ flat.facing|default:"-" }}</td>
                             <td>
-                                <span class="badge
-                                    {% if flat.status == 'AVAILABLE' %}bg-success
-                                    {% elif flat.status == 'SOLD' %}bg-primary
-                                    {% endif %}">
+                                <span class="badge {{ flat.status|status_badge }}">
                                     {{ flat.get_status_display }}
                                 </span>
                             </td>

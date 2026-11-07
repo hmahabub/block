@@ -6,8 +6,10 @@ from django.views.generic import TemplateView
 
 from activity_log.models import ActivityLog
 from core.reauth import money_visible
+from core.workspace import current_development, in_workspace
 from costing.models import Phase, ProjectCost
 from customers.models import Customer
+from directors.models import Director
 from projects.models import Development, Flat, Project
 from sales.models import FlatSale
 from suppliers.models import Supplier
@@ -27,30 +29,42 @@ class HomeView(TemplateView):
         if not self.request.user.is_authenticated:
             return context
 
+        request = self.request
+        development = current_development(request)
         context['activity_logs'] = ActivityLog.objects.select_related('user')[:5]
         context['development_count'] = Development.objects.count()
-        context['project_count'] = Project.objects.count()
+        # shared by every project
         context['customer_count'] = Customer.objects.count()
         context['supplier_count'] = Supplier.objects.count()
-        context['flat_count'] = Flat.objects.count()
-        context['sold_count'] = Flat.objects.filter(status=Flat.Status.SOLD).count()
-        context['available_count'] = Flat.objects.filter(status=Flat.Status.AVAILABLE).count()
+        context['director_count'] = Director.objects.count()
+        if development is None:
+            # No figure adds up several projects: outside a project there is only the list of projects to open.
+            context['developments'] = list(Development.objects.prefetch_related('buildings'))
+            return context
+
+        flats = in_workspace(Flat.objects.all(), request, 'project__development')
+        context['project_count'] = in_workspace(Project.objects.all(), request, 'development').count()
+        context['flat_count'] = flats.count()
+        context['booked_count'] = flats.filter(status=Flat.Status.BOOKED).count()
+        context['registered_count'] = flats.filter(status=Flat.Status.REGISTERED).count()
+        context['sold_count'] = context['booked_count'] + context['registered_count']
+        context['available_count'] = flats.filter(status=Flat.Status.AVAILABLE).count()
 
         # Money figures stay hidden while the sensitive screens are locked, since this page is shown to buyers.
         context['money_unlocked'] = money_visible(self.request)
         if context['money_unlocked']:
-            active_sales = FlatSale.objects.exclude(status=FlatSale.Status.CANCELLED)
+            active_sales = in_workspace(FlatSale.objects.exclude(status=FlatSale.Status.CANCELLED), request, 'project__development')
             context.update({
                 'total_sales': _total(active_sales, 'sale_value'),
                 'total_received': _total(active_sales, 'received_amount'),
                 'total_receivable': _total(active_sales, 'receivable_amount'),
             })
-            context.update(self.cost_stats(timezone.localdate(), context['flat_count']))
+            context.update(self.cost_stats(timezone.localdate(), context['flat_count'], request))
         return context
 
     @staticmethod
-    def cost_stats(today, flat_count):
-        costs = ProjectCost.objects.all()
+    def cost_stats(today, flat_count, request):
+        costs = in_workspace(ProjectCost.objects.all(), request, 'project__development')
         post_shared = _total(costs.filter(phase=Phase.POST, flat__isnull=True))
 
         top_heads = {}

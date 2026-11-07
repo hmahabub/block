@@ -68,10 +68,7 @@
                         <td class="text-end">{{ flat.effective_parking_price|taka }}{% if flat.parking_price is not None %} <i class="fas fa-pen text-muted" title="Set for this flat"></i>{% endif %}</td>
                         <td>{% if flat.active_sale %}{% if flat.active_sale.with_parking %}<span class="badge bg-dark">Booked</span>{% else %}<span class="badge bg-light text-dark border">Not taken</span>{% endif %}{% else %}<span class="badge bg-light text-dark border">Free</span>{% endif %}</td>
                         <td>
-                            <span class="badge
-                                {% if flat.status == 'AVAILABLE' %}bg-success
-                                {% elif flat.status == 'SOLD' %}bg-primary
-                                {% endif %}">
+                            <span class="badge {{ flat.status|status_badge }}">
                                 {{ flat.get_status_display }}
                             </span>
                         </td>

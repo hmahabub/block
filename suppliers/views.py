@@ -11,6 +11,7 @@ from core.formatting import DATE, MONEY
 from core.mixins import CreateAuditMixin, UpdateAuditMixin
 from core.reauth import money_visible
 from core.utils import int_or_none
+from core.workspace import in_workspace
 from reports.excel import XLSX_CONTENT_TYPE, build_xlsx
 from reports.tables import Column, ReportTable
 
@@ -41,7 +42,9 @@ class SupplierDetailView(LoginRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['project_costs'] = self.object.project_costs.select_related('project', 'cost_category').all()
+        context['project_costs'] = in_workspace(
+            self.object.project_costs.select_related('project', 'cost_category').all(), self.request, 'project__development',
+        )
         return context
 
 
@@ -55,8 +58,8 @@ def _date(value):
 class SupplierLedgerView(LoginRequiredMixin, DetailView):
     """Every payment made to one supplier, oldest first, with a running total.
 
-    Cost entries count as paid when they are recorded, so the ledger is the list of payments. The running total is
-    what the company has paid this supplier up to and including each line. ?format=xlsx downloads it as Excel.
+    Each line is a cost voucher with what has been paid under it so far. The running total is what the company has paid
+    this supplier up to and including each line; what is still owed on unpaid vouchers is shown above the table. ?format=xlsx downloads it as Excel.
     """
 
     model = Supplier
@@ -72,28 +75,30 @@ class SupplierLedgerView(LoginRequiredMixin, DetailView):
         phase = params.get('phase') if params.get('phase') in ('PRE', 'POST') else ''
         date_from, date_to = _date(params.get('date_from')), _date(params.get('date_to'))
 
-        costs = ProjectCost.objects.filter(supplier=self.object).select_related(
+        costs = in_workspace(ProjectCost.objects.filter(supplier=self.object), self.request, 'project__development').select_related(
             'project', 'cost_category', 'cost_category__parent_category', 'flat', 'account',
-        ).order_by('date', 'id')
+        ).prefetch_related('payments__account').order_by('date', 'id')
         def matches(cost):
             return (not building or cost.project_id == building.pk) and (not phase or cost.phase == phase)
 
         everything = [c for c in costs if matches(c)]
         # What was paid before the period starts is carried forward, so the running total is right for any period.
-        before = sum((c.amount for c in everything if date_from and c.date < date_from), Decimal('0'))
+        before = sum((c.paid_amount for c in everything if date_from and c.date < date_from), Decimal('0'))
         rows = [c for c in everything if (not date_from or c.date >= date_from) and (not date_to or c.date <= date_to)]
         running = before
         for cost in rows:
-            running += cost.amount
+            running += cost.paid_amount
             cost.running_total = running
+            cost.paid_from = cost.account.name if cost.account else ', '.join(sorted({p.account.name for p in cost.payments.all()}))
         by_building = {}
         for cost in rows:
-            by_building[cost.project] = by_building.get(cost.project, Decimal('0')) + cost.amount
+            by_building[cost.project] = by_building.get(cost.project, Decimal('0')) + cost.paid_amount
         return {
-            'rows': rows, 'brought_forward': before, 'period_total': sum((c.amount for c in rows), Decimal('0')),
+            'rows': rows, 'brought_forward': before, 'period_total': sum((c.paid_amount for c in rows), Decimal('0')),
+            'unpaid_total': sum((c.due_amount for c in everything), Decimal('0')),
             'closing_total': running, 'by_building': sorted(by_building.items(), key=lambda item: item[0].project_name),
             'building': building, 'phase': phase, 'date_from': date_from, 'date_to': date_to,
-            'buildings': Project.objects.filter(costs__supplier=self.object).distinct(),
+            'buildings': in_workspace(Project.objects.filter(costs__supplier=self.object), self.request, 'development').distinct(),
         }
 
     def get(self, request, *args, **kwargs):
@@ -109,7 +114,7 @@ class SupplierLedgerView(LoginRequiredMixin, DetailView):
         rows = [[data['date_from'], '', '', 'Brought forward', '', '', None, data['brought_forward']]] if data['date_from'] else []
         rows += [
             [c.date, c.voucher_no, c.project.project_name, f'{c.cost_category} - {c.description}'.rstrip(' -'),
-             c.get_phase_display(), c.account.name if c.account else None, c.amount, c.running_total]
+             c.get_phase_display(), c.paid_from or None, c.paid_amount, c.running_total]
             for c in data['rows']
         ]
         table = ReportTable(

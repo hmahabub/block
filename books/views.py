@@ -14,6 +14,7 @@ from django.views.generic import CreateView, DeleteView, ListView, TemplateView,
 from core.formatting import DATE, MONEY
 from core.mixins import CreateAuditMixin, DeleteAuditMixin, UpdateAuditMixin
 from core.utils import int_or_none
+from core.workspace import current_development
 from reports.excel import XLSX_CONTENT_TYPE, build_xlsx
 from reports.tables import Column, ReportTable
 
@@ -51,11 +52,16 @@ class AccountListView(LoginRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        rows = account_summaries(Account.objects.all())
+        development = current_development(self.request)
+        if development is None:
+            # Outside a project the accounts are only set up here; their balances belong to the project being worked in.
+            context['rows'] = [{'account': account} for account in Account.objects.all()]
+            return context
+        rows = account_summaries(Account.objects.all(), development)
         context['rows'] = rows
         context['total_balance'] = sum((r['balance'] for r in rows if r['account'].is_active), ZERO)
         context['total_pending'] = sum(r['pending_count'] for r in rows)
-        context['unassigned'] = unassigned_count()
+        context['unassigned'] = unassigned_count(development)
         return context
 
 
@@ -88,12 +94,14 @@ class BookView(LoginRequiredMixin, TemplateView):
         date_from = _parse_date(params.get('date_from')) or today.replace(day=1)
         date_to = _parse_date(params.get('date_to')) or today
 
+        development = current_development(self.request)
         entries, opening, closing = [], ZERO, ZERO
         if account:
-            confirmed = collect_entries([account], confirmed=True)
+            confirmed = collect_entries([account], confirmed=True, development=development)
             before = [e for e in confirmed if e.date < date_from]
             entries = [e for e in confirmed if date_from <= e.date <= date_to]
-            opening = account.opening_balance + sum((e.money_in - e.money_out for e in before), ZERO)
+            # The account's own opening balance belongs to the company, not to one project.
+            opening = (ZERO if development else account.opening_balance) + sum((e.money_in - e.money_out for e in before), ZERO)
             closing = with_running_balance(entries, opening)
         return {
             'accounts': accounts, 'account': account, 'entries': entries, 'opening_balance': opening,
@@ -108,7 +116,9 @@ class BookView(LoginRequiredMixin, TemplateView):
             return self.excel(book)
         context = self.get_context_data(**kwargs)
         context.update(book)
-        context['pending_count'] = account_summaries([book['account']])[0]['pending_count'] if book['account'] else 0
+        context['pending_count'] = (
+            account_summaries([book['account']], current_development(request))[0]['pending_count'] if book['account'] else 0
+        )
         context['can_confirm'] = request.user.has_perm('books.confirm_entries')
         return self.render_to_response(context)
 
@@ -139,8 +149,9 @@ class ConfirmPageView(PermissionRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        development = current_development(self.request)
         accounts = list(Account.objects.all())
-        summaries = {row['account'].pk: row for row in account_summaries(accounts)}
+        summaries = {row['account'].pk: row for row in account_summaries(accounts, development)}
         requested = self.request.GET.get('account')
         if not requested:  # open on the first account that has something waiting
             requested = next((a.pk for a in accounts if summaries[a.pk]['pending_count']), None)
@@ -149,9 +160,10 @@ class ConfirmPageView(PermissionRequiredMixin, TemplateView):
             'accounts': accounts,
             'account': account,
             'pending': {pk: row['pending_count'] for pk, row in summaries.items()},
-            'entries': collect_entries([account], confirmed=False) if account else [],
-            'balance': summaries[account.pk]['balance'] if account else ZERO,
-            'unassigned_entries': collect_entries(unassigned=True),
+            'entries': collect_entries([account], confirmed=False, development=development) if account else [],
+            # the real balance of the account, which is what a confirmation may never take below zero
+            'balance': account_summaries([account])[0]['balance'] if account else ZERO,
+            'unassigned_entries': collect_entries(unassigned=True, development=development),
             'active_accounts': [a for a in accounts if a.is_active],
         })
         return context

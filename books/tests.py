@@ -118,8 +118,8 @@ class LedgerCollectionTests(BookTestCase):
 
     def test_records_without_an_account_are_reported_not_counted(self):
         CustomerPayment.objects.create(sale=self.sale, payment_date='2026-01-05', amount=77)
-        ProjectCost.objects.create(project=self.project, cost_category=self.category, date='2026-01-05', amount=11)
-        self.assertEqual(unassigned_count(), 2)
+        ProjectCost.objects.create(project=self.project, cost_category=self.category, date='2026-01-05', amount=11)   # an unpaid voucher
+        self.assertEqual(unassigned_count(), 1)
         self.assertEqual(collect_entries(), [])
         self.assertEqual(sum(r['balance'] for r in account_summaries(Account.objects.all())), 10_000)
 
@@ -326,12 +326,12 @@ class AssignAccountTests(BookTestCase):
     def test_older_records_get_an_account_and_then_wait_for_confirmation(self):
         payment = CustomerPayment.objects.create(sale=self.sale, payment_date='2026-01-05', amount=77)
         cost = ProjectCost.objects.create(project=self.project, cost_category=self.category, date='2026-01-05', amount=11)
-        self.assertEqual(assign_account([f'cp:{payment.pk}', f'pc:{cost.pk}'], self.cash), 2)
+        self.assertEqual(assign_account([f'cp:{payment.pk}', f'pc:{cost.pk}'], self.cash), 1)      # a cost is a voucher: it is paid, not assigned
         payment.refresh_from_db()
         cost.refresh_from_db()
-        self.assertEqual((payment.account, cost.account, payment.payment_method), (self.cash, self.cash, 'CASH'))
+        self.assertEqual((payment.account, cost.account, payment.payment_method), (self.cash, None, 'CASH'))
         self.assertEqual(unassigned_count(), 0)
-        self.assertEqual(len(collect_entries([self.cash], confirmed=False)), 2)
+        self.assertEqual(len(collect_entries([self.cash], confirmed=False)), 1)
 
     def test_records_that_already_have_an_account_are_left_alone(self):
         payment = self.pay(100)

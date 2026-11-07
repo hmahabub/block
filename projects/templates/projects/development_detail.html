@@ -11,6 +11,7 @@
             <span class="badge bg-secondary">{{ object.get_status_display }}</span></p>
     </div>
     <div>
+        <form method="post" action="{% url 'enter-project' object.pk %}" class="d-inline">{% csrf_token %}<button type="submit" class="btn btn-success"><i class="fas fa-door-open"></i> Open project</button></form>
         <a href="{% url 'activity_log:list' %}?app=projects&amp;model=Development&amp;object={{ object.pk }}" class="btn btn-outline-secondary" title="Who changed this, and when"><i class="fas fa-clock-rotate-left"></i> History</a>
         {% if perms.projects.change_development %}<a href="{% url 'projects:development-update' object.pk %}" class="btn btn-warning"><i class="fas fa-edit"></i> Edit</a>{% endif %}
         <a href="{% url 'projects:development-list' %}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Back to List</a>

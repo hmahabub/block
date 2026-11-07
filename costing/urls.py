@@ -1,5 +1,7 @@
 from django.urls import path
 
+from sales.views import HonorariumListView, HonorariumPaymentCreateView, HonorariumVoucherView
+
 from .views import (
     CostCategoryCreateView,
     CostCategoryListView,
@@ -8,6 +10,9 @@ from .views import (
     ProjectBudgetDeleteView,
     ProjectBudgetListView,
     ProjectBudgetUpdateView,
+    CostPaymentCreateView,
+    CostPaymentDeleteView,
+    VoucherPaymentsView,
     ProjectCostDeleteView,
     ProjectCostDetailView,
     ProjectCostListView,
@@ -38,6 +43,13 @@ urlpatterns = [
     path('create/direct/', DirectCostCreateView.as_view(), name='cost-create-direct'),
     path('<int:pk>/', ProjectCostDetailView.as_view(), name='cost-detail'),
     path('<int:pk>/update/', ProjectCostUpdateView.as_view(), name='cost-update'),
+    path('vouchers/', VoucherPaymentsView.as_view(), name='voucher-payments'),
+    # Honorarium: the voucher of every booking, its payments, and where they are made
+    path('honorarium/', HonorariumListView.as_view(), name='honorarium-list'),
+    path('honorarium/<int:pk>/pay/', HonorariumPaymentCreateView.as_view(), name='honorarium-pay'),
+    path('honorarium/<int:pk>/voucher/', HonorariumVoucherView.as_view(), name='honorarium-voucher'),
+    path('<int:pk>/pay/', CostPaymentCreateView.as_view(), name='cost-pay'),
+    path('payments/<int:pk>/delete/', CostPaymentDeleteView.as_view(), name='payment-delete'),
     path('<int:pk>/voucher/', ProjectCostVoucherView.as_view(), name='cost-voucher'),
     path('<int:pk>/delete/', ProjectCostDeleteView.as_view(), name='cost-delete'),
 ]

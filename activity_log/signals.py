@@ -14,7 +14,7 @@ from .services import log_activity
 
 # Everything in these apps is tracked, plus the user accounts and groups. The rest (sessions, the numbering counters, the
 # SMS and WhatsApp send logs, the audit trail itself) is system bookkeeping, not business records.
-TRACKED_APPS = {'customers', 'suppliers', 'projects', 'costing', 'sales', 'books', 'directors'}
+TRACKED_APPS = {'customers', 'suppliers', 'projects', 'costing', 'sales', 'books', 'directors', 'installments'}
 TRACKED_MODELS = {'core.CompanyProfile', 'auth.User', 'auth.Group'}
 IGNORED_MODELS = {'core.Sequence', 'sms.SmsLog', 'sms.WhatsAppShare', 'activity_log.ActivityLog'}
 

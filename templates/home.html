@@ -10,6 +10,25 @@
     <hr class="my-4">
 
     {% if user.is_authenticated %}
+    {% if workspace_development %}
+    <h4 class="mb-3"><i class="fas fa-folder-open"></i> {{ workspace_development.name }} <small class="text-muted">{{ workspace_development.code }}</small></h4>
+    {% elif developments %}
+    <h5 class="mb-3">Open a project to work in it</h5>
+    <div class="row mb-2">
+        {% for item in developments %}
+        <div class="col-md-6 col-lg-4 mb-3">
+            <div class="card h-100"><div class="card-body">
+                <h5 class="card-title mb-1">{{ item.name }}</h5>
+                <p class="text-muted small mb-2">{{ item.code }} &middot; {{ item.buildings.all|length }} building{{ item.buildings.all|length|pluralize }} &middot; {{ item.flat_count }} flats</p>
+                <form method="post" action="{% url 'enter-project' item.pk %}">{% csrf_token %}
+                    <button type="submit" class="btn btn-success btn-sm"><i class="fas fa-door-open"></i> Open project</button>
+                </form>
+            </div></div>
+        </div>
+        {% endfor %}
+    </div>
+    <p class="text-muted small">Inside a project, every screen shows only that project's buildings, flats, costs, sales and payments. Nothing adds up several projects.</p>
+    {% endif %}
     <div class="row">
         <div class="col-md-6 mb-4">
             <div class="card h-100">
@@ -32,15 +51,21 @@
                 <div class="card-header"><h5 class="mb-0">Quick Stats</h5></div>
                 <div class="card-body">
                     <div class="row text-center stat-tile mb-2">
-                        <div class="col-4 border"><h3>{{ development_count }}</h3><p class="mb-0">Projects</p></div>
+                        {% if workspace_development %}
                         <div class="col-4 border"><h3>{{ project_count }}</h3><p class="mb-0">Buildings</p></div>
+                        {% else %}
+                        <div class="col-4 border"><h3>{{ development_count }}</h3><p class="mb-0">Projects</p></div>
+                        {% endif %}
                         <div class="col-4 border"><h3>{{ customer_count }}</h3><p class="mb-0">Customers</p></div>
                         <div class="col-4 border"><h3>{{ supplier_count }}</h3><p class="mb-0">Suppliers</p></div>
+                        <div class="col-4 border"><h3>{{ director_count }}</h3><p class="mb-0">Directors</p></div>
                     </div>
+                    {% if workspace_development %}
                     <div class="row text-center stat-tile mb-2">
-                        <div class="col-4 border"><h3>{{ flat_count }}</h3><p class="mb-0">Flats</p></div>
-                        <div class="col-4 border"><h3>{{ sold_count }}</h3><p class="mb-0">Sold</p></div>
-                        <div class="col-4 border"><h3>{{ available_count }}</h3><p class="mb-0">Available</p></div>
+                        <div class="col-3 border"><h3>{{ flat_count }}</h3><p class="mb-0">Flats</p></div>
+                        <div class="col-3 border"><h3>{{ available_count }}</h3><p class="mb-0"><span class="badge bg-success">Available</span></p></div>
+                        <div class="col-3 border"><h3>{{ booked_count }}</h3><p class="mb-0"><span class="badge bg-warning text-dark">Booked</span></p></div>
+                        <div class="col-3 border"><h3>{{ registered_count }}</h3><p class="mb-0"><span class="badge bg-danger">Registered</span></p></div>
                     </div>
                     {% if money_unlocked %}
                     <div class="row text-center stat-tile mb-2">
@@ -51,11 +76,15 @@
                     {% else %}
                     {% include "includes/locked_note.html" %}
                     {% endif %}
+                    {% else %}
+                    <p class="text-muted small mb-0">Customers, suppliers and directors are shared by every project. Open a project to see its flats, sales and costs.</p>
+                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
 
+    {% if workspace_development %}
     <div class="row">
         <div class="col-12 mb-4">
             <div class="card">
@@ -88,6 +117,7 @@
             </div>
         </div>
     </div>
+    {% endif %}
 
     {% else %}
     <p>Please log in to access the system</p>

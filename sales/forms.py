@@ -8,7 +8,7 @@ from books.models import Account
 from core.phone import normalize_phone
 from projects.models import Flat
 
-from .models import CustomerPayment, FlatSale, HonorariumPayment, RefundPayment, Reference
+from .models import CustomerPayment, FlatSale, HonorariumPayment, Invoice, RefundPayment, Reference
 
 DATE_WIDGET = forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d')
 
@@ -16,13 +16,21 @@ DATE_WIDGET = forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d')
 class FlatSaleForm(forms.ModelForm):
     """Book a flat for a customer.
 
-    Sale value must be at least the total base price (base price, plus the parking price if the buyer
-    takes the parking lot). Whatever the buyer pays above that is the honorarium for the reference.
+    The flat and the parking lot have each their own sale value: the flat sale value cannot be below the flat's base
+    price, and the parking sale value cannot be below the parking price. The sale value is the two added together, and
+    whatever the buyer pays above the total base price is the honorarium for the reference.
     """
+
+    flat_sale_value = forms.DecimalField(
+        label='Flat sale value', min_value=Decimal('0'), max_digits=14, decimal_places=2,
+        help_text='What the customer pays for the flat itself. Pre-filled with the quoted price; not below the flat base price.',
+    )
+
+    field_order = ['flat', 'customer', 'ref', 'sale_date', 'with_parking', 'flat_sale_value', 'parking_sale_value', 'reg_value', 'notes']
 
     class Meta:
         model = FlatSale
-        fields = ['flat', 'customer', 'ref', 'sale_date', 'with_parking', 'sale_value', 'reg_value', 'notes']
+        fields = ['flat', 'customer', 'ref', 'sale_date', 'with_parking', 'parking_sale_value', 'reg_value', 'notes']
         widgets = {
             'sale_date': DATE_WIDGET,
             'notes': forms.Textarea(attrs={'rows': 2}),
@@ -32,8 +40,12 @@ class FlatSaleForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['ref'].required = False
         self.fields['ref'].queryset = Reference.objects.all()
-        self.fields['sale_value'].help_text = 'Pre-filled with the quoted price (plus parking if taken). It cannot be below the total base price.'
+        self.fields['parking_sale_value'].required = False
+        self.fields['parking_sale_value'].label = 'Parking sale value'
+        self.fields['parking_sale_value'].help_text = (
+            'What the customer pays for the parking lot, when parking is taken. Pre-filled with the parking price; not below it.')
         if self.instance.pk:
+            self.initial['flat_sale_value'] = self.instance.flat_sale_value
             # The flat is fixed once the sale exists; changing it would leave the old flat marked sold.
             self.fields['flat'].disabled = True
         else:
@@ -61,6 +73,16 @@ class FlatSaleForm(forms.ModelForm):
 
     def clean(self):
         cleaned = super().clean()
+        flat_value, parking_value = cleaned.get('flat_sale_value'), cleaned.get('parking_sale_value')
+        if not cleaned.get('with_parking'):
+            parking_value = Decimal('0')
+        elif parking_value is None:
+            # parking taken but no value typed: the parking lot is sold at its price
+            flat = cleaned.get('flat')
+            parking_value = (self.instance.parking_price or flat.effective_parking_price) if flat else Decimal('0')
+        cleaned['parking_sale_value'] = parking_value
+        if flat_value is not None:
+            self.instance.sale_value = flat_value + parking_value
         flat = cleaned.get('flat')
         if flat and not self.instance.pk:
             other = flat.sales.exclude(status=FlatSale.Status.CANCELLED).first()
@@ -91,25 +113,65 @@ def _accounts():
 
 
 class CustomerPaymentForm(forms.ModelForm):
-    """Money received. Paying more than the net value is allowed; the extra is kept as the customer's balance."""
+    """A customer's payment, recorded from the invoice it pays: the flat booking's, or an installment's.
+
+    It can be for no more than what is still due on that invoice."""
 
     class Meta:
         model = CustomerPayment
-        fields = ['sale', 'payment_date', 'amount', 'account', 'reference_no', 'notes']
+        fields = ['invoice', 'payment_date', 'amount', 'account', 'reference_no', 'notes']
         widgets = {
             'payment_date': DATE_WIDGET,
             'notes': forms.Textarea(attrs={'rows': 2}),
         }
 
-    def __init__(self, *args, **kwargs):
+    field_order = ['invoice', 'payment_date', 'amount', 'account', 'reference_no', 'notes']
+
+    def __init__(self, *args, development=None, invoice=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['sale'].queryset = FlatSale.objects.exclude(status=FlatSale.Status.CANCELLED).select_related('flat', 'customer')
-        self.fields['sale'].label_from_instance = lambda sale: f'{sale.sale_no} - {sale.flat.flat_no} - {sale.customer.name}'
+        invoices = Invoice.objects.exclude(sale__status=FlatSale.Status.CANCELLED).select_related(
+            'sale', 'sale__customer', 'sale__flat', 'sale__project', 'charge', 'charge__installment',
+        ).order_by('sale__customer__name', 'sale__flat__flat_no', 'issued_on', 'id')
+        if development is not None:
+            invoices = invoices.filter(sale__project__development=development)
+        self.fields['invoice'].queryset = invoices
+        self.fields['invoice'].label_from_instance = self.invoice_label
+        self.fields['invoice'].empty_label = 'Choose the invoice being paid...'
+        if invoice is not None:
+            # Opened from an invoice: the payment is for that invoice and no other.
+            self.fields['invoice'].queryset = invoices.filter(pk=invoice.pk)
+            self.fields['invoice'].disabled = True
+            self.initial['invoice'] = invoice.pk
+            self.fields['amount'].initial = invoice.due or None
         self.fields['account'].queryset = _accounts()
         self.fields['account'].required = True
         self.fields['reference_no'].label = 'Cheque / transaction ref.'
         if not self.instance.pk:
             self.fields['payment_date'].initial = timezone.localdate()
+
+    @staticmethod
+    def invoice_label(invoice):
+        sale = invoice.sale
+        due = f'due {invoice.due:,.2f}' + (f' by {invoice.due_date:%d %b %Y}' if invoice.due_date else '')
+        return f'{invoice.number} - {sale.customer.name} - {sale.project.project_name} / {sale.flat.flat_no} - {invoice.label} ({due})'
+
+    def clean(self):
+        cleaned = super().clean()
+        invoice, amount = cleaned.get('invoice'), cleaned.get('amount')
+        if invoice is not None:
+            due = invoice.due
+            if due <= 0:
+                self.add_error('invoice', f'{invoice.number} is already paid in full.')
+            elif amount is not None and amount > due:
+                self.add_error('amount', f'Only {due:,.2f} is still due on {invoice.number}; the payment cannot be more than that.')
+        return cleaned
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        instance.sale = instance.invoice.sale
+        if commit:
+            instance.save()
+        return instance
 
 
 class _PayoutForm(forms.ModelForm):

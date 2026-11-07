@@ -57,7 +57,7 @@ def filter_project_costs(queryset, params):
         queryset = queryset.filter(flat__isnull=False)
     if q:
         queryset = queryset.filter(
-            Q(description__icontains=q) | Q(reference_no__icontains=q) | Q(supplier__name__icontains=q)
+            Q(description__icontains=q) | Q(reference_no__icontains=q) | Q(supplier__name__icontains=q) | Q(paid_to__icontains=q)
         )
     if date_from:
         queryset = queryset.filter(date__gte=date_from)

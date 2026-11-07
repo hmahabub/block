@@ -10,8 +10,10 @@ from .views import (
     FlatSaleInvoiceView,
     SharedInvoiceView,
     FlatSaleListView,
+    FlatSaleRegistryView,
     FlatSaleUpdateView,
-    HonorariumPaymentCreateView,
+    InvoiceDetailView,
+    InvoiceListView,
     RefundPaymentCreateView,
     ReferenceCreateView,
     ReferenceDetailView,
@@ -27,11 +29,14 @@ urlpatterns = [
     path('<int:pk>/', FlatSaleDetailView.as_view(), name='detail'),
     path('<int:pk>/update/', FlatSaleUpdateView.as_view(), name='update'),
     path('<int:pk>/cancel/', FlatSaleCancelView.as_view(), name='cancel'),
-    path('<int:pk>/honorarium/', HonorariumPaymentCreateView.as_view(), name='honorarium-create'),
+    path('<int:pk>/registry/', FlatSaleRegistryView.as_view(), name='registry'),
     path('<int:pk>/refund/', RefundPaymentCreateView.as_view(), name='refund-create'),
 
     path('<int:pk>/invoice/', FlatSaleInvoiceView.as_view(), name='invoice'),
     path('invoice/shared/<str:token>/', SharedInvoiceView.as_view(), name='invoice-shared'),
+
+    path('invoices/', InvoiceListView.as_view(), name='invoice-list'),
+    path('invoices/<int:pk>/', InvoiceDetailView.as_view(), name='invoice-detail'),
 
     path('payments/', CustomerPaymentListView.as_view(), name='payment-list'),
     path('payments/create/', CustomerPaymentCreateView.as_view(), name='payment-create'),

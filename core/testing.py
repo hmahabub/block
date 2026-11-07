@@ -28,6 +28,19 @@ def make_request(user=None, path='/', method='get', data=None, session=None, coo
     return request
 
 
+def enter_project(client, development=None):
+    """Open a project (the one given, else a new one) for a logged-in test client, as the Open project button does."""
+    from projects.models import Development
+
+    from .workspace import SESSION_KEY
+
+    development = development or Development.objects.create(name='Test project')
+    session = client.session
+    session[SESSION_KEY] = development.pk
+    session.save()
+    return development
+
+
 def make_project(name='P', floors=2, units=2, base=1000, quoted=1200, parking=100, area=1000, **extra):
     """A project with identical flats named A1, B1, A2, B2 ... (unit letter + floor)."""
     from projects.models import Flat, Project

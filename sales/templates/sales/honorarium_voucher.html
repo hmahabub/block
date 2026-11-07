@@ -1,0 +1,44 @@
+{% extends "print_base.html" %}
+{% load core_tags %}
+
+{% block doc_title %}Honorarium Payment Voucher{% endblock %}
+{% block doc_no %}{{ payment.reference_no }}{% endblock %}
+{% block back_url %}{% url 'sales:detail' payment.sale.pk %}{% endblock %}
+{% block doc_heading %}HONORARIUM PAYMENT VOUCHER{% endblock %}
+{% block doc_meta %}
+    <div><strong>Voucher No:</strong> {{ payment.reference_no }}</div>
+    <div><strong>Date:</strong> {{ payment.date|date:"j M Y" }}</div>
+{% endblock %}
+
+{% block body %}
+<div class="row mt-4 mb-3">
+    <div class="col-7">
+        <div class="section-label">Paid to (reference)</div>
+        <div class="fs-5 fw-semibold">{{ payment.sale.ref.name|default:"-" }}</div>
+        {% if payment.sale.ref.phone %}<div class="text-muted small">{{ payment.sale.ref.phone }}</div>{% endif %}
+    </div>
+    <div class="col-5">
+        <div class="section-label">Against sale</div>
+        <div class="fw-semibold">{{ payment.sale.sale_no }}</div>
+        <div class="text-muted small">{{ payment.sale.project.project_name }} &middot; flat {{ payment.sale.flat.flat_no }} &middot; {{ payment.sale.customer.name }}</div>
+    </div>
+</div>
+
+<table class="doc mb-3">
+    <tr><th class="label">Honorarium voucher</th><td>{{ payment.sale.honorarium_voucher_no }} &middot; booking {{ payment.sale.sale_no }}</td></tr>
+    <tr><th class="label">Honorarium on this voucher</th><td>{{ payment.sale.honorarium|taka }}</td></tr>
+    <tr><th class="label">Paid up to and including this payment</th><td>{{ paid_to_date|taka }}</td></tr>
+    <tr><th class="label">Balance still due after this payment</th><td>{{ balance_after|taka }}</td></tr>
+    <tr><th class="label">Paid from</th><td>{{ payment.account }}</td></tr>
+    {% if payment.notes %}<tr><th class="label">Notes</th><td>{{ payment.notes }}</td></tr>{% endif %}
+</table>
+
+<div class="amount-box mb-2">{{ payment.amount|taka }}</div>
+<div class="in-words"><span class="section-label">Amount in words</span><br><strong>{{ payment.amount|taka_words }}</strong></div>
+
+<div class="signatures">
+    <div>Prepared by<br><small class="text-muted">{{ user.get_full_name|default:user.username }}</small></div>
+    <div>Approved by</div>
+    <div>Received by<br><small class="text-muted">(Reference signature)</small></div>
+</div>
+{% endblock %}

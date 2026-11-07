@@ -77,7 +77,7 @@ def payment_message(payment):
     else:
         note = '; fully paid.'
     return render('PAYMENT', {
-        **_sale_values(sale), 'amount': money(payment.amount), 'date': _day(payment.payment_date),
+        **_sale_values(sale), 'amount': money(payment.amount), 'date': _day(payment.payment_date), 'purpose': payment.purpose_text,
         'receipt_no': payment.receipt_no, 'total_paid': money(sale.received_amount), 'balance_note': note,
     })
 
@@ -87,10 +87,13 @@ def notify_payment(payment, user=None):
     return deliver(payment.customer, payment_message(payment), SmsLog.Kind.PAYMENT, user, reference=payment.receipt_no)
 
 
-def customer_statement(customer):
-    """Open bookings of a customer with what is still due on each."""
+def customer_statement(customer, development=None):
+    """Open bookings of a customer with what is still due on each (only those in `development`, when one is given)."""
     rows = []
-    for sale in customer.sales.exclude(status='CANCELLED').select_related('flat', 'project'):
+    sales = customer.sales.exclude(status='CANCELLED').select_related('flat', 'project')
+    if development is not None:
+        sales = sales.filter(project__development=development)
+    for sale in sales:
         rows.append({
             'sale': sale, 'net': sale.net_value, 'received': sale.received_amount,
             'due': sale.receivable_amount, 'credit': sale.customer_balance,
@@ -98,8 +101,8 @@ def customer_statement(customer):
     return rows
 
 
-def reminder_message(customer):
-    rows = [row for row in customer_statement(customer) if row['due'] > 0]
+def reminder_message(customer, development=None):
+    rows = [row for row in customer_statement(customer, development) if row['due'] > 0]
     if not rows:
         return ''
     details = '; '.join(f'flat {r["sale"].flat.flat_no} ({r["sale"].project.project_name}): {money(r["due"])}' for r in rows)
@@ -107,24 +110,27 @@ def reminder_message(customer):
     return render('REMINDER', {**_customer_values(customer), 'total_due': money(total), 'details': details})
 
 
-def customers_with_dues():
-    """Customers with something still due, for the reminder screen."""
+def customers_with_dues(development=None):
+    """Customers with something still due, for the reminder screen (only what is due in `development`, when given)."""
     from customers.models import Customer
 
     result = []
     for customer in Customer.objects.prefetch_related('sales').order_by('name'):
-        due = sum((s.receivable_amount for s in customer.sales.all() if s.status != 'CANCELLED'), ZERO)
+        due = sum((
+            s.receivable_amount for s in customer.sales.all()
+            if s.status != 'CANCELLED' and (development is None or s.project.development_id == development.pk)
+        ), ZERO)
         if due > 0:
             customer.total_due = due
             result.append(customer)
     return result
 
 
-def send_reminders(customers, user):
+def send_reminders(customers, user, development=None):
     """Send a balance reminder to each customer (excluded customers and customers with nothing due are skipped)."""
     sent, skipped = [], []
     for customer in customers:
-        message = reminder_message(customer)
+        message = reminder_message(customer, development)
         reference = f'REM-{customer.pk}-{datetime.date.today():%Y%m%d}'
         log = deliver(customer, message, SmsLog.Kind.REMINDER, user, reference=reference) if message else None
         (sent if log else skipped).append(customer)

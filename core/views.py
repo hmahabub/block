@@ -3,13 +3,13 @@ from django.contrib import messages
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
-from django.shortcuts import redirect
+from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 from django.views.generic import FormView, UpdateView
 
-from . import reauth
+from . import reauth, workspace
 from .sessions import end_all_sessions
 from .forms import CompanyProfileForm, ConfirmPasswordForm
 from .mixins import UpdateAuditMixin
@@ -87,3 +87,23 @@ def lock_screens(request):
     reauth.lock(request)
     messages.info(request, 'Sensitive screens are locked. You will be asked for your password to open them again.')
     return redirect('home')
+
+
+@login_required
+@require_POST
+def enter_project(request, pk):
+    """Work inside one project: every screen then shows only that project's records."""
+    from projects.models import Development
+
+    development = get_object_or_404(Development, pk=pk)
+    workspace.enter(request, development)
+    return redirect(reverse('home'))
+
+
+@login_required
+@require_POST
+def exit_project(request):
+    """Back to the company-wide view of every project."""
+    workspace.leave(request)
+    messages.info(request, 'You left the project. Every project is shown again.')
+    return redirect(reverse('home'))

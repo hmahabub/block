@@ -27,6 +27,7 @@
 </div>
 
 <table class="doc mb-3">
+    <tr><th class="label">Paid under invoice</th><td>{{ payment.invoice.number }} &middot; {{ payment.purpose_text }}</td></tr>
     <tr><th class="label">Payment method</th><td>{{ payment.get_payment_method_display }}{% if payment.account and not payment.account.is_cash %} &middot; {{ payment.account.bank_name|default:payment.account.name }}{% endif %}</td></tr>
     <tr><th class="label">Reference / cheque no.</th><td>{{ payment.reference_no|default:"—" }}</td></tr>
     {% if payment.notes %}<tr><th class="label">Notes</th><td>{{ payment.notes|linebreaksbr }}</td></tr>{% endif %}

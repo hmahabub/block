@@ -5,12 +5,32 @@
 {% block content %}
 <h2 class="mb-4"><i class="fas fa-chart-line"></i> Report Center</h2>
 
+<h5 class="text-muted">Daily check and analysis</h5>
+<div class="row mb-3">
+    <div class="col-md-4 mb-3"><div class="card h-100"><div class="card-body">
+        <h5 class="card-title"><i class="fas fa-receipt"></i> Daily cost report</h5>
+        <p class="card-text">What was spent on a day, pre-development and post-development cost apart, with every voucher and the cost heads.</p>
+        <a href="{% url 'reports:daily-costs' %}" class="btn btn-primary">Open</a></div></div></div>
+    <div class="col-md-4 mb-3"><div class="card h-100"><div class="card-body">
+        <h5 class="card-title"><i class="fas fa-clipboard-check"></i> Daily transactions</h5>
+        <p class="card-text">Every payment, cost and director transaction of a day, with whether it has been verified. Verify what is waiting, and download the day as PDF or Excel.</p>
+        <a href="{% url 'reports:daily' %}" class="btn btn-primary">Open</a></div></div></div>
+    <div class="col-md-4 mb-3"><div class="card h-100"><div class="card-body">
+        <h5 class="card-title"><i class="fas fa-chart-pie"></i> Profitability analysis</h5>
+        <p class="card-text">Profit, margin and return per building, the profit if every flat were sold, cost by head, and the cash position.</p>
+        <a href="{% url 'reports:profitability' %}" class="btn btn-primary">Open</a></div></div></div>
+</div>
+
 <h5 class="text-muted">All phases</h5>
 <div class="row mb-3">
     <div class="col-md-4 mb-3"><div class="card h-100"><div class="card-body">
         <h5 class="card-title"><i class="fas fa-scale-balanced"></i> Finance report</h5>
         <p class="card-text">Sales, cost, receivable and payable, plus the money in hand.</p>
         <a href="{% url 'reports:finance' %}" class="btn btn-primary">Open</a></div></div></div>
+    <div class="col-md-4 mb-3"><div class="card h-100"><div class="card-body">
+        <h5 class="card-title"><i class="fas fa-user-check"></i> Customer-wise report</h5>
+        <p class="card-text">Each customer who booked a flat: booking details, sales, payments, cost share, installments and what is due.</p>
+        <a href="{% url 'reports:customer-wise' %}" class="btn btn-primary">Open</a></div></div></div>
     <div class="col-md-4 mb-3"><div class="card h-100"><div class="card-body">
         <h5 class="card-title"><i class="fas fa-door-open"></i> Flat-wise report</h5>
         <p class="card-text">Sale, collection and cost share for each flat.</p>
