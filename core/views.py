@@ -3,6 +3,7 @@ from django.contrib import messages
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -107,3 +108,12 @@ def exit_project(request):
     workspace.leave(request)
     messages.info(request, 'You left the project. Every project is shown again.')
     return redirect(reverse('home'))
+
+
+@login_required
+def training_guide(request):
+    """The staff training guide (docs/ERP_Training_Guide.html), for signed-in users."""
+    path = settings.BASE_DIR / 'docs' / 'ERP_Training_Guide.html'
+    if not path.is_file():
+        raise Http404('The training guide is not installed.')
+    return HttpResponse(path.read_text(encoding='utf-8'), content_type='text/html; charset=utf-8')

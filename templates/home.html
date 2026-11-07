@@ -10,6 +10,8 @@
     <hr class="my-4">
 
     {% if user.is_authenticated %}
+    <p class="mb-3"><a href="{% url 'training-guide' %}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary"><i class="fas fa-book-open"></i> Training guide</a>
+        <span class="text-muted small">How to use the system, with a flowchart for every process.</span></p>
     {% if workspace_development %}
     <h4 class="mb-3"><i class="fas fa-folder-open"></i> {{ workspace_development.name }} <small class="text-muted">{{ workspace_development.code }}</small></h4>
     {% elif developments %}
